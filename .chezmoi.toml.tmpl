@@ -37,7 +37,8 @@
     op_ssh_sign = {{ $op_ssh_sign | quote }}
     op_ssh_socket = {{ $op_ssh_socket | quote }}
 
-# 本地解密私钥身份路径 (当存在 encrypted_ 文件时生效)
+# 加密引擎配置 (age 秘钥)
+encryption = "age"
 [age]
     identity = "~/.config/age/keys.txt"
 

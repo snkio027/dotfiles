@@ -5,7 +5,7 @@
 
 palette = "catppuccin_mocha"
 add_newline = false
-command_timeout = 2000
+command_timeout = 5000 # 防超时调优: 提升至 5000ms，防止首次/冷启动工具链 (如 zig, rustc) 探针超时报 [WARN]
 
 # 左侧提示符高密度双行结构 (长路径与工具链状态下不挤占输入区)
 format = """
@@ -85,7 +85,7 @@ format = "via [$symbol$version]($style) "
 symbol = "⚡ "
 style = "bold yellow"
 detect_extensions = ["zig"]
-detect_files = ["build.zig"]
+detect_files = ["build.zig", "build.zig.zon"]
 format = "via [$symbol$version]($style) "
 
 [c]

@@ -49,7 +49,6 @@ brew "yazi"             # 极速 TUI 文件管理器 (带图片预览)
 brew "neovim"           # 高度可扩展的现代 Vim 编辑器
 brew "uv"               # 极速 Python 包与虚拟环境管理器
 brew "rustup-init"      # Rust 工具链安装器
-brew "zig"              # Zig 语言编译器与工具链
 
 # --- macOS Cask 图形化应用 ---
 cask "ghostty"          # GPU 加速的原生终端模拟器

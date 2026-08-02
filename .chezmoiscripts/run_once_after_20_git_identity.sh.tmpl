@@ -64,16 +64,22 @@ if command -v gh &>/dev/null; then
         
         # 绑定 SSH 认证秘钥
         if ! gh ssh-key list 2>/dev/null | grep -q "$(cat "$AUTH_PUB" | awk '{print $2}')"; then
-            gh ssh-key add "$AUTH_PUB" --title "$HOSTNAME-auth-key" 2>/dev/null && \
-                echo "    ✔ 成功注册认证秘钥至 GitHub" || true
+            if ! gh ssh-key add "$AUTH_PUB" --title "$HOSTNAME-auth-key" 2>/dev/null; then
+                echo "    ⚠️ 认证秘钥自动绑定失败 (如需自动同步，请执行: gh auth refresh -s admin:public_key)"
+            else
+                echo "    ✔ 成功注册认证秘钥至 GitHub"
+            fi
         else
             echo "    ✔ 认证秘钥已在 GitHub 注册"
         fi
 
         # 绑定 Git 提交签名秘钥
         if ! gh ssh-key list --type signing 2>/dev/null | grep -q "$(cat "$SIGN_PUB" | awk '{print $2}')"; then
-            gh ssh-key add "$SIGN_PUB" --type signing --title "$HOSTNAME-signing-key" 2>/dev/null && \
-                echo "    ✔ 成功注册签名秘钥至 GitHub" || true
+            if ! gh ssh-key add "$SIGN_PUB" --type signing --title "$HOSTNAME-signing-key" 2>/dev/null; then
+                echo "    ⚠️ 签名秘钥自动绑定失败 (如需自动同步，请执行: gh auth refresh -s admin:public_key)"
+            else
+                echo "    ✔ 成功注册签名秘钥至 GitHub"
+            fi
         else
             echo "    ✔ 签名秘钥已在 GitHub 注册"
         fi

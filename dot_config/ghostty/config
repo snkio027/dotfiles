@@ -6,9 +6,9 @@
 # 外观样式与色彩主题
 theme = "Catppuccin Mocha"
 font-family = "JetBrainsMono Nerd Font"
-font-size = 14
-# 开启 JetBrains Mono 字体特性 (例如 zero 渲染带斜杠的 0，彻底防与大写 O 混淆)
-font-feature = ["zero", "ss01", "ss02"]
+font-size = 18
+# 开启 JetBrains Mono 字体特性 (zero 渲染斜杠 0，calt 开启编程连字符如 !=, =>, ->, ==)
+font-feature = ["zero", "calt", "ss01", "ss02"]
 window-padding-x = 12
 window-padding-y = 12
 window-decoration = true
@@ -20,6 +20,9 @@ macos-titlebar-style = transparent
 window-height = 40
 window-width = 130
 cursor-style = block
+
+# 关键设置: macOS 专属 Option 键映射为 Alt (Meta) 键，使 Zellij (Alt+h/j/k/l) 与 Zsh (Alt+f) 正常触发
+macos-option-as-alt = left
 
 # 鼠标交互与历史回溯缓冲区
 focus-follows-mouse = true
