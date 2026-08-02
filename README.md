@@ -69,7 +69,7 @@ dotfiles/
 ### 裸机一键恢复 (Chezmoi 原生方式)
 
 ```bash
-chezmoi init --apply https://github.com/nekoreb/dotfiles
+chezmoi init --apply https://github.com/snkio027/dotfiles
 ```
 
 ### 日常管理与维护
