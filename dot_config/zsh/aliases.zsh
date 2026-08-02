@@ -9,6 +9,17 @@ alias ..="cd .."
 alias ...="cd ../.."
 alias ....="cd ../../../.."
 
+# --- 1.5 个人标准 7 大工作区快速导航 (Workspace Shortcuts) ---
+alias ws="cd ~/Workspace"
+alias w1="cd ~/Workspace/01_Vault"
+alias w2="cd ~/Workspace/02_Platform"
+alias w3="cd ~/Workspace/03_Projects"
+alias w4="cd ~/Workspace/04_Lab"
+alias w5="cd ~/Workspace/05_Architecture"
+alias w6="cd ~/Workspace/06_Data"
+alias w7="cd ~/Workspace/07_Archive"
+alias dataclean="rm -rf ~/Workspace/06_Data/scratch/*"
+
 # --- 2. 现代 Rust CLI 工具链映射 ---
 if command -v eza &>/dev/null; then
     alias ls="eza --icons=auto --group-directories-first"

@@ -6,7 +6,7 @@
 # 外观样式与色彩主题
 theme = "Catppuccin Mocha"
 font-family = "JetBrainsMono Nerd Font"
-font-size = 18
+font-size = 14
 # 开启 JetBrains Mono 字体特性 (zero 渲染斜杠 0，calt 开启编程连字符如 !=, =>, ->, ==)
 font-feature = ["zero", "calt", "ss01", "ss02"]
 window-padding-x = 12
