@@ -35,7 +35,26 @@ jobs:
 
       - name: Test chezmoi template rendering
         run: |
-          chezmoi execute-template --init < .chezmoi.toml.tmpl
-          chezmoi execute-template --init < dot_gitconfig.tmpl > /dev/null
-          chezmoi execute-template --init < dot_zshrc.tmpl > /dev/null
+          mkdir -p ~/.config/chezmoi
+          cat << 'EOF' > ~/.config/chezmoi/chezmoi.toml
+          [data]
+              name = "CI Test User"
+              email = "ci@example.com"
+              is_mac = false
+              is_linux = true
+              is_arm64 = false
+              op_ssh_sign = "/opt/1Password/op-ssh-sign"
+              op_ssh_socket = "~/.1password/agent.sock"
+              features.use_1password = true
+              features.use_zinit = true
+              features.use_starship = true
+              features.use_atuin = true
+              git.gpg_format = "ssh"
+              git.default_branch = "main"
+              git.editor = "nvim"
+          EOF
+          chezmoi execute-template < dot_gitconfig.tmpl > /dev/null
+          chezmoi execute-template < dot_zshrc.tmpl > /dev/null
+          chezmoi execute-template < private_dot_ssh/private_config.tmpl > /dev/null
+          chezmoi execute-template < dot_config/zsh/exports.zsh.tmpl > /dev/null
           echo "✅ Template rendering validation successful."

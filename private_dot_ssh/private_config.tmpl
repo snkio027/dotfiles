@@ -7,9 +7,9 @@
 Include ~/.ssh/config.d/*.conf
 
 Host *
-{{- if .features.use_1password }}
-    # 1Password SSH Agent 全局集成 (私钥保持在 1Password 安全区)
-    IdentityAgent {{ .op_ssh_socket }}
+{{- if and .features.use_1password .op_ssh_socket }}
+    # 1Password SSH Agent 全局集成 (双引号转义包含空格的 macOS 路径)
+    IdentityAgent "{{ .op_ssh_socket }}"
 {{- end }}
     AddKeysToAgent yes
 {{- if .is_mac }}
