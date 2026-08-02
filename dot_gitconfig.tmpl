@@ -33,7 +33,7 @@
 {{- if stat (joinPath .chezmoi.homeDir ".ssh/revoked_signers") }}
     revocationFile = ~/.ssh/revoked_signers
 {{- end }}
-{{- if and .features.use_1password .op_ssh_sign }}
+{{- if and .features.use_1password .op_ssh_sign (stat .op_ssh_socket) }}
     program = {{ .op_ssh_sign | quote }}
 {{- end }}
 
