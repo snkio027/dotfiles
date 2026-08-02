@@ -1,0 +1,19 @@
+# ==============================================================================
+# ~/.ssh/config — SSH 客户端配置文件模板
+# 由 chezmoi 托管 | 自动应用严格安全权限 (600)
+# ==============================================================================
+
+# 模块化 Host 独立配置文件引用 (包含 GitHub、GitLab、内网基础设施等)
+Include ~/.ssh/config.d/*.conf
+
+Host *
+{{- if .features.use_1password }}
+    # 1Password SSH Agent 全局集成 (私钥保持在 1Password 安全区)
+    IdentityAgent {{ .op_ssh_socket }}
+{{- end }}
+    AddKeysToAgent yes
+{{- if .is_mac }}
+    UseKeychain yes
+{{- end }}
+    ServerAliveInterval 60
+    ServerAliveCountMax 10

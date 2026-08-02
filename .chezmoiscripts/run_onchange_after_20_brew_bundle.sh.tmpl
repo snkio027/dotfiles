@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# ------------------------------------------------------------------------------
+# run_onchange_after_20_brew_bundle.sh.tmpl
+# 当 Brewfile 文件发生变更或初始化应用时，自动触发软件包安装与更新。
+# Brewfile 哈希值: {{ include "Brewfile" | sha256sum }}
+# ------------------------------------------------------------------------------
+
+set -euo pipefail
+
+BREWFILE="{{ .chezmoi.sourceDir }}/Brewfile"
+
+if command -v brew &>/dev/null && [ -f "$BREWFILE" ]; then
+    echo "📦  正在根据 Brewfile 执行软件包声明式安装 (brew bundle)..."
+    brew bundle --file="$BREWFILE" || true
+    echo "✅  Homebrew 软件包同步完成。"
+fi

@@ -1,0 +1,6 @@
+# 企业私有 Git 服务器 Host 配置示例
+# Host gitlab.work.com
+#     HostName gitlab.work.com
+#     User git
+#     IdentityFile ~/.ssh/keys/work_auth
+#     IdentitiesOnly yes

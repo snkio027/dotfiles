@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# ------------------------------------------------------------------------------
+# run_once_after_30_setup_neovim.sh.tmpl
+# Neovim 无头静默安装初始化脚本 (基于 lazy.nvim 进行插件同步)
+# ------------------------------------------------------------------------------
+
+set -euo pipefail
+
+if command -v nvim &>/dev/null; then
+    echo "⚡ 正在后台静默初始化 Neovim 插件 (基于 lazy.nvim)..."
+    nvim --headless "+Lazy! sync" +qa 2>/dev/null || true
+    echo "✅ Neovim 插件库构建完成。"
+fi

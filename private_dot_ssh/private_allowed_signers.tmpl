@@ -1,0 +1,10 @@
+# ==============================================================================
+# ~/.ssh/allowed_signers — Git SSH 提交签名验证信任链文件
+# 由 chezmoi 动态渲染
+# ==============================================================================
+{{- if stat (joinPath .chezmoi.homeDir ".ssh/keys/git_signing.pub") }}
+{{ .email }} {{ include (joinPath .chezmoi.homeDir ".ssh/keys/git_signing.pub") | trim }}
+{{- else }}
+# 未在 ~/.ssh/keys/git_signing.pub 找到本地 Ed25519 签名秘钥
+# 运行身份初始化脚本生成秘钥后，重新执行 `chezmoi apply` 即可更新本文件。
+{{- end }}

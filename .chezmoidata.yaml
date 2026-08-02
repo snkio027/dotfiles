@@ -1,0 +1,27 @@
+# ==============================================================================
+# .chezmoidata.yaml — 全局静态 chezmoi 数据字典
+# DevSecOps 生产级 Profile | 机器角色与特性开关控制
+# ==============================================================================
+
+# 机器角色分层定义
+machine:
+  profile: "developer"  # 可选: developer (开发者) | server (服务器) | ci (构建节点)
+  role: "workstation"   # 可选: workstation (工作站) | headless (无头节点)
+  cloud: false
+
+workstation_type: "developer-macbook"
+default_shell: "zsh"
+dotfiles_repo: "https://github.com/nekoreb/dotfiles"
+
+# 全局 Git 默认行为
+git:
+  default_branch: "main"
+  gpg_format: "ssh"
+  editor: "nvim"
+
+# 全局功能开关
+features:
+  use_1password: true
+  use_zinit: true
+  use_starship: true
+  use_atuin: true

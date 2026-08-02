@@ -1,0 +1,46 @@
+# ==============================================================================
+# .chezmoi.toml.tmpl — chezmoi 全局引擎配置模板
+# DevSecOps 生产级 Profile | 跨平台 (macOS / Linux) 与 1Password Agent 动态探测
+# ==============================================================================
+
+{{- $email := promptStringOnce . "email" "请输入用于 Git & SSH 的邮箱地址" -}}
+{{- $name := promptStringOnce . "name" "请输入用于 Git 的全名" -}}
+
+{{- $is_mac := eq .chezmoi.os "darwin" -}}
+{{- $is_linux := eq .chezmoi.os "linux" -}}
+{{- $is_arm64 := eq .chezmoi.arch "arm64" -}}
+
+{{- $op_ssh_sign := lookPath "op-ssh-sign" -}}
+{{- if empty $op_ssh_sign -}}
+{{-   if $is_mac -}}
+{{-     $op_ssh_sign = "/Applications/1Password.app/Contents/MacOS/op-ssh-sign" -}}
+{{-   else if $is_linux -}}
+{{-     $op_ssh_sign = "/opt/1Password/op-ssh-sign" -}}
+{{-   end -}}
+{{- end -}}
+
+{{- $op_ssh_socket := env "SSH_AUTH_SOCK" -}}
+{{- if empty $op_ssh_socket -}}
+{{-   if $is_mac -}}
+{{-     $op_ssh_socket = "~/Library/Group Containers/208264KDC8.fnd/1Password/t/agent.sock" -}}
+{{-   else if $is_linux -}}
+{{-     $op_ssh_socket = "~/.1password/agent.sock" -}}
+{{-   end -}}
+{{- end -}}
+
+[data]
+    name = {{ $name | quote }}
+    email = {{ $email | quote }}
+    is_mac = {{ $is_mac }}
+    is_linux = {{ $is_linux }}
+    is_arm64 = {{ $is_arm64 }}
+    op_ssh_sign = {{ $op_ssh_sign | quote }}
+    op_ssh_socket = {{ $op_ssh_socket | quote }}
+
+# 本地解密私钥身份路径 (当存在 encrypted_ 文件时生效)
+[age]
+    identity = "~/.config/age/keys.txt"
+
+# chezmoi diff 输出美化 (使用 delta 进行 Side-by-Side 双栏对比)
+[diff]
+    pager = "delta --side-by-side"

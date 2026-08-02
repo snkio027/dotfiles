@@ -1,0 +1,41 @@
+name: chezmoi CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate:
+    name: Validate Dotfiles & Templates
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for AppleDouble (._*) metadata pollution
+        run: |
+          FOUND_APPLEDOUBLE=$(find . -name "._*" | wc -l)
+          if [ "$FOUND_APPLEDOUBLE" -gt 0 ]; then
+            echo "❌ Error: Found $FOUND_APPLEDOUBLE AppleDouble (._*) files in repository!"
+            find . -name "._*"
+            exit 1
+          fi
+          echo "✅ Zero AppleDouble files found."
+
+      - name: Install chezmoi
+        run: |
+          sh -c "$(curl -fsLS get.chezmoi.io)" -- -b ~/.local/bin
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Run chezmoi doctor
+        run: chezmoi doctor || true
+
+      - name: Test chezmoi template rendering
+        run: |
+          chezmoi execute-template --init < .chezmoi.toml.tmpl
+          chezmoi execute-template --init < dot_gitconfig.tmpl > /dev/null
+          chezmoi execute-template --init < dot_zshrc.tmpl > /dev/null
+          echo "✅ Template rendering validation successful."

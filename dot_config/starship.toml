@@ -1,0 +1,143 @@
+# ------------------------------------------------------------------------------
+# Starship 命令行提示符配置文件
+# DevSecOps 生产级 Profile | 全栈 Catppuccin Mocha 调色板与 Monorepo 优化
+# ------------------------------------------------------------------------------
+
+palette = "catppuccin_mocha"
+add_newline = false
+command_timeout = 2000
+
+# 左侧提示符高密度双行结构 (长路径与工具链状态下不挤占输入区)
+format = """
+$username\
+$hostname\
+$directory\
+$git_branch\
+$git_commit\
+$git_state\
+$git_status\
+$rust\
+$zig\
+$c\
+$python\
+$docker_context\
+$kubernetes\
+$line_break\
+$character"""
+
+# 右侧提示符布局 (防抖动设计: 将耗时与错误状态码右置，保持左侧输入区静止)
+right_format = """$cmd_duration$status"""
+
+[character]
+success_symbol = "[❯](bold green)"
+error_symbol = "[❯](bold red)"
+vicmd_symbol = "[❮](bold mauve)"
+
+[directory]
+truncation_length = 3
+truncate_to_repo = true # Monorepo 友好: 自动以最近的 Git 项目根目录作为截断锚点
+style = "bold blue"
+repo_root_style = "bold sapphire"
+repo_root_format = "[$before_root_path]($style)[$repo_root]($repo_root_style)[$path]($style)[$read_only]($read_only_style) "
+
+[cmd_duration]
+min_time = 500
+style = "bold yellow"
+format = "took [$duration]($style) "
+
+[status]
+disabled = false
+format = "[$symbol$status]($style)"
+style = "bold red"
+symbol = "🚫 "
+not_found_symbol = "🔍 "
+not_executable_symbol = "🔒 "
+sigint_symbol = "💥 "
+signal_symbol = "🚨 "
+
+[git_branch]
+symbol = "🌿 "
+style = "bold mauve"
+format = "on [$symbol$branch]($style) "
+
+[git_status]
+style = "red"
+format = '([\[$all_status$ahead_behind\]]($style) )'
+ignore_submodules = true # 性能关键: 跳过对巨型分布式仓库子模块 (Submodules) 的递归检测，消除回车延迟
+conflicted = "⚔${count}"
+ahead = "⇡${count}"
+behind = "⇣${count}"
+diverged = "⇕⇡${ahead_count}⇣${behind_count}"
+untracked = "?${count}"
+modified = "!${count}"
+staged = "+${count}"
+renamed = "»${count}"
+deleted = "✘${count}"
+
+[rust]
+symbol = "🦀 "
+style = "bold maroon"
+detect_extensions = ["rs"]
+detect_files = ["Cargo.toml"]
+format = "via [$symbol$version]($style) "
+
+[zig]
+symbol = "⚡ "
+style = "bold yellow"
+detect_extensions = ["zig"]
+detect_files = ["build.zig"]
+format = "via [$symbol$version]($style) "
+
+[c]
+symbol = "⚙️ "
+style = "bold sapphire"
+detect_extensions = ["c", "h", "cpp", "hpp", "cc"]
+detect_files = ["Makefile", "CMakeLists.txt", "meson.build", "go.mod"]
+format = "via [$symbol$version]($style) "
+
+[python]
+symbol = "🐍 "
+style = "bold green"
+detect_extensions = ["py"]
+detect_files = ["requirements.txt", "pyproject.toml", "Pipfile", "setup.py"]
+format = 'via [$symbol$version( \($virtualenv\))]($style) '
+
+[docker_context]
+symbol = "🐳 "
+style = "bold blue"
+format = "via [$symbol$context]($style) "
+
+[kubernetes]
+disabled = false
+symbol = "☸ "
+style = "bold teal"
+format = 'on [$symbol$context( \($namespace\))]($style) '
+
+# Catppuccin Mocha 官方调色板
+[palettes.catppuccin_mocha]
+rosewater = "#f5e0dc"
+flamingo = "#f2cdcd"
+pink = "#f5c2e7"
+mauve = "#cba6f7"
+red = "#f38ba8"
+maroon = "#eba0ac"
+peach = "#fab387"
+yellow = "#f9e2af"
+green = "#a6e3a1"
+teal = "#94e2d5"
+sky = "#89dceb"
+sapphire = "#74c7ec"
+blue = "#89b4fa"
+lavender = "#b4befe"
+text = "#cdd6f4"
+subtext1 = "#bac2de"
+subtext0 = "#a6adc8"
+overlay2 = "#9399b2"
+overlay1 = "#7f849c"
+overlay0 = "#6c7086"
+surface2 = "#585b70"
+surface1 = "#45475a"
+surface0 = "#313244"
+base = "#1e1e2e"
+mantle = "#181825"
+crust = "#11111b"

@@ -1,0 +1,4 @@
+{{- /* 通用操作系统与 CPU 架构推导模版片段 */ -}}
+{{- $is_mac := eq .chezmoi.os "darwin" -}}
+{{- $is_linux := eq .chezmoi.os "linux" -}}
+{{- $is_arm64 := eq .chezmoi.arch "arm64" -}}

@@ -1,0 +1,31 @@
+// ------------------------------------------------------------------------------
+// Zellij 终端工作区复用器配置文件
+// DevSecOps 生产级 Profile | 免模式 Vim 分屏导航与 Catppuccin Mocha 主题
+// ------------------------------------------------------------------------------
+
+theme "catppuccin-mocha"
+default_layout "compact"
+mouse_mode true
+copy_on_select true
+pane_frames false
+simplified_ui false
+
+ui {
+    pane_frames {
+        rounded_corners true
+    }
+}
+
+// 免前缀模式 Vim 风格分屏盲操导航与浮动面板快捷键
+keybinds {
+    normal {
+        bind "Alt h" { MoveFocus "Left"; }
+        bind "Alt l" { MoveFocus "Right"; }
+        bind "Alt j" { MoveFocus "Down"; }
+        bind "Alt k" { MoveFocus "Up"; }
+        bind "Alt n" { NewPane; }
+        bind "Alt x" { CloseFocus; }
+        bind "Alt f" { ToggleFocusFullscreen; }
+        bind "Alt i" { ToggleFloatingPanes; } // 瞬间弹出/隐藏悬浮工作面板
+    }
+}

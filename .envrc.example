@@ -1,0 +1,18 @@
+# ------------------------------------------------------------------------------
+# direnv project-level environment template
+# Copy to any project root as .envrc and customize
+# NOTE: Never store raw secret values here. Use AWS profiles or `op run`.
+# ------------------------------------------------------------------------------
+
+# --- Runtime Environment Selection ---
+# export AWS_PROFILE="project-dev"
+# export KAFKA_BROKERS="localhost:9092"
+# export LOG_LEVEL="debug"
+
+# --- Apple Silicon Build Optimization (project-specific cache) ---
+export ZIG_GLOBAL_CACHE_DIR="$PWD/.zig-cache"
+export CARGO_TARGET_DIR="$PWD/.target"
+
+# --- Inject secrets at runtime via 1Password (zero-disk exposure) ---
+# use_op() { eval "$(op run --env-file=.op.env -- env)"; }
+# use_op
