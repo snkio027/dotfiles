@@ -1,0 +1,23 @@
+{
+  "name": "DevSecOps Personal Workstation",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "editor.formatOnSave": true
+      },
+      "extensions": [
+        "eamodio.gitlens",
+        "ms-azuretools.vscode-docker",
+        "golang.go",
+        "rust-lang.rust-analyzer",
+        "charliermarsh.ruff"
+      ]
+    }
+  },
+  "remoteUser": "vscode",
+  "postCreateCommand": "chezmoi init --apply --source=/workspaces/dotfiles || true"
+}

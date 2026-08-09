@@ -1,52 +1,55 @@
 # ------------------------------------------------------------------------------
 # Ghostty GPU 加速原生终端模拟器配置文件
-# DevSecOps 生产级 Profile
+# DevSecOps 生产级 Profile | Catppuccin Mocha 玻璃透明度与高阶人机工程
 # ------------------------------------------------------------------------------
 
-# 外观样式与色彩主题
+# 1. 外观样式与色彩主题
 theme = "Catppuccin Mocha"
 font-family = "JetBrainsMono Nerd Font"
 font-size = 14
-# 开启 JetBrains Mono 字体特性 (zero 渲染斜杠 0，calt 开启编程连字符如 !=, =>, ->, ==)
+font-thicken = true
 font-feature = ["zero", "calt", "ss01", "ss02"]
-window-padding-x = 12
-window-padding-y = 12
+
+# 玻璃透明度与阴影效果
+background-opacity = 0.95
+background-blur-radius = 20
+
+window-padding-x = 14
+window-padding-y = 14
 window-decoration = true
 window-title-font-family = "Inter"
-unfocused-split-opacity = 0.7
+unfocused-split-opacity = 0.75
 
-# 窗口行为与光标样式
+# 2. 窗口行为与光标样式
 macos-titlebar-style = transparent
-window-height = 40
-window-width = 130
+window-height = 42
+window-width = 135
 cursor-style = block
+cursor-style-blink = false
 
-# 关键设置: macOS 专属 Option 键映射为 Alt (Meta) 键，使 Zellij (Alt+h/j/k/l) 与 Zsh (Alt+f) 正常触发
+# macOS Option 键映射为 Alt (Meta) 键，配合 Zellij (Alt+h/j/k/l) 与 Zsh (Alt+f)
 macos-option-as-alt = left
 
-# 鼠标交互与历史回溯缓冲区
+# 3. 鼠标交互与剪贴板
 focus-follows-mouse = true
 mouse-hide-while-typing = true
 scrollback-limit = 100000
-selection-word-chars = "/\\_-.~:?=&"
+selection-word-chars = "/\\_-.~:?=#&"
 
-# 剪贴板复制与关闭确认
 copy-on-select = true
+clipboard-read = allow
+clipboard-write = allow
 confirm-close-surface = false
 
-# ------------------------------------------------------------------------------
-# 现代工作站高阶交互配置
-# ------------------------------------------------------------------------------
-
-# 1. 长时间后台任务完成系统通知 (超过 15 秒且非聚焦状态下自动触发 macOS 通知)
+# 4. 后台任务完成系统通知 (运行 >15s 且非当前窗口焦点时弹窗通知)
 notify-on-command-finish = unfocused
 notify-on-command-finish-after = 15s
 notify-on-command-finish-action = notify
 
-# 2. 全局下拉式终端 (Quake Mode: Cmd+Alt+Space 瞬间唤出隐藏终端)
+# 5. 全局下拉快捷终端 (Quake Mode: Cmd+Alt+Space)
 keybind = global:cmd+alt+space=toggle_quick_terminal
 
-# 3. 分屏管理与 Vim 风格焦点切换快捷键
+# 6. 分屏管理与 Vim 风格焦点切换快捷键
 keybind = super+d=new_split:right
 keybind = super+shift+d=new_split:down
 keybind = super+h=goto_split:left

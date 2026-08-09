@@ -1,0 +1,210 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# doctor.sh — Personal Developer Platform Health & Self-Healing Diagnostics
+# DevSecOps Grade Platform Engineering Tool | Chezmoi Integrated
+# ==============================================================================
+
+set -euo pipefail
+
+# ANSI Color Definitions
+BOLD="\033[1m"
+RED="\033[31m"
+GREEN="\033[32m"
+YELLOW="\033[33m"
+BLUE="\033[34m"
+CYAN="\033[36m"
+RESET="\033[0m"
+
+PASS="${GREEN}✓${RESET}"
+WARN="${YELLOW}⚠${RESET}"
+FAIL="${RED}✕${RESET}"
+
+TOTAL_CHECKS=0
+PASSED_CHECKS=0
+WARN_CHECKS=0
+FAIL_CHECKS=0
+
+check_status() {
+    local name="$1"
+    local status="$2"
+    local detail="${3:-}"
+
+    TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
+    case "$status" in
+        pass)
+            PASSED_CHECKS=$((PASSED_CHECKS + 1))
+            printf "  %-30s %b %s\n" "$name" "$PASS" "$detail"
+            ;;
+        warn)
+            WARN_CHECKS=$((WARN_CHECKS + 1))
+            printf "  %-30s %b %s\n" "$name" "$WARN" "$detail"
+            ;;
+        fail)
+            FAIL_CHECKS=$((FAIL_CHECKS + 1))
+            printf "  %-30s %b %s\n" "$name" "$FAIL" "$detail"
+            ;;
+    esac
+}
+
+echo -e "${BOLD}${CYAN}======================================================================${RESET}"
+echo -e "${BOLD}${CYAN}   🚀 Developer Platform Environment Health Check (devdoctor)   ${RESET}"
+echo -e "${BOLD}${CYAN}======================================================================${RESET}"
+echo ""
+
+# ------------------------------------------------------------------------------
+# 1. System & Core Infrastructure
+# ------------------------------------------------------------------------------
+echo -e "${BOLD}${BLUE}[1/5] System & Core Infrastructure${RESET}"
+
+OS_TYPE="$(uname -s)"
+ARCH_TYPE="$(uname -m)"
+check_status "Operating System" "pass" "$OS_TYPE ($ARCH_TYPE)"
+
+if command -v brew &>/dev/null; then
+    BREW_VER="$(brew --version 2>/dev/null | head -n1 || echo "installed")"
+    check_status "Homebrew Package Manager" "pass" "$BREW_VER"
+else
+    check_status "Homebrew Package Manager" "fail" "Not installed in PATH"
+fi
+
+if command -v chezmoi &>/dev/null; then
+    CZ_VER="$(chezmoi --version 2>/dev/null | head -n1 | awk '{print $3}' || echo "installed")"
+    RAW_STATUS="$(chezmoi status 2>/dev/null || true)"
+    if [ -z "$RAW_STATUS" ]; then
+        check_status "chezmoi State" "pass" "v$CZ_VER (Synced / Clean)"
+    else
+        DIFF_COUNT="$(echo "$RAW_STATUS" | wc -l | tr -d ' ')"
+        check_status "chezmoi State" "warn" "v$CZ_VER ($DIFF_COUNT pending diffs)"
+    fi
+else
+    check_status "chezmoi State" "fail" "chezmoi binary missing"
+fi
+
+if [ -f "$HOME/.config/age/keys.txt" ]; then
+    check_status "age Identity Key" "pass" "~/.config/age/keys.txt present"
+else
+    check_status "age Identity Key" "warn" "~/.config/age/keys.txt not found (chezmoi secrets disabled)"
+fi
+
+echo ""
+
+# ------------------------------------------------------------------------------
+# 2. Security & Credentials Plane
+# ------------------------------------------------------------------------------
+echo -e "${BOLD}${BLUE}[2/5] Security & Credentials Plane${RESET}"
+
+OP_SOCK="${SSH_AUTH_SOCK:-$HOME/Library/Group Containers/208264KDC8.fnd/1Password/t/agent.sock}"
+if [ -S "$OP_SOCK" ] || [ -n "${SSH_AUTH_SOCK:-}" ]; then
+    check_status "1Password SSH Agent" "pass" "Socket active ($OP_SOCK)"
+else
+    check_status "1Password SSH Agent" "warn" "Agent socket not detected"
+fi
+
+if [ -f "$HOME/.ssh/keys/git_signing.pub" ]; then
+    check_status "Git SSH Signing Key" "pass" "~/.ssh/keys/git_signing.pub ready"
+else
+    check_status "Git SSH Signing Key" "warn" "Signing key missing (run chezmoi scripts)"
+fi
+
+if [ -f "$HOME/.ssh/allowed_signers" ]; then
+    check_status "SSH Allowed Signers" "pass" "~/.ssh/allowed_signers configured"
+else
+    check_status "SSH Allowed Signers" "warn" "~/.ssh/allowed_signers missing"
+fi
+
+if command -v gitleaks &>/dev/null; then
+    GLEAKS_VER="$(gitleaks version 2>/dev/null || echo "installed")"
+    check_status "gitleaks Scanner" "pass" "v$GLEAKS_VER"
+else
+    check_status "gitleaks Scanner" "warn" "gitleaks missing (run brew bundle)"
+fi
+
+echo ""
+
+# ------------------------------------------------------------------------------
+# 3. Runtime & Language Management
+# ------------------------------------------------------------------------------
+echo -e "${BOLD}${BLUE}[3/5] Runtime & Language Management${RESET}"
+
+if command -v mise &>/dev/null; then
+    MISE_VER="$(mise --version 2>/dev/null | head -n1 || echo "installed")"
+    check_status "mise Runtime Engine" "pass" "$MISE_VER"
+    if mise ls 2>/dev/null | grep -q "missing"; then
+        check_status "mise Hydration" "warn" "Some runtimes pending, run 'mise install'"
+    else
+        check_status "mise Hydration" "pass" "All declarative runtimes installed"
+    fi
+else
+    check_status "mise Runtime Engine" "fail" "mise binary missing"
+fi
+
+if command -v uv &>/dev/null; then
+    UV_VER="$(uv --version 2>/dev/null | head -n1 || echo "installed")"
+    check_status "uv Python Manager" "pass" "$UV_VER"
+else
+    check_status "uv Python Manager" "warn" "uv binary missing"
+fi
+
+if command -v python3 &>/dev/null; then
+    PY_VER="$(python3 --version 2>/dev/null | awk '{print $2}' || echo "installed")"
+    check_status "Python Environment" "pass" "v$PY_VER"
+else
+    check_status "Python Environment" "warn" "Python3 missing"
+fi
+
+if command -v node &>/dev/null; then
+    NODE_VER="$(node --version 2>/dev/null || echo "installed")"
+    check_status "Node.js Environment" "pass" "$NODE_VER"
+else
+    check_status "Node.js Environment" "warn" "Node.js missing"
+fi
+
+if command -v rustc &>/dev/null; then
+    RUST_VER="$(rustc --version 2>/dev/null | awk '{print $2}' || echo "installed")"
+    check_status "Rust Toolchain" "pass" "v$RUST_VER"
+else
+    check_status "Rust Toolchain" "warn" "Rust toolchain missing"
+fi
+
+if command -v go &>/dev/null; then
+    GO_VER="$(go version 2>/dev/null | awk '{print $3}' || echo "installed")"
+    check_status "Go Toolchain" "pass" "$GO_VER"
+else
+    check_status "Go Toolchain" "warn" "Go toolchain missing"
+fi
+
+echo ""
+
+# ------------------------------------------------------------------------------
+# 4. Productivity & Terminal Environment
+# ------------------------------------------------------------------------------
+echo -e "${BOLD}${BLUE}[4/5] Productivity & Terminal Suite${RESET}"
+
+for tool in starship atuin zoxide yazi lazygit zellij ghostty nvim carapace; do
+    if command -v "$tool" &>/dev/null; then
+        check_status "$tool" "pass" "installed"
+    else
+        check_status "$tool" "warn" "missing in PATH"
+    fi
+done
+
+echo ""
+
+# ------------------------------------------------------------------------------
+# 5. Summary & Health Report
+# ------------------------------------------------------------------------------
+echo -e "${BOLD}${BLUE}[5/5] Diagnostic Summary${RESET}"
+echo -e "  Total Checks : $TOTAL_CHECKS"
+echo -e "  Passed       : ${GREEN}$PASSED_CHECKS${RESET}"
+echo -e "  Warnings     : ${YELLOW}$WARN_CHECKS${RESET}"
+echo -e "  Failures     : ${RED}$FAIL_CHECKS${RESET}"
+echo ""
+
+if [ "$FAIL_CHECKS" -eq 0 ] && [ "$WARN_CHECKS" -eq 0 ]; then
+    echo -e "${BOLD}${GREEN}🎉 Platform status: 100% Healthy! Environment is in peak DevEx state.${RESET}"
+elif [ "$FAIL_CHECKS" -eq 0 ]; then
+    echo -e "${BOLD}${YELLOW}⚡ Platform status: Good with minor warnings. Run 'chezmoi apply' or 'brew bundle' to resolve.${RESET}"
+else
+    echo -e "${BOLD}${RED}🚨 Platform status: Needs attention. Please fix failed items above.${RESET}"
+fi
+echo -e "${BOLD}${CYAN}======================================================================${RESET}"

@@ -19,6 +19,15 @@ export PYTHONWARNINGS="ignore::SyntaxWarning"
 ssh-add --apple-load-keychain 2>/dev/null || true
 
 # --- 2. 补全引擎缓存加速与美化 ---
+mkdir -p "${XDG_CACHE_HOME:-$HOME/.cache}/zsh"
+autoload -Uz compinit
+ZCOMPDUMP="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompdump"
+if [[ -n "${ZCOMPDUMP}"(#qN.mh+24) ]]; then
+    compinit -d "${ZCOMPDUMP}"
+else
+    compinit -C -d "${ZCOMPDUMP}"
+fi
+
 zstyle ':completion:*' use-cache yes
 zstyle ':completion:*' cache-path "${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompcache"
 zstyle ':completion:*' menu select
@@ -30,7 +39,7 @@ bindkey '^[[B' down-line-or-search
 
 # zsh-autosuggestions 快捷键: Ctrl+F 接受整行建议，Alt+F 接受下一个单词
 bindkey '^F' autosuggest-accept
-bindkey '^[f' autosuggest-accept-word
+bindkey '^[f' forward-word
 
 # --- 4. 运行时与工具链钩子 ---
 
@@ -42,6 +51,12 @@ fi
 # zoxide: 智能目录跳转
 if command -v zoxide &>/dev/null; then
     eval "$(zoxide init zsh)"
+fi
+
+# carapace: 跨 CLI 现代上下文自动补全引擎
+if command -v carapace &>/dev/null; then
+    export CARAPACE_BRIDGES='zsh,fish,bash'
+    eval "$(carapace _carapace)"
 fi
 
 # --- 5. Starship 瞬时提示符 (Transient Prompt) ---

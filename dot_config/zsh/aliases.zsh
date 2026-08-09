@@ -85,10 +85,13 @@ if command -v lazygit &>/dev/null; then
     alias lg="lazygit"
 fi
 
-# --- 7. 开发者实用快捷命令 ---
+# --- 7. 开发者实用快捷命令 & 平台自检自愈 ---
 alias reload="exec zsh"
 alias brewup="brew update && brew upgrade && brew cleanup"
 alias mise-up="mise self-update && mise upgrade"
+alias doctor="bash ~/.config/zsh/scripts/doctor.sh"
+alias devdoctor="bash ~/.config/zsh/scripts/doctor.sh"
+alias scan-secrets="gitleaks protect --staged --verbose"
 
 # --- 8. Yazi 推出自动切换目录 Hook (离开 Yazi 时自动 cd 至最后所在的目录) ---
 function y() {
@@ -99,4 +102,17 @@ function y() {
         builtin cd -- "$cwd"
     fi
     rm -f -- "$tmp"
+}
+
+# --- 9. 高频 Developer DX 快捷函数 ---
+function mkcd() { mkdir -p "$1" && cd "$1"; }
+function up() { local d=""; for i in $(seq 1 "${1:-1}"); do d="../$d"; done; cd "$d"; }
+function port() { lsof -i :"$1"; }
+function ghc() { git clone "git@github.com:$1.git"; }
+function dotenv() { set -o allexport; source "${1:-.env}"; set +o allexport; }
+function cze() { chezmoi edit "$(chezmoi managed | fzf)"; }
+function fkill() {
+    local pid
+    pid=$(ps -ef | fzf +m | awk '{print $2}')
+    [ -n "$pid" ] && kill -"${1:-9}" "$pid"
 }

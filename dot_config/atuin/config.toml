@@ -1,6 +1,6 @@
 # ------------------------------------------------------------------------------
 # Atuin 端到端加密 Shell 历史数据库配置文件
-# DevSecOps 生产级 Profile | 双层检索架构 (Up 键局部目录 / Ctrl+R 全局历史)
+# DevSecOps 生产级 Profile | 双层检索架构 (Up 键目录历史 / Ctrl+R 全局历史)
 # ------------------------------------------------------------------------------
 
 # 开启多终端历史自动同步
@@ -14,9 +14,14 @@ filter_mode = "global"
 # 按 Up 方向键时仅检索当前项目/目录下的专属历史
 filter_mode_shell_up_key_binding = "directory"
 
-# 视觉样式与高度配置
+# 视觉样式与高密度交互
 style = "compact"
 inline_height = 20
 show_preview = true
 enter_accept = false
 exit_mode = "return-original"
+
+# 安全防范：自动拦截过滤敏感 Command (API Tokens / Passwords)
+secrets_filter = true
+store_failed = true
+workspaces = true

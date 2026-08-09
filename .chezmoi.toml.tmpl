@@ -22,9 +22,9 @@
 {{- $op_ssh_socket := env "SSH_AUTH_SOCK" -}}
 {{- if empty $op_ssh_socket -}}
 {{-   if $is_mac -}}
-{{-     $op_ssh_socket = "~/Library/Group Containers/208264KDC8.fnd/1Password/t/agent.sock" -}}
+{{-     $op_ssh_socket = printf "%s/Library/Group Containers/208264KDC8.fnd/1Password/t/agent.sock" .chezmoi.homeDir -}}
 {{-   else if $is_linux -}}
-{{-     $op_ssh_socket = "~/.1password/agent.sock" -}}
+{{-     $op_ssh_socket = printf "%s/.1password/agent.sock" .chezmoi.homeDir -}}
 {{-   end -}}
 {{- end -}}
 

@@ -1,0 +1,47 @@
+# ==============================================================================
+# Global Gitignore — DevSecOps Standard Exclusion Matrix
+# Managed by chezmoi | ~/.config/git/ignore
+# ==============================================================================
+
+# OS Metadata & Junk
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Security & Private Credentials (CRITICAL)
+*.pem
+*.key
+*.pfx
+*.p12
+*.age
+.env
+.env.*
+!.env.example
+op.env
+.secrets
+secrets.yaml
+secrets.json
+
+# IDE & Editor Temporary Files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.classpath
+.project
+.settings/
+
+# Runtime & Dependency Caches
+.direnv/
+.venv/
+__pycache__/
+*.pyc
+node_modules/
+dist/
+target/
+.terraform/

@@ -1,0 +1,26 @@
+# ==============================================================================
+# config.toml.tmpl — mise Declarative Multi-Language Runtime Configuration
+# Managed by chezmoi | DevSecOps Platform Engineering Profile
+# ==============================================================================
+
+[settings]
+experimental = true
+auto_install = true
+always_keep_download = false
+plugin_autoupdate_last_check_duration = "7d"
+
+[tools]
+# Declarative runtime versions (always targeting latest stable releases)
+python = "latest"
+node = "lts"
+go = "latest"
+rust = "latest"
+uv = "latest"
+terraform = "latest"
+kubectl = "latest"
+helm = "latest"
+
+[env]
+# Auto-hydrate environment variables for languages
+# UV_PYTHON_PREFERENCE guarantees uv uses mise managed python when requested
+UV_PYTHON_PREFERENCE = "managed"

@@ -8,6 +8,7 @@
 brew "chezmoi"          # Dotfiles 配置管理引擎
 brew "age"              # 现代高性能加密工具
 brew "sops"             # 结构化文件秘钥加密管理
+brew "gitleaks"         # 本地与 CI 秘钥泄漏安全检测工具
 cask "1password-cli"    # 1Password 命令行工具 (op)
 
 # --- 编译工具链与基础依赖 (Neovim Treesitter 编译必需) ---
@@ -20,6 +21,7 @@ brew "mise"             # 基于 Rust 的多语言运行时管理器
 brew "starship"         # 极速响应式跨 Shell 提示符
 brew "direnv"           # 基于目录的环境变量自动切换器
 brew "atuin"            # 端到端加密 Shell 历史数据库
+brew "carapace"         # 跨 CLI 现代上下文自动补全引擎
 brew "zsh-autosuggestions"
 brew "zsh-syntax-highlighting"
 

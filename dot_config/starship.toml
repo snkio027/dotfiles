@@ -5,9 +5,9 @@
 
 palette = "catppuccin_mocha"
 add_newline = false
-command_timeout = 5000 # 防超时调优: 提升至 5000ms，防止首次/冷启动工具链 (如 zig, rustc) 探针超时报 [WARN]
+command_timeout = 5000 # 防超时调优: 5000ms
 
-# 左侧提示符高密度双行结构 (长路径与工具链状态下不挤占输入区)
+# 左侧提示符高密度双行结构
 format = """
 $username\
 $hostname\
@@ -16,16 +16,18 @@ $git_branch\
 $git_commit\
 $git_state\
 $git_status\
+$mise\
 $rust\
 $zig\
 $c\
 $python\
 $docker_context\
 $kubernetes\
+$sudo\
 $line_break\
 $character"""
 
-# 右侧提示符布局 (防抖动设计: 将耗时与错误状态码右置，保持左侧输入区静止)
+# 右侧提示符布局 (防抖动设计: 将耗时与错误状态码右置)
 right_format = """$cmd_duration$status"""
 
 [character]
@@ -35,7 +37,7 @@ vicmd_symbol = "[❮](bold mauve)"
 
 [directory]
 truncation_length = 3
-truncate_to_repo = true # Monorepo 友好: 自动以最近的 Git 项目根目录作为截断锚点
+truncate_to_repo = true # Monorepo 锚点自动截断
 style = "bold blue"
 repo_root_style = "bold sapphire"
 repo_root_format = "[$before_root_path]($style)[$repo_root]($repo_root_style)[$path]($style)[$read_only]($read_only_style) "
@@ -63,7 +65,7 @@ format = "on [$symbol$branch]($style) "
 [git_status]
 style = "red"
 format = '([\[$all_status$ahead_behind\]]($style) )'
-ignore_submodules = true # 性能关键: 跳过对巨型分布式仓库子模块 (Submodules) 的递归检测，消除回车延迟
+ignore_submodules = true # 消除超大微服务仓库回车延迟
 conflicted = "⚔${count}"
 ahead = "⇡${count}"
 behind = "⇣${count}"
@@ -73,6 +75,12 @@ modified = "!${count}"
 staged = "+${count}"
 renamed = "»${count}"
 deleted = "✘${count}"
+
+[mise]
+symbol = "⚡ "
+style = "bold lavender"
+format = "[$symbol$active]($style) "
+disabled = false
 
 [rust]
 symbol = "🦀 "
@@ -92,7 +100,7 @@ format = "via [$symbol$version]($style) "
 symbol = "⚙️ "
 style = "bold sapphire"
 detect_extensions = ["c", "h", "cpp", "hpp", "cc"]
-detect_files = ["Makefile", "CMakeLists.txt", "meson.build", "go.mod"]
+detect_files = ["Makefile", "CMakeLists.txt", "meson.build"]
 format = "via [$symbol$version]($style) "
 
 [python]
@@ -112,6 +120,11 @@ disabled = false
 symbol = "☸ "
 style = "bold teal"
 format = 'on [$symbol$context( \($namespace\))]($style) '
+
+[sudo]
+style = "bold red"
+symbol = "🧙 "
+disabled = false
 
 # Catppuccin Mocha 官方调色板
 [palettes.catppuccin_mocha]

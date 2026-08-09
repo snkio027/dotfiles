@@ -78,6 +78,7 @@
 [core]
     editor = {{ .git.editor }}
     pager = delta 2>/dev/null || less -RFX
+    excludesFile = ~/.config/git/ignore
     autocrlf = input
 {{- if .is_mac }}
     fsmonitor = true
@@ -85,6 +86,9 @@
 {{- end }}
     untrackedCache = true
     quotePath = false
+
+[url "git@github.com:"]
+    insteadOf = https://github.com/
 
 [index]
     threads = true
@@ -168,7 +172,7 @@
     st  = status --short
     dfs = diff --staged
     amend = commit --amend --no-edit
-    sweep = !git branch -vv | grep ': gone]' | awk '{print $1}' | xargs -r git branch -D
+    sweep = !git branch -vv | grep ': gone]' | awk '{print $1}' | xargs git branch -D 2>/dev/null || true
     sync  = !git pull --rebase && git push
     undo  = reset HEAD~1 --mixed
     rescue = reflog show --date=iso

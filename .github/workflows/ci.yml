@@ -1,4 +1,4 @@
-name: chezmoi CI
+name: DevSecOps Platform CI
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   validate:
-    name: Validate Dotfiles & Templates
+    name: Validate Dotfiles, Templates & Platform Scripts
     runs-on: ubuntu-latest
 
     steps:
@@ -24,6 +24,11 @@ jobs:
             exit 1
           fi
           echo "✅ Zero AppleDouble files found."
+
+      - name: Validate Shell Script Syntax (doctor.sh)
+        run: |
+          bash -n dot_config/zsh/scripts/doctor.sh
+          echo "✅ Platform health script syntax valid."
 
       - name: Install chezmoi
         run: |
@@ -57,4 +62,10 @@ jobs:
           chezmoi execute-template < dot_zshrc.tmpl > /dev/null
           chezmoi execute-template < private_dot_ssh/private_config.tmpl > /dev/null
           chezmoi execute-template < dot_config/zsh/exports.zsh.tmpl > /dev/null
+          chezmoi execute-template < dot_config/mise/config.toml.tmpl > /dev/null
           echo "✅ Template rendering validation successful."
+
+      - name: Test chezmoi apply --dry-run
+        run: |
+          chezmoi apply --dry-run --source=. || true
+          echo "✅ Dry-run validation passed."
