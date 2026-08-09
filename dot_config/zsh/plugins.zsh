@@ -10,9 +10,13 @@ setopt HIST_REDUCE_BLANKS   # 移除历史命令中多余的空格
 setopt SHARE_HISTORY        # 多个终端会话间实时共享历史
 setopt EXTENDED_HISTORY     # 记录命令执行的时间戳
 setopt INTERACTIVE_COMMENTS # 允许在交互式命令行中使用 # 注释
+unsetopt PROMPT_SP          # 关键：彻底关闭无换行符脚本输出时的 100+ 空格填充 Bug
+unsetopt PROMPT_CR          # 避免脚本输出在回车前跳行错位
 
-# 环境变量卫生
+# 环境变量与 Hook 卫生
 export HOMEBREW_NO_ENV_HINTS=1
+export DIRENV_LOG_FORMAT=""  # 屏蔽 direnv 进入目录时的冗长日志输出
+export MISE_QUIET=1          # 屏蔽 mise 内部钩子静默输出
 export PYTHONWARNINGS="ignore::SyntaxWarning"
 
 # 自动从 macOS Keychain 钥匙串加载已保存的 SSH Key 到 agent
@@ -59,26 +63,10 @@ if command -v carapace &>/dev/null; then
     eval "$(carapace _carapace)"
 fi
 
-# --- 5. Starship 瞬时提示符 (Transient Prompt) ---
-# 确保在 Atuin 之后加载，避免 ZLE 钩子碰撞，按下回车后将已执行的历史行强行收缩为 ❯ 静态短箭头
+# 避免末尾缺少换行符的命令输出在行首打出反色 % 符号
+PROMPT_EOL_MARK=""
+
+# --- 5. Starship 响应式提示符 ---
 if command -v starship &>/dev/null; then
     eval "$(starship init zsh)"
-
-    export STARSHIP_THEME="$PROMPT"
-
-    _starship_transient_precmd() {
-        PROMPT="$STARSHIP_THEME"
-    }
-
-    _starship_transient_accept_line() {
-        [[ -n "$POSTDISPLAY" ]] && POSTDISPLAY=""
-        PROMPT="%(?.%F{green}❯%f.%F{red}❯%f) "
-        RPROMPT=""
-        zle .reset-prompt
-        zle .accept-line
-    }
-
-    autoload -Uz add-zsh-hook
-    add-zsh-hook precmd _starship_transient_precmd
-    zle -N accept-line _starship_transient_accept_line
 fi
