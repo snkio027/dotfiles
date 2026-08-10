@@ -18,8 +18,9 @@ filter_mode_shell_up_key_binding = "directory"
 style = "compact"
 inline_height = 20
 show_preview = true
-enter_accept = false
+enter_accept = true   # 选中后直接执行，不额外渲染一次提示符
 exit_mode = "return-original"
+keymap_mode = "auto"  # 与 Starship 多行 ZLE 兼容
 
 # 安全防范：自动拦截过滤敏感 Command (API Tokens / Passwords)
 secrets_filter = true

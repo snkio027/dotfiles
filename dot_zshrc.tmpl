@@ -35,16 +35,14 @@ if command -v direnv &>/dev/null; then
     eval "$(direnv hook zsh)"
 fi
 
-# Atuin 加密 Shell 历史数据库初始化 (必须在 Starship Transient Prompt ZLE 钩子之前挂载)
+# Atuin 加密 Shell 历史数据库初始化
+# --disable-up-arrow: 防止 Atuin 接管方向键，避免与 Starship 多行提示符的 ZLE hook 冲突导致双重渲染
 if command -v atuin &>/dev/null; then
-    eval "$(atuin init zsh)"
+    eval "$(atuin init zsh --disable-up-arrow)"
 fi
 
-# FZF 命令行模糊搜索集成 (标准跨 Shell eval 载入)
+# FZF 命令行模糊搜索集成 (fzf ≥0.48 统一入口，已废弃旧 Homebrew key-bindings.zsh 分开挂载)
 if command -v fzf &>/dev/null; then
-    if [ -f "${HOMEBREW_PREFIX:-/opt/homebrew}/opt/fzf/shell/key-bindings.zsh" ]; then
-        source "${HOMEBREW_PREFIX:-/opt/homebrew}/opt/fzf/shell/key-bindings.zsh"
-    fi
     eval "$(fzf --zsh 2>/dev/null || true)"
 fi
 

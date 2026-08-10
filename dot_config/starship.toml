@@ -7,7 +7,7 @@ palette = "catppuccin_mocha"
 add_newline = false
 command_timeout = 5000 # 防超时调优: 5000ms
 
-# 左侧提示符高密度双行结构
+# 左侧提示符双行结构 (右侧 RPROMPT 已禁用，防止并行任务输出与 RPROMPT 光标定位冲突)
 format = """
 $username\
 $hostname\
@@ -27,7 +27,7 @@ $sudo\
 $line_break\
 $character"""
 
-# 右侧提示符布局 (防抖动设计: 将耗时与错误状态码右置)
+# 右侧提示符 (耗时只在命令 ≥2s 时才显示，避免 Atuin precmd 重绘时出现虚假 0s)
 right_format = """$cmd_duration$status"""
 
 [character]
@@ -43,7 +43,7 @@ repo_root_style = "bold sapphire"
 repo_root_format = "[$before_root_path]($style)[$repo_root]($repo_root_style)[$path]($style)[$read_only]($read_only_style) "
 
 [cmd_duration]
-min_time = 500
+min_time = 2000   # 仅对执行超过 2s 的命令显示耗时，防止 Atuin precmd 重绘引发的虚假 0s
 style = "bold yellow"
 format = "took [$duration]($style) "
 

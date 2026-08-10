@@ -10,8 +10,9 @@ setopt HIST_REDUCE_BLANKS   # 移除历史命令中多余的空格
 setopt SHARE_HISTORY        # 多个终端会话间实时共享历史
 setopt EXTENDED_HISTORY     # 记录命令执行的时间戳
 setopt INTERACTIVE_COMMENTS # 允许在交互式命令行中使用 # 注释
-unsetopt PROMPT_SP          # 关键：彻底关闭无换行符脚本输出时的 100+ 空格填充 Bug
-unsetopt PROMPT_CR          # 避免脚本输出在回车前跳行错位
+unsetopt PROMPT_SP          # 关闭无换行符脚本输出时的 % 符号与空格填充
+# 注意: PROMPT_CR 必须保留启用 (不 unsetopt) —— 它负责在绘制提示符前输出 \r 将光标归位第 0 列
+# 关闭 PROMPT_CR 会导致子进程输出末尾无 \n 时光标停在中间列，造成后续文字右移错位
 
 # 环境变量与 Hook 卫生
 export HOMEBREW_NO_ENV_HINTS=1
