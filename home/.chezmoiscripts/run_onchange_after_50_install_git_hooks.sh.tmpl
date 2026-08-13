@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# ------------------------------------------------------------------------------
+# run_onchange_after_50_install_git_hooks.sh.tmpl
+# DevSecOps 自动防御：为本地 Git 仓库一键自动注入 gitleaks pre-commit 钩子
+# ------------------------------------------------------------------------------
+
+set -euo pipefail
+
+{{- if eq (index . "machine_profile") "devcontainer" }}
+echo "ℹ️  DevContainer 不修改宿主仓库的 Git hooks。"
+exit 0
+{{- end }}
+
+if command -v gitleaks &>/dev/null; then
+    # 检查当前 dotfiles 源码仓库是否有 .git 目录
+    HOOK_FILE="{{ .chezmoi.workingTree }}/.git/hooks/pre-commit"
+    if [ -d "{{ .chezmoi.workingTree }}/.git" ] && [ -d "{{ .chezmoi.workingTree }}/.git/hooks" ]; then
+        if [ -e "$HOOK_FILE" ] && ! grep -Fq "# Managed by chezmoi" "$HOOK_FILE"; then
+            echo "⚠️  已存在非 Chezmoi 管理的 pre-commit hook，跳过覆盖: $HOOK_FILE"
+            exit 0
+        fi
+
+        echo "🔒  正在挂载 gitleaks pre-commit 提交拦截钩子..."
+        cat <<'EOF' >"$HOOK_FILE"
+#!/usr/bin/env bash
+# Managed by chezmoi
+if command -v gitleaks &>/dev/null; then
+    gitleaks git --pre-commit --staged --redact --verbose .
+fi
+EOF
+        chmod +x "$HOOK_FILE"
+        echo "✅  gitleaks pre-commit 钩子注入完成。"
+    fi
+fi

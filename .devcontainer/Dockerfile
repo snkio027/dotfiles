@@ -4,20 +4,28 @@
 # ------------------------------------------------------------------------------
 FROM mcr.microsoft.com/devcontainers/base:ubuntu-24.04
 
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+USER root
+
+# Install the OS base; chezmoi provisions current Homebrew formulae afterwards.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  age \
+  build-essential \
+  ca-certificates \
+  curl \
+  git \
+  jq \
+  unzip \
+  xz-utils \
+  zsh \
+  && rm -rf /var/lib/apt/lists/*
+
+# Install user-scoped tooling without granting the interactive user root access
 USER vscode
 ENV USER=vscode
 ENV HOME=/home/vscode
-
-# Install core build dependencies, Zsh, git, curl
-RUN apt-get update && apt-get install -y --no-install-recommends \
-  build-essential \
-  curl \
-  git \
-  zsh \
-  age \
-  jq \
-  ca-certificates \
-  && rm -rf /var/lib/apt/lists/*
+ENV PATH="/home/vscode/.local/bin:${PATH}"
 
 # Install chezmoi
 RUN sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "$HOME/.local/bin"

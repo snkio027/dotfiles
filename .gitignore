@@ -6,8 +6,8 @@
 *.swp
 *.swo
 *~
+nvim.log
 .idea/
-.vscode/
 
 # 归档压缩包
 git.tar

@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# ------------------------------------------------------------------------------
+# run_onchange_after_20_brew_bundle.sh.tmpl
+# 当 Brewfile 文件发生变更或初始化应用时，自动触发软件包安装与更新。
+# Brewfile 哈希值: {{ include "../Brewfile" | sha256sum }}
+# ------------------------------------------------------------------------------
+
+set -euo pipefail
+
+BREWFILE="{{ .chezmoi.workingTree }}/Brewfile"
+
+if command -v brew &>/dev/null && [ -f "$BREWFILE" ]; then
+    echo "📦  正在同步 Brewfile 中未锁定的最新稳定版工具..."
+    brew update
+    # Homebrew 6 requires explicit trust for third-party formulae. Keep the
+    # grant scoped to HashiCorp's Terraform formula instead of the whole tap.
+    if brew commands | grep -qx "trust"; then
+        brew trust --formula hashicorp/tap/terraform
+    fi
+    brew bundle --file="$BREWFILE"
+    echo "✅  Homebrew 软件包同步完成。"
+fi

@@ -1,5 +1,12 @@
 name: DevSecOps Platform CI
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [main]
@@ -13,7 +20,14 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install validation toolchain
+        run: |
+          brew update
+          brew bundle --file=.github/Brewfile
 
       - name: Check for AppleDouble (._*) metadata pollution
         run: |
@@ -25,47 +39,72 @@ jobs:
           fi
           echo "✅ Zero AppleDouble files found."
 
-      - name: Validate Shell Script Syntax (doctor.sh)
+      - name: Configure chezmoi fixture
+        env:
+          CHEZMOI_PROFILE: workstation
+          GIT_AUTHOR_NAME: CI Test User
+          GIT_AUTHOR_EMAIL: ci@example.com
         run: |
-          bash -n dot_config/zsh/scripts/doctor.sh
-          echo "✅ Platform health script syntax valid."
+          chezmoi init --source="$GITHUB_WORKSPACE"
 
-      - name: Install chezmoi
+      - name: Validate workflow and repository security
         run: |
-          sh -c "$(curl -fsLS get.chezmoi.io)" -- -b ~/.local/bin
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          actionlint
+          zizmor .github/workflows/ci.yml
+          gitleaks dir --redact --no-banner .
+
+      - name: Validate Shell templates
+        run: |
+          tmp_dir="$(mktemp -d)"
+          trap 'rm -rf "$tmp_dir"' EXIT
+
+          for template in home/dot_zshenv.tmpl home/dot_zprofile.tmpl home/dot_zshrc.tmpl home/dot_config/zsh/exports.zsh.tmpl; do
+            rendered="$tmp_dir/$(basename "${template%.tmpl}")"
+            chezmoi execute-template --source=. < "$template" > "$rendered"
+            zsh -n "$rendered"
+          done
+
+          chezmoi execute-template --source=. < home/dot_config/zsh/scripts/executable_doctor.sh.tmpl > "$tmp_dir/doctor.sh"
+          bash -n "$tmp_dir/doctor.sh"
+          shellcheck -S warning -s bash "$tmp_dir/doctor.sh"
+
+          for script in home/.chezmoiscripts/*.tmpl; do
+            rendered="$tmp_dir/$(basename "${script%.tmpl}")"
+            chezmoi execute-template --source=. < "$script" > "$rendered"
+            bash -n "$rendered"
+            shellcheck -S warning -s bash "$rendered"
+            shfmt -d -i 4 -ci "$rendered"
+          done
 
       - name: Run chezmoi doctor
-        run: chezmoi doctor || true
+        continue-on-error: true
+        run: chezmoi doctor
 
       - name: Test chezmoi template rendering
         run: |
-          mkdir -p ~/.config/chezmoi
-          cat << 'EOF' > ~/.config/chezmoi/chezmoi.toml
-          [data]
-              name = "CI Test User"
-              email = "ci@example.com"
-              is_mac = false
-              is_linux = true
-              is_arm64 = false
-              op_ssh_sign = "/opt/1Password/op-ssh-sign"
-              op_ssh_socket = "~/.1password/agent.sock"
-              features.use_1password = true
-              features.use_zinit = true
-              features.use_starship = true
-              features.use_atuin = true
-              git.gpg_format = "ssh"
-              git.default_branch = "main"
-              git.editor = "nvim"
-          EOF
-          chezmoi execute-template < dot_gitconfig.tmpl > /dev/null
-          chezmoi execute-template < dot_zshrc.tmpl > /dev/null
-          chezmoi execute-template < private_dot_ssh/private_config.tmpl > /dev/null
-          chezmoi execute-template < dot_config/zsh/exports.zsh.tmpl > /dev/null
-          chezmoi execute-template < dot_config/mise/config.toml.tmpl > /dev/null
+          chezmoi execute-template --source=. < home/dot_config/git/config.tmpl > /dev/null
+          chezmoi execute-template --source=. < home/dot_zshenv.tmpl > /dev/null
+          chezmoi execute-template --source=. < home/dot_zprofile.tmpl > /dev/null
+          chezmoi execute-template --source=. < home/dot_zshrc.tmpl > /dev/null
+          chezmoi execute-template --source=. < home/private_dot_ssh/private_config.tmpl > /dev/null
+          chezmoi execute-template --source=. < home/private_dot_ssh/private_allowed_signers.tmpl > /dev/null
+          chezmoi execute-template --source=. < home/dot_config/zsh/exports.zsh.tmpl > /dev/null
           echo "✅ Template rendering validation successful."
+
+      - name: Validate static configuration
+        run: |
+          find . -path ./.git -prune -o -type f -name '*.json' -print0 | xargs -0 -n1 jq empty
+          find . -path ./.git -prune -o -type f \( -name '*.yml' -o -name '*.yaml' \) -print0 | xargs -0 -n1 ruby -e 'require "yaml"; YAML.load_file(ARGV.fetch(0))'
+          find home/dot_config .github -type f -name '*.toml' -print0 | xargs -0 taplo format --check
+          stylua --check home/dot_config/nvim
+          hadolint --failure-threshold error .devcontainer/Dockerfile
+
+          YAZI_CONFIG_HOME="$PWD/home/dot_config/yazi" yazi --help > /dev/null
+          lazygit --use-config-file="$PWD/home/dot_config/lazygit/config.yml" --version
+          STARSHIP_CONFIG="$PWD/home/dot_config/starship.toml" starship print-config > /dev/null
+          zellij --config "$PWD/home/dot_config/zellij/config.kdl" setup --check
 
       - name: Test chezmoi apply --dry-run
         run: |
-          chezmoi apply --dry-run --source=. || true
+          chezmoi apply --dry-run --source=.
           echo "✅ Dry-run validation passed."

@@ -1,0 +1,30 @@
+# ------------------------------------------------------------------------------
+# Atuin 端到端加密 Shell 历史数据库配置文件
+# DevSecOps 生产级 Profile | Ctrl+R 全局检索，Up 键保留原生逐条历史
+# ------------------------------------------------------------------------------
+
+# 开启多终端历史自动同步
+auto_sync = true
+sync_frequency = "1h"
+
+# 默认全局搜索模式与过滤规则
+search_mode = "daemon-fuzzy"
+filter_mode = "global"
+
+# 视觉样式与高密度交互
+style = "compact"
+inline_height = 20
+show_preview = true
+enter_accept = true           # 选中后直接执行，不额外渲染一次提示符
+exit_mode = "return-original"
+keymap_mode = "auto"          # 与 Starship 多行 ZLE 兼容
+
+# 安全防范：自动拦截过滤敏感 Command (API Tokens / Passwords)
+secrets_filter = true
+store_failed = true
+workspaces = true
+
+[daemon]
+enabled = true
+autostart = true
+sync_frequency = 300

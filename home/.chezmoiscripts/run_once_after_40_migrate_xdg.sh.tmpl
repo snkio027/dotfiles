@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# ------------------------------------------------------------------------------
+# 一次性迁移仍位于 HOME 根目录的旧 Git 配置。
+# 只有旧配置与 XDG 配置语义完全一致时才删除，避免覆盖本地手工修改。
+# ------------------------------------------------------------------------------
+
+set -euo pipefail
+
+XDG_GIT_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/git/config"
+LEGACY_GIT_CONFIG="$HOME/.gitconfig"
+XDG_MARKDOWNLINT_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/markdownlint-cli2/config.yaml"
+LEGACY_MARKDOWNLINT_CONFIG="$HOME/.markdownlint-cli2.yaml"
+
+if [ -L "$LEGACY_MARKDOWNLINT_CONFIG" ] && [ "$(readlink "$LEGACY_MARKDOWNLINT_CONFIG")" = "$XDG_MARKDOWNLINT_CONFIG" ]; then
+    rm -f -- "$LEGACY_MARKDOWNLINT_CONFIG"
+fi
+
+if [ ! -f "$LEGACY_GIT_CONFIG" ] || [ ! -f "$XDG_GIT_CONFIG" ]; then
+    exit 0
+fi
+
+LEGACY_VALUES="$(git config --file "$LEGACY_GIT_CONFIG" --list | LC_ALL=C sort)"
+XDG_VALUES="$(git config --file "$XDG_GIT_CONFIG" --list | LC_ALL=C sort)"
+
+if [ "$LEGACY_VALUES" = "$XDG_VALUES" ]; then
+    rm -f -- "$LEGACY_GIT_CONFIG"
+    echo "✅  Git 全局配置已迁移至 ${XDG_GIT_CONFIG}。"
+else
+    echo "⚠️  ${LEGACY_GIT_CONFIG} 含有未合并的本地设置，已保留；请审核后手动合并至 ${XDG_GIT_CONFIG}。"
+fi

@@ -1,0 +1,60 @@
+# ------------------------------------------------------------------------------
+# Ghostty GPU 加速原生终端模拟器配置文件
+# DevSecOps 生产级 Profile | Catppuccin Mocha 玻璃透明度与高阶人机工程
+# ------------------------------------------------------------------------------
+
+# 1. 外观样式与色彩主题
+theme = "light:Catppuccin Latte,dark:Catppuccin Mocha"
+font-family = "Maple Mono NF CN"
+font-family = "PingFang SC"
+font-size = 14
+font-thicken = true
+# Maple Mono 官方建议组合：智能连字、字符变体与易辨识的 0。
+font-feature = ["calt", "cv01", "ss01", "zero"]
+minimum-contrast = 3
+
+# 玻璃透明度与阴影效果
+background-opacity = 0.96
+background-blur-radius = 12
+
+window-padding-x = 14
+window-padding-y = 14
+window-decoration = true
+window-title-font-family = "Inter"
+unfocused-split-opacity = 0.75
+
+# 2. 窗口行为与光标样式
+macos-titlebar-style = transparent
+window-height = 42
+window-width = 135
+cursor-style = block
+cursor-style-blink = false
+
+# 左 Option 作为 Alt/Meta，保留 Zsh 的单词级移动。
+macos-option-as-alt = left
+
+# 3. 鼠标交互与剪贴板
+focus-follows-mouse = true
+mouse-hide-while-typing = true
+scrollback-limit = 100000
+copy-on-select = true
+clipboard-read = allow
+clipboard-write = allow
+confirm-close-surface = false
+
+# 4. 后台任务完成系统通知 (运行 >15s 且非当前窗口焦点时弹窗通知)
+notify-on-command-finish = unfocused
+notify-on-command-finish-after = 15s
+notify-on-command-finish-action = notify
+
+# 5. 全局下拉快捷终端 (Quake Mode: Cmd+Alt+Space)
+keybind = global:cmd+alt+space=toggle_quick_terminal
+
+# 6. 分屏管理与 Vim 风格焦点切换快捷键
+keybind = super+d=new_split:right
+keybind = super+shift+d=new_split:down
+keybind = super+h=goto_split:left
+keybind = super+l=goto_split:right
+keybind = super+k=goto_split:up
+keybind = super+j=goto_split:down
+keybind = super+z=toggle_split_zoom

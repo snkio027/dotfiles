@@ -1,0 +1,30 @@
+# ------------------------------------------------------------------------------
+# Yazi 高性能 TUI 文件管理器配置文件
+# Yazi 26.x | Ghostty 图像协议与现代 opener 语法
+# ------------------------------------------------------------------------------
+
+[mgr]
+ratio = [1, 3, 4]      # 黄金比例三栏布局 (父目录 : 当前目录 : 预览区)
+show_hidden = true     # 显示隐藏文件 (点文件)
+show_symlink = true    # 显示符号链接标志
+sort_by = "natural"
+sort_sensitive = false
+sort_dir_first = true  # 目录始终排在文件最前面
+linemode = "size"      # 右侧栏显示文件大小
+scrolloff = 5
+
+[preview]
+wrap = "no"
+tab_size = 4
+max_width = 1000
+max_height = 1000
+image_filter = "triangle"
+image_quality = 75
+image_delay = 20
+
+[opener]
+edit = [{ run = '${EDITOR:-nvim} %s', block = true, for = "unix" }]
+open = [
+  { run = 'open %s', orphan = true, desc = "打开", for = "macos" },
+  { run = 'xdg-open %s', orphan = true, desc = "打开", for = "linux" },
+]

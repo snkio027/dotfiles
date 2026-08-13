@@ -3,21 +3,9 @@
   "build": {
     "dockerfile": "Dockerfile"
   },
-  "customizations": {
-    "vscode": {
-      "settings": {
-        "terminal.integrated.defaultProfile.linux": "zsh",
-        "editor.formatOnSave": true
-      },
-      "extensions": [
-        "eamodio.gitlens",
-        "ms-azuretools.vscode-docker",
-        "golang.go",
-        "rust-lang.rust-analyzer",
-        "charliermarsh.ruff"
-      ]
-    }
+  "containerEnv": {
+    "CHEZMOI_PROFILE": "devcontainer"
   },
   "remoteUser": "vscode",
-  "postCreateCommand": "chezmoi init --apply --source=/workspaces/dotfiles || true"
+  "postCreateCommand": "GIT_AUTHOR_NAME=\"${GIT_AUTHOR_NAME:-Dev Container}\" GIT_AUTHOR_EMAIL=\"${GIT_AUTHOR_EMAIL:-devcontainer@localhost}\" chezmoi init --apply --source=/workspaces/dotfiles"
 }

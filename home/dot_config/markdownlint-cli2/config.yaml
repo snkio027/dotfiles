@@ -1,0 +1,4 @@
+# Global Markdown defaults. A project-local config closer to the file can override these.
+config:
+  # Tables, URLs and mixed CJK text frequently exceed an arbitrary column limit.
+  MD013: false

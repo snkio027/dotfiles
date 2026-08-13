@@ -1,0 +1,56 @@
+# ------------------------------------------------------------------------------
+# ~/.zshrc — Zsh Shell 交互终端入口配置模板
+# 由 chezmoi 托管 | DevSecOps 生产级 Profile
+# ------------------------------------------------------------------------------
+
+# --- 1. 加载 Shell 模块化子配置（环境、别名、补全）---
+ZSH_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/zsh"
+
+if [ -d "$ZSH_CONFIG_DIR" ]; then
+    [ -f "$ZSH_CONFIG_DIR/exports.zsh" ] && source "$ZSH_CONFIG_DIR/exports.zsh"
+    [ -f "$ZSH_CONFIG_DIR/aliases.zsh" ] && source "$ZSH_CONFIG_DIR/aliases.zsh"
+    [ -f "$ZSH_CONFIG_DIR/plugins.zsh" ] && source "$ZSH_CONFIG_DIR/plugins.zsh"
+fi
+
+# --- 2. 交互式工具钩子（生成结果按二进制 mtime 缓存）---
+
+if command -v direnv &>/dev/null; then
+    _zsh_cached_init direnv direnv hook zsh
+fi
+
+{{- if .features.use_atuin }}
+if command -v atuin &>/dev/null; then
+    _zsh_cached_init atuin atuin init zsh --disable-up-arrow
+fi
+{{- end }}
+
+if command -v fzf &>/dev/null; then
+    _zsh_cached_init fzf fzf --zsh
+fi
+
+if command -v zoxide &>/dev/null; then
+    _zsh_cached_init zoxide zoxide init zsh
+fi
+
+if command -v carapace &>/dev/null; then
+    export CARAPACE_BRIDGES='zsh,fish,bash'
+    _zsh_cached_init carapace carapace _carapace
+fi
+
+{{- if .features.use_starship }}
+if command -v starship &>/dev/null; then
+    _zsh_cached_init starship starship init zsh
+fi
+{{- end }}
+
+# zsh-autosuggestions 自动补全建议插件
+if [ -f "${HOMEBREW_PREFIX:-/opt/homebrew}/share/zsh-autosuggestions/zsh-autosuggestions.zsh" ]; then
+    source "${HOMEBREW_PREFIX:-/opt/homebrew}/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
+fi
+
+# zsh-syntax-highlighting 命令行语法高亮插件 (须在末尾挂载)
+if [ -f "${HOMEBREW_PREFIX:-/opt/homebrew}/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]; then
+    source "${HOMEBREW_PREFIX:-/opt/homebrew}/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+fi
+
+unset -f _zsh_cached_init 2>/dev/null || true

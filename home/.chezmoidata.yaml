@@ -1,0 +1,17 @@
+# ==============================================================================
+# .chezmoidata.yaml — 全局静态 chezmoi 数据字典
+# Git 默认值与功能开关
+# ==============================================================================
+
+# 全局 Git 默认行为
+git:
+  default_branch: "main"
+  gpg_format: "ssh"
+  editor: "nvim"
+
+# 全局功能开关
+features:
+  # SSH 认证/签名使用本地 Ed25519 key；需要 1Password Agent 时再显式开启。
+  use_1password: false
+  use_starship: true
+  use_atuin: true

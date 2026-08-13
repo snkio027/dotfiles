@@ -1,0 +1,70 @@
+# ------------------------------------------------------------------------------
+# Zsh 环境变量导出配置模板
+# 由 chezmoi 托管 | DevSecOps 生产级 Profile
+# ------------------------------------------------------------------------------
+
+# --- 1. 全局 PATH 环境变量设置 ---
+typeset -U path
+# 清理从旧父进程继承的 Runtime 管理器路径与环境覆盖。
+path=("${(@)path:#${HOME}/.local/share/mise/*}")
+unset GOROOT RUSTUP_TOOLCHAIN
+unset ${(M)${(k)parameters}:#(MISE_*|__MISE_*)} 2>/dev/null
+
+path=(
+{{- if .is_mac }}
+{{- if .is_arm64 }}
+    /opt/homebrew/bin
+    /opt/homebrew/sbin
+{{- else }}
+    /usr/local/bin
+    /usr/local/sbin
+{{- end }}
+{{- else if .is_linux }}
+    /home/linuxbrew/.linuxbrew/bin
+    /home/linuxbrew/.linuxbrew/sbin
+{{- end }}
+    $HOME/.cargo/bin
+    $HOME/.local/bin
+    $HOME/go/bin
+    $HOME/.zvm/bin
+    $HOME/.zvm/self
+    $path
+)
+export PATH
+
+# --- 2. 默认编辑器与 Pager 分页器 ---
+export EDITOR="{{ .git.editor }}"
+export VISUAL="{{ .git.editor }}"
+export GIT_EDITOR="{{ .git.editor }}"
+export SUDO_EDITOR="{{ .git.editor }}"
+export SYSTEMD_EDITOR="{{ .git.editor }}"
+export KUBE_EDITOR="{{ .git.editor }}"
+export FCEDIT="{{ .git.editor }}"
+export NVIM_LOG_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/nvim/log"
+export PAGER="less -RF"
+export LANG="en_US.UTF-8"
+
+# --- 3. 硬件编译加速旗标 ---
+{{- if and .is_mac .is_arm64 }}
+# 针对 macOS Apple Silicon 架构进行编译指令集原生优化
+export RUSTFLAGS="-C target-cpu=native"
+export ZIG_FLAGS="-mcpu=native"
+export CFLAGS="-march=native"
+export CXXFLAGS="-march=native"
+{{- end }}
+
+# --- 4. 工具链与主题环境变量 ---
+export CARGO_HOME="$HOME/.cargo"
+export GOPATH="$HOME/go"
+# ZVM 目前不支持 XDG Base Directory；仅保留其官方安装位置，避免污染 .zshenv。
+export ZVM_INSTALL="$HOME/.zvm/self"
+export UV_PYTHON_PREFERENCE="only-system"
+export BAT_THEME="Catppuccin Mocha"
+
+# --- 5. FZF 配色主题配置 (Catppuccin Mocha 调色板) ---
+export FZF_DEFAULT_OPTS="--height 40% --layout=reverse --border \
+  --color=bg+:#313244,bg:#1e1e2e,spinner:#f5e0dc,hl:#f38ba8 \
+  --color=fg:#cdd6f4,header:#f38ba8,info:#cba6f7,pointer:#f5e0dc \
+  --color=marker:#b4befe,fg+:#cdd6f4,prompt:#cba6f7,hl+:#f38ba8"
+export FZF_CTRL_T_OPTS="--preview 'bat --color=always --style=numbers --line-range=:200 {} 2>/dev/null || eza --tree --level=2 --color=always {} 2>/dev/null'"
+export FZF_ALT_C_OPTS="--preview 'eza --tree --level=2 --color=always {} 2>/dev/null'"

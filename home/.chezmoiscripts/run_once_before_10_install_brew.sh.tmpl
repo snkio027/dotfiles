@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# ------------------------------------------------------------------------------
+# run_once_before_10_install_brew.sh.tmpl
+# chezmoi 前置初始化脚本: 仅负责包管理器 (Homebrew / Linuxbrew) 的基座安装
+# 单一职责：确保系统的 brew 引擎及 C 编译器 (gcc) 就位，不包含软件包 bundle。
+# ------------------------------------------------------------------------------
+
+set -euo pipefail
+
+echo "🍺  正在检查 Homebrew/Linuxbrew 基座安装状态..."
+if ! command -v brew &>/dev/null; then
+{{- if .is_mac }}
+    echo "正在为 macOS 安装 Homebrew..."
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+{{- else if .is_linux }}
+    echo "正在安装 Linuxbrew..."
+    NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+{{- end }}
+    echo "✅  Homebrew 基座安装成功。"
+else
+    echo "✔  Homebrew 基座已就位。"
+fi
+
+# 确保 Linux 平台拥有 gcc 编译链 (支持 Neovim Treesitter 语法解析器编译)
+{{- if .is_linux }}
+if ! command -v gcc &>/dev/null; then
+    echo "⚙️  正在为 Linuxbrew 安装 C 编译器 (gcc)..."
+    brew install gcc || true
+fi
+{{- end }}

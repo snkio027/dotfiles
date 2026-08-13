@@ -1,0 +1,46 @@
+# ==============================================================================
+# .chezmoi.toml.tmpl — chezmoi 全局引擎配置模板
+# DevSecOps 生产级 Profile | 跨平台 (macOS / Linux) 与 1Password Agent 动态探测
+# ==============================================================================
+
+{{- $email := env "GIT_AUTHOR_EMAIL" -}}
+{{- if empty $email -}}
+{{-   $email = promptStringOnce . "email" "请输入用于 Git & SSH 的邮箱地址" -}}
+{{- end -}}
+{{- $name := env "GIT_AUTHOR_NAME" -}}
+{{- if empty $name -}}
+{{-   $name = promptStringOnce . "name" "请输入用于 Git 的全名" -}}
+{{- end -}}
+
+{{- $is_mac := eq .chezmoi.os "darwin" -}}
+{{- $is_linux := eq .chezmoi.os "linux" -}}
+{{- $is_arm64 := eq .chezmoi.arch "arm64" -}}
+{{- $machine_profile := env "CHEZMOI_PROFILE" -}}
+{{- if empty $machine_profile -}}
+{{-   $machine_profile = "workstation" -}}
+{{- end -}}
+
+{{- $op_ssh_socket := env "OP_SSH_AUTH_SOCK" -}}
+{{- if empty $op_ssh_socket -}}
+{{-   if $is_mac -}}
+{{-     $op_ssh_socket = printf "%s/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock" .chezmoi.homeDir -}}
+{{-   else if $is_linux -}}
+{{-     $op_ssh_socket = printf "%s/.1password/agent.sock" .chezmoi.homeDir -}}
+{{-   end -}}
+{{- end }}
+
+# 固定为初始化时使用的 Git 工作树；.chezmoiroot 会继续解析 home/ source state。
+sourceDir = {{ .chezmoi.workingTree | quote }}
+
+# chezmoi diff 输出美化 (使用 delta 进行 Side-by-Side 双栏对比)
+[diff]
+    pager = "delta --side-by-side"
+
+[data]
+    name = {{ $name | quote }}
+    email = {{ $email | quote }}
+    is_mac = {{ $is_mac }}
+    is_linux = {{ $is_linux }}
+    is_arm64 = {{ $is_arm64 }}
+    machine_profile = {{ $machine_profile | quote }}
+    op_ssh_socket = {{ $op_ssh_socket | quote }}

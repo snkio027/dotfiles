@@ -1,0 +1,15 @@
+# CI validation toolchain: intentionally unpinned so every run uses the latest
+# stable Homebrew formulae available after `brew update`.
+brew "actionlint"
+brew "chezmoi"
+brew "gitleaks"
+brew "hadolint"
+brew "lazygit"
+brew "shellcheck"
+brew "shfmt"
+brew "starship"
+brew "stylua"
+brew "taplo"
+brew "yazi"
+brew "zellij"
+brew "zizmor"

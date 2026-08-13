@@ -1,0 +1,166 @@
+# ==============================================================================
+# $XDG_CONFIG_HOME/git/config — Git 全局配置
+# 2026 云原生与现代开发标准 | Git >= 2.45, OpenSSH >= 9.x
+# Managed by chezmoi
+# ==============================================================================
+
+# ==============================================================================
+# 1. 开发者身份与提交签名 (供应链安全溯源)
+# ==============================================================================
+[user]
+    name = {{ .name | quote }}
+    email = {{ .email | quote }}
+    signingkey = ~/.ssh/keys/git_signing.pub
+
+[commit]
+    gpgsign = true
+    verbose = true
+
+[tag]
+    gpgSign = true
+
+[gpg]
+    format = {{ .git.gpg_format }}
+
+[gpg "ssh"]
+    allowedSignersFile = ~/.ssh/allowed_signers
+    revocationFile = ~/.ssh/revoked_signers
+
+# ==============================================================================
+# 2. 分支与 Rebase 协作工作流 (线性 Git 历史)
+# ==============================================================================
+[init]
+    defaultBranch = {{ .git.default_branch }}
+
+[pull]
+    rebase = true
+
+[rebase]
+    autoStash = true
+    updateRefs = true
+
+[branch]
+    autoSetupMerge = true
+
+# ==============================================================================
+# 3. 网络与远程同步优化
+# ==============================================================================
+[push]
+    default = current
+    autoSetupRemote = true
+    followTags = true
+
+[fetch]
+    prune = true
+    pruneTags = true
+    writeCommitGraph = true
+
+# ==============================================================================
+# 4. 底层协议与性能优化 (大仓 / Monorepo 必备)
+# ==============================================================================
+[protocol]
+    version = 2
+
+[protocol "file"]
+    allow = user
+
+[core]
+    editor = {{ .git.editor }}
+    pager = delta 2>/dev/null || less -RFX
+    excludesFile = ~/.config/git/ignore
+    autocrlf = input
+{{- if .is_mac }}
+    precomposeunicode = true
+{{- end }}
+    untrackedCache = true
+    quotePath = false
+
+[url "git@github.com:"]
+    insteadOf = https://github.com/
+
+[index]
+    threads = true
+
+[maintenance]
+    auto = true
+
+# ==============================================================================
+# 5. Diff & Merge 代码审查体验
+# ==============================================================================
+[diff]
+    algorithm = histogram
+    colorMoved = default
+
+[merge]
+    conflictStyle = zdiff3
+    ff = only
+
+[rerere]
+    enabled = true
+
+# ==============================================================================
+# 6. Delta 语法高亮 Pager 配置 (Catppuccin Mocha 官方调色板)
+# ==============================================================================
+[interactive]
+    diffFilter = delta --color-only
+
+[delta]
+    features = catppuccin-mocha
+    side-by-side = true
+    navigate = true
+    line-numbers = true
+    light = false
+    hyperlinks = true
+
+[delta "catppuccin-mocha"]
+    blame-palette = "#1e1e2e #181825 #11111b #313244 #45475a"
+    commit-decoration-style = "box ul #cba6f7"
+    dark = true
+    file-added-label = [+]
+    file-copied-label = [==]
+    file-decoration-style = "#cdd6f4"
+    file-modified-label = [*]
+    file-removed-label = [-]
+    file-renamed-label = [->]
+    file-style = "bold #cdd6f4"
+    hunk-header-decoration-style = "box ul #a6adc8"
+    hunk-header-file-style = "bold #cdd6f4"
+    hunk-header-line-number-style = "bold #a6adc8"
+    hunk-header-style = "file line-number"
+    line-numbers = true
+    line-numbers-left-format = "{nm:>4}┊"
+    line-numbers-left-style = "#6c7086"
+    line-numbers-minus-style = "bold #f38ba8"
+    line-numbers-plus-style = "bold #a6e3a1"
+    line-numbers-right-format = "{np:>4}│"
+    line-numbers-right-style = "#6c7086"
+    line-numbers-zero-style = "#6c7086"
+    minus-emph-style = "bold #f38ba8 #45475a"
+    minus-empty-line-gaps-style = "normal #181825"
+    minus-non-emph-style = "bold #f38ba8 #313244"
+    minus-style = "bold #f38ba8 #313244"
+    plus-emph-style = "bold #a6e3a1 #45475a"
+    plus-empty-line-gaps-style = "normal #181825"
+    plus-non-emph-style = "bold #a6e3a1 #313244"
+    plus-style = "bold #a6e3a1 #313244"
+    zero-style = "syntax"
+
+[column]
+    ui = auto
+
+[color]
+    ui = auto
+
+# ==============================================================================
+# 7. 快捷别名
+# ==============================================================================
+[alias]
+    lg  = log --color --graph --decorate --abbrev-commit --pretty=format:'%C(yellow)%h%Creset %Cgreen(%cr)%Creset %C(auto)%d%Creset %s'
+    lla = log --graph --all --decorate --topo-order --date=short --pretty=format:'%C(yellow)%h%Creset %C(cyan)%ad%Creset %C(auto)%d%Creset %s'
+    st  = status --short
+    dfs = diff --staged
+    amend = commit --amend --no-edit
+    sweep = !git branch -vv | grep ': gone]' | awk '{print $1}' | xargs git branch -D 2>/dev/null || true
+    sync  = !git pull --rebase && git push
+    undo  = reset HEAD~1 --mixed
+    rescue = reflog show --date=iso
