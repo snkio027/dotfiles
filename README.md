@@ -23,7 +23,7 @@ Homebrew 是系统工具和语言 Runtime 的唯一安装来源。Brewfile 不�
 - Starship 只在对应项目中显示 Node、Go、Rust、Python 与 Terraform 的实际版本。
 - Ghostty 自动跟随系统浅色/深色主题，使用 Maple Mono NF CN 的圆润连字、Nerd 图标与 CJK 2:1 对齐，并提供 GPU 渲染和原生分屏。
 - Zellij 默认处于 locked mode，避免占用 Shell、Neovim 和 macOS 的 Alt 快捷键。
-- Atuin 以 daemon fuzzy 模式提供 `Ctrl-R` 全局检索，方向键保留原生历史行为。
+- Atuin 以 daemon fuzzy 模式持续记录、同步历史，FZF 接管 `Ctrl-R` 检索界面，方向键保留原生历史行为。
 - Neovim 是唯一编辑器；Git、Yazi、sudo、systemd 与 kubectl 的编辑入口统一指向 Neovim。
 - Neovim/LazyVim、LazyGit、Yazi 与全部颜色配置均由 chezmoi 纳管。
 - Markdown 在普通模式渲染标题、任务、表格与代码块，插入模式自动显示原文；Ghostty 直连会话支持文档内图片、数学公式与 Mermaid 预览。
@@ -95,6 +95,121 @@ brewup                            # update + upgrade + cleanup
 ```
 
 `devdoctor` 检查 Homebrew、chezmoi、age、SSH、gitleaks、语言 Runtime、IaC/Kubernetes CLI 和终端工具，并确认 Runtime 的实际路径来自 Homebrew；它不会自动修改系统。
+
+## 功能与快捷键速查
+
+Neovim 的 `<leader>` 是空格键；Ghostty 的 `Cmd` 快捷键属于 macOS，Zellij 默认 locked mode，不会在启动后立即占用 Shell 或 Neovim 按键。以下只记录本仓库显式配置或当前上游配置实际提供的高频功能。
+
+### Shell 与终端工具
+
+经典命令会在对应现代工具存在时自动升级：`ls` → `eza`、`cat` → `bat`、`find` → `fd`、`grep` → `rg`、`top` → `btop`、`cd` → `zoxide`、`vi`/`vim` → `nvim`。
+
+| 快捷键或命令 | 功能 |
+| --- | --- |
+| `Ctrl-R` | 使用 FZF 检索 Shell 历史；Atuin 在后台负责持久记录与同步 |
+| `Ctrl-T` | 使用 FZF 选择文件并插入命令行 |
+| `Alt-C` | 使用 FZF 选择并进入目录 |
+| `Ctrl-F` | 接受完整的 Zsh 自动建议 |
+| `Alt-F` | 向前移动/接受一个单词 |
+| `ll` / `lt` | 详细文件列表 / 目录树 |
+| `z <keyword>` / `cdi` | 按使用频率跳转目录 / 交互式选择目录 |
+| `y` | 启动 Yazi，退出后进入最后访问的目录 |
+| `mkcd <dir>` / `up <n>` | 创建并进入目录 / 向上跳转 n 层 |
+| `port <port>` / `fkill` | 查找端口占用 / 模糊选择并结束进程 |
+| `ghc <owner/repo>` | 克隆 GitHub 仓库 |
+| `dotenv [file]` | 将 `.env` 或指定文件安全加载到当前 Shell |
+| `reload` | 重新加载 Zsh 配置 |
+
+### Neovim 导航与检索
+
+| 快捷键 | 功能 |
+| --- | --- |
+| `<leader><space>` / `<leader>ff` | 查找项目根目录中的文件 |
+| `<leader>fF` / `<leader>fg` | 查找当前目录文件 / Git 文件 |
+| `<leader>fr` / `<leader>fb` | 最近文件 / Buffer 列表 |
+| `<leader>e` / `<leader>fE` | 打开项目根目录 / 当前目录文件树 |
+| `<leader>/` / `<leader>sg` | 在项目根目录全文检索 |
+| `<leader>sG` | 在当前目录全文检索 |
+| `<leader>sk` / `<leader>sR` | 搜索所有快捷键 / 恢复上一次搜索 |
+| `s` / `S` | Flash 跳转 / Tree-sitter 结构跳转 |
+| `H` / `L` | 上一个 / 下一个 Buffer |
+| `Ctrl-H/J/K/L` | 在 Neovim 窗口间移动 |
+| `<leader>uW` | 切换当前窗口的自动换行 |
+
+### 代码、LSP 与诊断
+
+| 快捷键 | 功能 |
+| --- | --- |
+| `grn` / `gra` | 重命名符号 / Code Action |
+| `grr` / `gri` / `grt` | 查找引用 / 实现 / 类型定义 |
+| `gO` | 文档符号与大纲 |
+| `[d` / `]d` | 上一个 / 下一个诊断 |
+| `<leader>sd` / `<leader>sD` | Buffer / 工作区诊断检索 |
+| `<leader>xx` / `<leader>xX` | Trouble 工作区 / Buffer 诊断 |
+| `gcc` / `gc` | 注释当前行 / 选区或动作范围 |
+| `gsa` / `gsd` / `gsr` | 添加 / 删除 / 替换包围符号 |
+| `<leader>p` | 打开 Yank 历史；`[y`、`]y` 切换记录 |
+
+### 测试、调试与 Git
+
+| 快捷键 | 功能 |
+| --- | --- |
+| `<leader>tr` / `<leader>tt` | 运行最近测试 / 当前文件测试 |
+| `<leader>tT` / `<leader>tl` | 运行全部测试文件 / 重新运行上次测试 |
+| `<leader>td` / `<leader>ts` | 调试最近测试 / 测试摘要 |
+| `<leader>tw` / `<leader>to` | Watch 模式 / 测试输出 |
+| `<leader>db` / `<leader>dc` | 设置断点 / 继续调试 |
+| `<leader>di` / `<leader>dO` / `<leader>do` | 步入 / 步过 / 步出 |
+| `<leader>du` / `<leader>de` / `<leader>dt` | DAP UI / 计算表达式 / 终止调试 |
+| `<leader>gs` / `<leader>gd` | Git 状态 / 当前文件 Diff |
+| `<leader>gc` / `<leader>gS` | 提交历史 / Stash |
+| `lg` | 在终端中启动 LazyGit |
+
+### Markdown 与 Python
+
+Markdown 在普通、命令和终端模式渲染标题、任务、表格、代码块、图片和数学公式，进入插入模式后显示原始文本，兼顾阅读与编辑。
+
+| 快捷键 | 功能 |
+| --- | --- |
+| `<leader>um` | 切换 Neovim 内 Markdown 渲染 |
+| `<leader>cp` | 切换 Markdown 浏览器预览，适合 Mermaid 和 Zellij 会话 |
+| `[[` / `]]` | 跳转到上一节 / 下一节 |
+| `gO` | 打开 Markdown 文档大纲 |
+| `<leader>cv` | 在 Python Buffer 中手动选择虚拟环境 |
+
+打开 uv 项目的 Python 文件时，会依据 `uv.lock` 自动激活 `.venv/bin/python`，并把同一环境交给 Pyright、Ruff、DAP 与 Neotest；Ruff 负责 Lint 和 Import，Pyright 专注类型分析，避免重复诊断。
+
+### Ghostty 与 Zellij
+
+Ghostty 自动跟随系统浅色/深色主题，使用 Maple Mono NF CN 与 PingFang SC 回退、透明模糊背景、10 万行回滚、复制即选中，并在失焦窗口中的长命令结束时发送系统通知。
+
+| 快捷键 | 功能 |
+| --- | --- |
+| `Cmd-Alt-Space` | 显示/隐藏 Ghostty Quick Terminal |
+| `Cmd-D` / `Cmd-Shift-D` | 向右 / 向下创建 Ghostty 分屏 |
+| `Cmd-H/J/K/L` | 在 Ghostty 分屏间移动 |
+| `Cmd-Z` | 放大/恢复当前 Ghostty 分屏 |
+| `Ctrl-G` | 解锁或重新锁定 Zellij |
+| `Alt-H/J/K/L` | 在已解锁的 Zellij Pane 间移动 |
+| `Alt-N` / `Alt-F` | 新建 Pane / 切换浮动 Pane |
+| `Ctrl-P` / `Ctrl-T` | 进入 Zellij Pane / Tab 模式 |
+| `Ctrl-S`，然后 `e` | 进入滚动模式并用 Neovim 编辑滚动缓冲区 |
+| `Ctrl-O`，然后 `w` / `d` | 打开 Session Manager / Detach |
+
+Ghostty 直连会话适合内联图片；Zellij 当前不透传 Kitty Graphics Protocol，应使用 Neovim 浮动窗口或浏览器预览。
+
+### Git、chezmoi 与维护
+
+| 命令 | 功能 |
+| --- | --- |
+| `git lg` / `git st` / `git dfs` | 图形日志 / 状态 / 已暂存 Diff |
+| `git amend` / `git undo` | 修改上次提交 / 撤销提交并保留文件 |
+| `git sync` / `git rescue` | Rebase 同步 / 查看 Reflog |
+| `cz` / `cza` / `czd` | chezmoi 命令入口 / 应用目标状态 / 查看目标差异 |
+| `cze` / `czu` | 编辑受管文件 / 更新并应用仓库 |
+| `brewup` / `devup` | 更新并清理 Homebrew / 更新 Homebrew 工具链 |
+| `devdoctor` | 只读检查配置、Runtime 来源、签名和关键工具 |
+| `scan-secrets` | 使用 gitleaks 扫描暂存内容 |
 
 ## Neovim 文档与 Python 工作流
 
