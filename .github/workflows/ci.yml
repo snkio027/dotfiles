@@ -24,6 +24,9 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@962acc985cf741e4f7a112a3cfa6194386b63edf # main 2026-08-12
+
       - name: Install validation toolchain
         run: |
           brew update
