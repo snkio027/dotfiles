@@ -4,7 +4,8 @@
 # ------------------------------------------------------------------------------
 
 # 1. 外观样式与色彩主题
-theme = "light:Catppuccin Latte,dark:Catppuccin Mocha"
+# Always use the dark palette, independent of the macOS appearance setting.
+theme = "Catppuccin Mocha"
 font-family = "Maple Mono NF CN"
 font-family = "PingFang SC"
 font-size = 14

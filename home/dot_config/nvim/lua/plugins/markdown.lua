@@ -9,10 +9,11 @@ return {
       completions = { lsp = { enabled = true } },
       heading = {
         sign = false,
-        icons = { "󰲡 ", "󰲣 ", "󰲥 ", "󰲧 ", "󰲩 ", "󰲫 " },
+        -- Conceal the Markdown markers without adding another hierarchy label.
+        -- Numbered documents already communicate structure through 1 / 1.1 / 1.2.
+        icons = { "", "", "", "", "", "" },
         position = "inline",
-        width = "block",
-        right_pad = 2,
+        backgrounds = {},
       },
       code = {
         sign = false,
@@ -21,6 +22,12 @@ return {
         border = "thin",
       },
       checkbox = { enabled = true },
+      quote = { icon = "▏" },
+      dash = {
+        icon = "─",
+        width = 0.82,
+        left_margin = 0.02,
+      },
       pipe_table = { preset = "round" },
       -- Snacks owns formula rendering so there is one visual pipeline instead
       -- of a second converter managed by render-markdown.
