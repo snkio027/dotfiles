@@ -21,7 +21,7 @@ Homebrew 是系统工具和语言 Runtime 的唯一安装来源。Brewfile 不�
 - `.zshenv` 只定义 XDG Base Directory；`.zprofile` 只初始化登录环境；`.zshrc` 只处理交互功能。
 - Starship、Atuin、fzf、direnv、zoxide 与 Carapace 的生成脚本按二进制修改时间缓存，升级后自动刷新。
 - Starship 只在对应项目中显示 Node、Go、Rust、Python 与 Terraform 的实际版本。
-- Ghostty 固定使用 Catppuccin Mocha 暗色主题，使用 Maple Mono NF CN 的圆润连字、Nerd 图标与 CJK 2:1 对齐，并提供 GPU 渲染和原生分屏。
+- Ghostty 固定使用 Catppuccin Mocha 暗色主题，以 Maple Mono NF CN Italic 作为主字面，保留圆润连字、Nerd 图标与 CJK 2:1 对齐，并提供 GPU 渲染和原生分屏。
 - Zellij 默认处于 locked mode，避免占用 Shell、Neovim 和 macOS 的 Alt 快捷键。
 - Atuin 以 daemon fuzzy 模式持续记录、同步历史，FZF 接管 `Ctrl-R` 检索界面，方向键保留原生历史行为。
 - Neovim 是唯一编辑器；Git、Yazi、sudo、systemd 与 kubectl 的编辑入口统一指向 Neovim。
@@ -181,7 +181,7 @@ Markdown 在普通、命令和终端模式渲染标题、任务、表格、代�
 
 ### Ghostty 与 Zellij
 
-Ghostty 固定使用 Catppuccin Mocha 暗色主题，使用 Maple Mono NF CN 与 PingFang SC 回退、透明模糊背景、10 万行回滚、复制即选中，并在失焦窗口中的长命令结束时发送系统通知。
+Ghostty 固定使用 Catppuccin Mocha 暗色主题，以 Maple Mono NF CN Italic 与 Bold Italic 作为默认字面，PingFang SC 负责缺字回退；同时提供透明模糊背景、10 万行回滚、复制即选中，以及失焦窗口长命令完成通知。
 
 | 快捷键 | 功能 |
 | --- | --- |

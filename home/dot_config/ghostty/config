@@ -8,6 +8,11 @@
 theme = "Catppuccin Mocha"
 font-family = "Maple Mono NF CN"
 font-family = "PingFang SC"
+# Use Maple Mono's cursive italic face as the default terminal typography.
+font-style = "Italic"
+font-style-bold = "Bold Italic"
+font-style-italic = "Italic"
+font-style-bold-italic = "Bold Italic"
 font-size = 14
 font-thicken = true
 # Maple Mono 官方建议组合：智能连字、字符变体与易辨识的 0。
