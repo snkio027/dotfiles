@@ -10,6 +10,17 @@ return {
     end,
     opts = {
       flavour = "mocha",
+      -- Snacks uses diagnostic groups for Git status filenames. Keep their
+      -- colors without switching Maple Mono to its cursive italic face.
+      lsp_styles = {
+        virtual_text = {
+          errors = { "nocombine" },
+          hints = { "nocombine" },
+          warnings = { "nocombine" },
+          information = { "nocombine" },
+          ok = { "nocombine" },
+        },
+      },
       custom_highlights = function(colors)
         return {
           -- Markdown should read like a document, not a collection of badges.
