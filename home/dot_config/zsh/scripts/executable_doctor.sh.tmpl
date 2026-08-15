@@ -112,10 +112,13 @@ else
 fi
 {{- end }}
 
+{{- if eq .machine_profile "devcontainer" }}
+check_status "Git SSH Signing" "pass" "Disabled by devcontainer profile"
+{{- else }}
 if [ -f "$HOME/.ssh/keys/git_signing.pub" ]; then
     check_status "Git SSH Signing Key" "pass" "$HOME/.ssh/keys/git_signing.pub ready"
 else
-    check_status "Git SSH Signing Key" "warn" "Signing key missing (run chezmoi scripts)"
+    check_status "Git SSH Signing Key" "warn" "Signing public key missing (run chezmoi scripts)"
 fi
 
 if [ -f "$HOME/.ssh/allowed_signers" ]; then
@@ -123,6 +126,7 @@ if [ -f "$HOME/.ssh/allowed_signers" ]; then
 else
     check_status "SSH Allowed Signers" "warn" "$HOME/.ssh/allowed_signers missing"
 fi
+{{- end }}
 
 if command -v gitleaks &>/dev/null; then
     GLEAKS_VER="$(gitleaks version 2>/dev/null || echo "installed")"

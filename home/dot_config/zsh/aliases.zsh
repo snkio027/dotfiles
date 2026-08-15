@@ -31,11 +31,11 @@ if command -v bat &>/dev/null; then
 fi
 
 if command -v fd &>/dev/null; then
-    alias find="fd"
+    alias ff="fd"
 fi
 
 if command -v rg &>/dev/null; then
-    alias grep="rg"
+    alias rgg="rg"
 fi
 
 if command -v btop &>/dev/null; then
@@ -53,9 +53,8 @@ if command -v markdownlint-cli2 &>/dev/null; then
     alias markdownlint-cli2='markdownlint-cli2 --config "${XDG_CONFIG_HOME:-$HOME/.config}/markdownlint-cli2/config.yaml"'
 fi
 
-# --- 3. zoxide 智能目录跳转 (替代 cd) ---
+# --- 3. zoxide 智能目录跳转 ---
 if command -v zoxide &>/dev/null; then
-    alias cd="z"
     alias cdi="zi"
 fi
 
@@ -64,7 +63,6 @@ alias cz="chezmoi"
 alias cza="chezmoi apply"
 alias czcd="chezmoi cd"
 alias czd="chezmoi diff"
-alias cze="chezmoi edit"
 alias czu="chezmoi update"
 alias cm="chezmoi"
 alias cma="chezmoi apply"
@@ -109,12 +107,88 @@ function y() {
 }
 
 # --- 9. 高频 Developer DX 快捷函数 ---
-function mkcd() { mkdir -p "$1" && cd "$1"; }
-function up() { local d=""; for i in $(seq 1 "${1:-1}"); do d="../$d"; done; cd "$d"; }
+function mkcd() { mkdir -p "$1" && builtin cd -- "$1"; }
+function up() {
+    local count="${1:-1}" destination="" index
+    [[ "$count" =~ '^[1-9][0-9]*$' ]] || {
+        print -u2 "用法: up <正整数>"
+        return 2
+    }
+    for ((index = 0; index < count; index++)); do
+        destination+="../"
+    done
+    builtin cd -- "$destination"
+}
 function port() { lsof -i :"$1"; }
 function ghc() { git clone "git@github.com:$1.git"; }
-function dotenv() { set -o allexport; source "${1:-.env}"; set +o allexport; }
-function cze() { chezmoi edit "$(chezmoi managed | fzf)"; }
+# 支持空行、整行注释、可选 export、KEY=value、空值及成对单/双引号。
+# 值按字面量导出；拒绝命令替换、反引号、续行、非法键名与不成对引号。
+function dotenv() {
+    local file="${1:-.env}" line trimmed key value
+    local -A values
+
+    [[ -f "$file" && -r "$file" && ! -L "$file" ]] || {
+        print -u2 "dotenv: 需要可读的非符号链接文件: $file"
+        return 1
+    }
+
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        line="${line%$'\r'}"
+        [[ -n "$line" && "${line[-1]}" == "\\" ]] && {
+            print -u2 "dotenv: 不支持续行: $line"
+            return 2
+        }
+        trimmed="${line#"${line%%[![:space:]]*}"}"
+        [[ -z "$trimmed" || "${trimmed[1]}" == "#" ]] && continue
+
+        if [[ "$trimmed" == export[[:space:]]* ]]; then
+            trimmed="${trimmed#export}"
+            trimmed="${trimmed#"${trimmed%%[![:space:]]*}"}"
+        fi
+        [[ "$trimmed" == *"="* ]] || {
+            print -u2 "dotenv: 非法赋值: $line"
+            return 2
+        }
+
+        key="${trimmed%%=*}"
+        value="${trimmed#*=}"
+        key="${key#"${key%%[![:space:]]*}"}"
+        key="${key%"${key##*[![:space:]]}"}"
+        [[ "$key" =~ '^[A-Za-z_][A-Za-z0-9_]*$' ]] || {
+            print -u2 "dotenv: 非法变量名: $key"
+            return 2
+        }
+
+        value="${value#"${value%%[![:space:]]*}"}"
+        value="${value%"${value##*[![:space:]]}"}"
+        [[ "$value" == *'$('* || "$value" == *'`'* ]] && {
+            print -u2 "dotenv: 不允许命令替换: $key"
+            return 2
+        }
+        if [[ "$value" == \"*\" || "$value" == \'*\' ]]; then
+            value="${value[2,-2]}"
+        elif [[ "$value" == \"* || "$value" == *\" || "$value" == \'* || "$value" == *\' ]]; then
+            print -u2 "dotenv: 引号不匹配: $key"
+            return 2
+        fi
+        values[$key]="$value"
+    done < "$file"
+
+    for key in "${(@k)values}"; do
+        export "$key=${values[$key]}"
+    done
+}
+function cze() {
+    local target="${1:-}"
+    if [[ -z "$target" ]]; then
+        command -v fzf &>/dev/null || {
+            print -u2 "cze: 未安装 fzf"
+            return 1
+        }
+        target="$(chezmoi managed | fzf --prompt='chezmoi edit> ')" || return
+    fi
+    [[ -n "$target" ]] && chezmoi edit "$target"
+}
 function dataclean() {
     local scratch="$HOME/Workspace/06_Data/scratch"
     [[ -d "$scratch" ]] || { print -u2 "目录不存在: $scratch"; return 1; }
@@ -123,7 +197,12 @@ function dataclean() {
     command rm -rf -- "$scratch"/*(DN)
 }
 function fkill() {
-    local pid
-    pid=$(ps -ef | fzf +m | awk '{print $2}')
-    [ -n "$pid" ] && kill -"${1:-9}" "$pid"
+    local signal="${1:-TERM}" selection pid
+    [[ "$signal" =~ '^[A-Za-z][A-Za-z0-9]*$|^[0-9]+$' ]] || {
+        print -u2 "fkill: 非法信号: $signal"
+        return 2
+    }
+    selection="$(ps -Ao pid=,command= | fzf --no-multi --prompt='kill> ')" || return
+    pid="$(awk '{print $1}' <<< "$selection")"
+    [[ "$pid" =~ '^[0-9]+$' ]] && kill -"$signal" "$pid"
 }

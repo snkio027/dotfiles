@@ -12,20 +12,6 @@
 ehthumbs.db
 Thumbs.db
 
-# Security & Private Credentials (CRITICAL)
-*.pem
-*.key
-*.pfx
-*.p12
-*.age
-.env
-.env.*
-!.env.example
-op.env
-.secrets
-secrets.yaml
-secrets.json
-
 # IDE & Editor Temporary Files
 .idea/
 *.swp
@@ -34,13 +20,3 @@ secrets.json
 .classpath
 .project
 .settings/
-
-# Runtime & Dependency Caches
-.direnv/
-.venv/
-__pycache__/
-*.pyc
-node_modules/
-dist/
-target/
-.terraform/

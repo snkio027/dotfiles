@@ -6,7 +6,7 @@
 
 ```text
 State       │ chezmoi · Homebrew Bundle · Dev Container
-Runtime     │ Homebrew latest（Python · Node · Go · Rust · uv · Terraform · Kubernetes）
+Runtime     │ Homebrew 全局工具 · uv 项目 Python · 项目级版本与锁文件
 Shell       │ Zsh · Starship · Atuin · direnv · zoxide · Carapace · fzf
 Terminal    │ Ghostty · Zellij（按需）· Yazi · LazyGit
 Editor      │ Neovim 0.12 · LazyVim 16 · Catppuccin · fzf-lua · Snacks
@@ -14,7 +14,7 @@ Security    │ age · SOPS · SSH signing · gitleaks · Zizmor
 Validation  │ actionlint · ShellCheck · shfmt · Taplo · Hadolint · StyLua
 ```
 
-Homebrew 是系统工具和语言 Runtime 的唯一安装来源。Brewfile 不固定公式版本：每次先执行 `brew update`，再安装或升级到 Homebrew 当前提供的最新稳定版。不使用 mise、asdf、nvm、pyenv 或运行时锁文件。
+Homebrew 负责全局 CLI 与语言 Runtime；uv 负责项目 Python、虚拟环境与依赖，Lazy 与 Mason 只管理 Neovim 内部插件和编辑器工具。Brewfile 不固定公式版本：每次先执行 `brew update`，再安装或升级到 Homebrew 当前提供的稳定版。不使用 mise、asdf、nvm、pyenv；项目仍应提交自身的版本声明与依赖锁文件。
 
 ## 体验设计
 
@@ -71,7 +71,7 @@ dotfiles/
 | 缓存 | `~/.cache` | Zsh 初始化缓存、补全、uv 与可安全重建的数据 |
 | 可执行文件 | `~/.local/bin` | 用户级引导程序与脚本 |
 
-`~/.zshenv`、`~/.zprofile`、`~/.zshrc` 是 Zsh 原生启动入口，`~/.ssh` 是 OpenSSH 固定发现位置，因此保留在 HOME。Markdownlint 的 Zsh alias 与 Neovim 都显式加载 XDG 主配置，项目内规则仍可覆盖。Cargo、Go 与 ZVM 保留各自官方数据目录，避免破坏已安装工具和升级机制。
+`~/.zshenv`、`~/.zprofile`、`~/.zshrc` 是 Zsh 原生启动入口，`~/.ssh` 是 OpenSSH 固定发现位置，因此保留在 HOME。Markdownlint 的 Zsh alias 与 Neovim 都显式加载 XDG 主配置，项目内规则仍可覆盖。Cargo 与 Go 保留各自官方数据目录，避免破坏已安装工具和升级机制。
 
 ## 初始化
 
@@ -79,7 +79,7 @@ dotfiles/
 chezmoi init --apply https://github.com/snkio027/dotfiles
 ```
 
-初始化会询问 Git 姓名和邮箱，安装 Homebrew/Linuxbrew，更新公式元数据，同步 Brewfile，配置本地 SSH 签名与 gitleaks hook，并在 macOS 上应用键盘、Finder、Dock 和截图偏好。
+初始化会询问 Git 姓名和邮箱，安装 Homebrew/Linuxbrew，更新公式元数据，同步 Brewfile，配置 SSH 签名与 gitleaks hook，并在 macOS 上应用键盘、Finder、Dock 和截图偏好。本地新建的长期 SSH key 必须由用户设置口令；启用 1Password Agent 时不会生成磁盘私钥。
 
 Dev Container 使用 `CHEZMOI_PROFILE=devcontainer`，通过 Linuxbrew 获得同样的最新工具链，但不会生成宿主密钥、修改宿主 Git hooks 或应用 macOS 偏好。可用 `GIT_AUTHOR_NAME` 与 `GIT_AUTHOR_EMAIL` 覆盖缺省身份。
 
@@ -102,7 +102,7 @@ Neovim 的 `<leader>` 是空格键；Ghostty 的 `Cmd` 快捷键属于 macOS，Z
 
 ### Shell 与终端工具
 
-经典命令会在对应现代工具存在时自动升级：`ls` → `eza`、`cat` → `bat`、`find` → `fd`、`grep` → `rg`、`top` → `btop`、`cd` → `zoxide`、`vi`/`vim` → `nvim`。
+兼容性敏感的 `find`、`grep` 与 `cd` 保留原始语义；现代搜索使用 `ff`（fd）、`rgg`（ripgrep）和 `z`（zoxide）。交互展示命令仍会在工具存在时增强：`ls` → `eza`、`cat` → `bat`、`top` → `btop`、`vi`/`vim` → `nvim`。
 
 | 快捷键或命令 | 功能 |
 | --- | --- |
@@ -112,12 +112,13 @@ Neovim 的 `<leader>` 是空格键；Ghostty 的 `Cmd` 快捷键属于 macOS，Z
 | `Ctrl-F` | 接受完整的 Zsh 自动建议 |
 | `Alt-F` | 向前移动/接受一个单词 |
 | `ll` / `lt` | 详细文件列表 / 目录树 |
+| `ff` / `rgg` | 使用 fd 查找路径 / 使用 ripgrep 检索内容 |
 | `z <keyword>` / `cdi` | 按使用频率跳转目录 / 交互式选择目录 |
 | `y` | 启动 Yazi，退出后进入最后访问的目录 |
 | `mkcd <dir>` / `up <n>` | 创建并进入目录 / 向上跳转 n 层 |
-| `port <port>` / `fkill` | 查找端口占用 / 模糊选择并结束进程 |
+| `port <port>` / `fkill [signal]` | 查找端口占用 / 模糊选择进程并默认发送 SIGTERM |
 | `ghc <owner/repo>` | 克隆 GitHub 仓库 |
-| `dotenv [file]` | 将 `.env` 或指定文件安全加载到当前 Shell |
+| `dotenv [file]` | 导出 `.env` 的字面量赋值；支持空值、整行注释和成对引号，拒绝命令替换、续行与非法键名 |
 | `reload` | 重新加载 Zsh 配置 |
 
 ### Neovim 导航与检索
@@ -181,7 +182,7 @@ Markdown 在普通、命令和终端模式渲染标题、任务、表格、代�
 
 ### Ghostty 与 Zellij
 
-Ghostty 固定使用 Catppuccin Mocha 暗色主题，以 Maple Mono NF CN Italic 与 Bold Italic 作为默认字面，PingFang SC 负责缺字回退；同时提供透明模糊背景、10 万行回滚、复制即选中，以及失焦窗口长命令完成通知。
+Ghostty 固定使用 Catppuccin Mocha 暗色主题，以 Maple Mono NF CN Italic 与 Bold Italic 作为默认字面，PingFang SC 负责缺字回退；同时提供透明模糊背景、10 万行回滚、剪贴板读取确认和失焦窗口长命令完成通知。Zellij 保留会话结构恢复，但不把 Pane 可见内容序列化到缓存。
 
 | 快捷键 | 功能 |
 | --- | --- |
@@ -218,7 +219,10 @@ Ghostty 直连会话适合内联图片；Zellij 当前不透传 Kitty Graphics P
 
 ## SSH 与提交签名
 
-- GitHub 认证和 Git 提交签名使用 `~/.ssh/keys/` 下相互独立的 Ed25519 key。
-- 签名公钥会加入 `~/.ssh/allowed_signers`；`gh` 已登录时，初始化脚本会尝试注册公钥。
-- `features.use_1password` 只控制 SSH Agent 集成；Git 签名使用本地 OpenSSH key。
-- 可在初始化前通过 `OP_SSH_AUTH_SOCK` 覆盖 1Password Agent socket。
+- Workstation 默认启用 SSH 提交签名，但不再把所有 GitHub HTTPS URL 全局改写为 SSH；`ghc` 仍显式使用 SSH 克隆。
+- Dev Container 不强制签名、不固定本地 IdentityFile，也不改写 URL，允许使用转发凭据或项目级 Git 配置。
+- 本地模式使用 `~/.ssh/keys/` 下相互独立且有口令的 Ed25519 认证/签名 key；已有无口令 key 不会被脚本自动轮换。
+- 缺少本地 key 时，非交互 `chezmoi apply` 会立即失败并提示操作方式，不会等待 `ssh-keygen` 输入。
+- 启用 `features.use_1password` 后，SSH 统一使用 1Password Agent 且初始化脚本不生成私钥；导出的 `~/.ssh/keys/git_signing.pub` 会内联为 Git `key::` 配置，并在 apply 时验证 Agent 确实提供同一 key。
+- `git.rewrite_github_https_to_ssh` 是显式 opt-in，默认关闭；可在初始化前通过 `OP_SSH_AUTH_SOCK` 覆盖 1Password Agent socket。
+- 全局 Git ignore 只处理 OS 与编辑器垃圾；依赖缓存、环境文件和 SOPS/age 文件由仓库级 `.gitignore` 与 gitleaks 管理。
