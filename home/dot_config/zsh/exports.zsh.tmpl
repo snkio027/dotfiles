@@ -26,8 +26,6 @@ path=(
     $HOME/.cargo/bin
     $HOME/.local/bin
     $HOME/go/bin
-    $HOME/.zvm/bin
-    $HOME/.zvm/self
     $path
 )
 export PATH
@@ -44,24 +42,12 @@ export NVIM_LOG_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/nvim/log"
 export PAGER="less -RF"
 export LANG="en_US.UTF-8"
 
-# --- 3. 硬件编译加速旗标 ---
-{{- if and .is_mac .is_arm64 }}
-# 针对 macOS Apple Silicon 架构进行编译指令集原生优化
-export RUSTFLAGS="-C target-cpu=native"
-export ZIG_FLAGS="-mcpu=native"
-export CFLAGS="-march=native"
-export CXXFLAGS="-march=native"
-{{- end }}
-
-# --- 4. 工具链与主题环境变量 ---
+# --- 3. 工具链与主题环境变量 ---
 export CARGO_HOME="$HOME/.cargo"
 export GOPATH="$HOME/go"
-# ZVM 目前不支持 XDG Base Directory；仅保留其官方安装位置，避免污染 .zshenv。
-export ZVM_INSTALL="$HOME/.zvm/self"
-export UV_PYTHON_PREFERENCE="only-system"
 export BAT_THEME="Catppuccin Mocha"
 
-# --- 5. FZF 配色主题配置 (Catppuccin Mocha 调色板) ---
+# --- 4. FZF 配色主题配置 (Catppuccin Mocha 调色板) ---
 export FZF_DEFAULT_OPTS="--height 40% --layout=reverse --border \
   --color=bg+:#313244,bg:#1e1e2e,spinner:#f5e0dc,hl:#f38ba8 \
   --color=fg:#cdd6f4,header:#f38ba8,info:#cba6f7,pointer:#f5e0dc \

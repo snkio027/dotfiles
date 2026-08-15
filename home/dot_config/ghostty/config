@@ -44,9 +44,9 @@ focus-follows-mouse = true
 mouse-hide-while-typing = true
 scrollback-limit = 100000
 copy-on-select = true
-clipboard-read = allow
+clipboard-read = ask
 clipboard-write = allow
-confirm-close-surface = false
+confirm-close-surface = true
 
 # 4. 后台任务完成系统通知 (运行 >15s 且非当前窗口焦点时弹窗通知)
 notify-on-command-finish = unfocused

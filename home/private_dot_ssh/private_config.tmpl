@@ -10,10 +10,11 @@ Host *
 {{- if and .features.use_1password .op_ssh_socket }}
     # 1Password SSH Agent 全局集成 (双引号转义包含空格的 macOS 路径)
     IdentityAgent "{{ .op_ssh_socket }}"
-{{- end }}
+{{- else }}
     AddKeysToAgent yes
 {{- if .is_mac }}
     UseKeychain yes
+{{- end }}
 {{- end }}
     ServerAliveInterval 60
     ServerAliveCountMax 10

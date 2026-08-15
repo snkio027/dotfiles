@@ -12,11 +12,63 @@ echo "ℹ️  DevContainer 继承宿主凭据，跳过密钥生成与远端注�
 exit 0
 {{- end }}
 
+{{- if .features.use_1password }}
+SIGN_PUB="$HOME/.ssh/keys/git_signing.pub"
+OP_SSH_SOCKET={{ .op_ssh_socket | quote }}
+if [ ! -r "$SIGN_PUB" ]; then
+    echo "✘ 1Password 签名公钥不可读: $SIGN_PUB" >&2
+    echo "  请导出所选 1Password SSH key 的公钥后重新运行 chezmoi apply。" >&2
+    exit 1
+fi
+EXPECTED_SIGNING_KEY="$(awk 'NF >= 2 { print $1 " " $2; exit }' "$SIGN_PUB")"
+
+if [ ! -S "$OP_SSH_SOCKET" ]; then
+    echo "✘ 1Password SSH Agent socket 不可用: $OP_SSH_SOCKET" >&2
+    echo "  请在 1Password 中启用 SSH Agent，或关闭 features.use_1password。" >&2
+    exit 1
+fi
+if [ -z "$EXPECTED_SIGNING_KEY" ]; then
+    echo "✘ 无法读取 1Password 签名公钥: $SIGN_PUB" >&2
+    echo "  请重新导出所选 1Password SSH key 的公钥后运行 chezmoi apply。" >&2
+    exit 1
+fi
+if ! SSH_AUTH_SOCK="$OP_SSH_SOCKET" ssh-add -L 2>/dev/null | awk -v expected="$EXPECTED_SIGNING_KEY" '
+    ($1 " " $2) == expected { found = 1 }
+    END { exit !found }
+'; then
+    echo "✘ 导出的签名公钥未由当前 1Password SSH Agent 提供。" >&2
+    echo "  请在 Agent 中启用同一 key，或重新导出 ~/.ssh/keys/git_signing.pub。" >&2
+    exit 1
+fi
+
+echo "ℹ️  1Password SSH Agent 与 Git 签名公钥匹配，不生成磁盘私钥。"
+exit 0
+{{- end }}
+
 KEY_DIR="$HOME/.ssh/keys"
 AUTH_KEY="$KEY_DIR/github_auth"
 SIGN_KEY="$KEY_DIR/git_signing"
 AUTH_PUB="${AUTH_KEY}.pub"
 SIGN_PUB="${SIGN_KEY}.pub"
+
+if { [ ! -f "$AUTH_KEY" ] || [ ! -f "$SIGN_KEY" ]; } && [ ! -t 0 ]; then
+    echo "✘ 缺少本地 SSH key，非交互环境不会启动 ssh-keygen。" >&2
+    echo "  请在终端运行 chezmoi apply 并设置非空口令，或启用 1Password Profile。" >&2
+    exit 1
+fi
+
+generate_protected_key() {
+    local key_path="$1"
+    local purpose="$2"
+
+    echo "  ▶ 正在生成 Ed25519 ${purpose}（必须设置非空口令）..."
+    ssh-keygen -t ed25519 -a 100 -C "{{ .email }}" -f "$key_path"
+    if ssh-keygen -y -P "" -f "$key_path" >/dev/null 2>&1; then
+        rm -f -- "$key_path" "${key_path}.pub"
+        echo "    ✘ 不接受空口令；已删除刚生成的 key，请重新运行 chezmoi apply。" >&2
+        return 1
+    fi
+}
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -30,8 +82,7 @@ chmod 700 "$HOME/.ssh" "$KEY_DIR"
 
 # 2. 若不存在则自动生成 Ed25519 SSH 认证私钥
 if [ ! -f "$AUTH_KEY" ]; then
-    echo "  ▶ 正在生成 Ed25519 SSH 认证秘钥..."
-    ssh-keygen -t ed25519 -C "{{ .email }}" -N "" -f "$AUTH_KEY" >/dev/null
+    generate_protected_key "$AUTH_KEY" "SSH 认证 key"
     chmod 600 "$AUTH_KEY"
     chmod 644 "$AUTH_PUB"
     echo "    ✔ 成功创建: $AUTH_KEY"
@@ -41,8 +92,7 @@ fi
 
 # 3. 若不存在则自动生成 Ed25519 Git 提交签名秘钥
 if [ ! -f "$SIGN_KEY" ]; then
-    echo "  ▶ 正在生成 Ed25519 Git 提交签名秘钥..."
-    ssh-keygen -t ed25519 -C "{{ .email }}" -N "" -f "$SIGN_KEY" >/dev/null
+    generate_protected_key "$SIGN_KEY" "Git 提交签名 key"
     chmod 600 "$SIGN_KEY"
     chmod 644 "$SIGN_PUB"
     echo "    ✔ 成功创建: $SIGN_KEY"

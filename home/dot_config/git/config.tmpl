@@ -3,6 +3,18 @@
 # 2026 云原生与现代开发标准 | Git >= 2.45, OpenSSH >= 9.x
 # Managed by chezmoi
 # ==============================================================================
+{{- $signing_key := "~/.ssh/keys/git_signing.pub" -}}
+{{- if and (ne .machine_profile "devcontainer") .git.sign_commits .features.use_1password -}}
+{{-   $signing_key_path := joinPath .chezmoi.homeDir ".ssh/keys/git_signing.pub" -}}
+{{-   if not (stat $signing_key_path) -}}
+{{-     fail "1Password signing requires ~/.ssh/keys/git_signing.pub; export the selected 1Password public key, then rerun chezmoi apply" -}}
+{{-   end -}}
+{{-   $signing_key_material := include $signing_key_path | trim -}}
+{{-   if contains "\n" $signing_key_material -}}
+{{-     fail "1Password signing public key must contain exactly one key" -}}
+{{-   end -}}
+{{-   $signing_key = printf "key::%s" $signing_key_material -}}
+{{- end }}
 
 # ==============================================================================
 # 1. 开发者身份与提交签名 (供应链安全溯源)
@@ -10,7 +22,8 @@
 [user]
     name = {{ .name | quote }}
     email = {{ .email | quote }}
-    signingkey = ~/.ssh/keys/git_signing.pub
+{{- if and (ne .machine_profile "devcontainer") .git.sign_commits }}
+    signingkey = {{ $signing_key | quote }}
 
 [commit]
     gpgsign = true
@@ -25,6 +38,7 @@
 [gpg "ssh"]
     allowedSignersFile = ~/.ssh/allowed_signers
     revocationFile = ~/.ssh/revoked_signers
+{{- end }}
 
 # ==============================================================================
 # 2. 分支与 Rebase 协作工作流 (线性 Git 历史)
@@ -75,8 +89,10 @@
     untrackedCache = true
     quotePath = false
 
+{{- if and (ne .machine_profile "devcontainer") .git.rewrite_github_https_to_ssh }}
 [url "git@github.com:"]
     insteadOf = https://github.com/
+{{- end }}
 
 [index]
     threads = true

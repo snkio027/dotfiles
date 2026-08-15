@@ -9,7 +9,7 @@
 # export KAFKA_BROKERS="localhost:9092"
 # export LOG_LEVEL="debug"
 
-# --- Apple Silicon Build Optimization (project-specific cache) ---
+# --- Project-scoped build caches ---
 export ZIG_GLOBAL_CACHE_DIR="$PWD/.zig-cache"
 export CARGO_TARGET_DIR="$PWD/.target"
 
