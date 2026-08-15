@@ -67,6 +67,22 @@ jobs:
             zsh -n "$rendered"
           done
 
+          # The inner zsh must evaluate these parameter-existence expressions.
+          # shellcheck disable=SC2016
+          env \
+            RUSTFLAGS=poison ZIG_FLAGS=poison \
+            CFLAGS=poison CXXFLAGS=poison \
+            UV_PYTHON_PREFERENCE=poison ZVM_INSTALL=poison \
+            zsh -fc '
+              source "$1"
+              (( ! ${+RUSTFLAGS} &&
+                 ! ${+ZIG_FLAGS} &&
+                 ! ${+CFLAGS} &&
+                 ! ${+CXXFLAGS} &&
+                 ! ${+UV_PYTHON_PREFERENCE} &&
+                 ! ${+ZVM_INSTALL} ))
+            ' _ "$tmp_dir/exports.zsh"
+
           chezmoi execute-template --source=. < home/dot_config/zsh/scripts/executable_doctor.sh.tmpl > "$tmp_dir/doctor.sh"
           bash -n "$tmp_dir/doctor.sh"
           shellcheck -S warning -s bash "$tmp_dir/doctor.sh"

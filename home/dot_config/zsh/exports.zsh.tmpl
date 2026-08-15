@@ -3,6 +3,10 @@
 # 由 chezmoi 托管 | DevSecOps 生产级 Profile
 # ------------------------------------------------------------------------------
 
+# 清除从长生命周期终端进程继承的旧工具链覆盖。
+unset RUSTFLAGS ZIG_FLAGS CFLAGS CXXFLAGS
+unset UV_PYTHON_PREFERENCE ZVM_INSTALL
+
 # --- 1. 全局 PATH 环境变量设置 ---
 typeset -U path
 # 清理从旧父进程继承的 Runtime 管理器路径与环境覆盖。
