@@ -199,13 +199,22 @@ Ghostty 固定使用 Catppuccin Mocha 暗色主题，以 Maple Mono NF CN Italic
 
 Ghostty 直连会话适合内联图片；Zellij 当前不透传 Kitty Graphics Protocol，应使用 Neovim 浮动窗口或浏览器预览。
 
-### Git、chezmoi 与维护
+### Git 同步、chezmoi 与维护
+
+`git pull` 仅允许 fast-forward，不会隐式创建 Merge Commit 或自动 Rebase。需要把当前分支显式更新到远端主干时，分步执行：
+
+```bash
+git fetch origin
+git rebase origin/main
+```
+
+`fetch.prune` 会在同步时清理已经从远端删除的跟踪引用；`rerere` 会复用曾经人工解决过的冲突；`zdiff3` 冲突标记会同时展示共同祖先。新分支首次执行 `git push` 时会自动建立 upstream，新仓库默认使用 `main`。
 
 | 命令 | 功能 |
 | --- | --- |
 | `git lg` / `git st` / `git dfs` | 图形日志 / 状态 / 已暂存 Diff |
 | `git amend` / `git undo` | 修改上次提交 / 撤销提交并保留文件 |
-| `git sync` / `git rescue` | Rebase 同步 / 查看 Reflog |
+| `git rescue` | 查看 Reflog |
 | `cz` / `cza` / `czd` | chezmoi 命令入口 / 应用目标状态 / 查看目标差异 |
 | `cze` / `czu` | 编辑受管文件 / 更新并应用仓库 |
 | `brewup` / `devup` | 更新并清理 Homebrew / 更新 Homebrew 工具链 |

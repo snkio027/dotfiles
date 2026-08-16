@@ -41,13 +41,13 @@
 {{- end }}
 
 # ==============================================================================
-# 2. 分支与 Rebase 协作工作流 (线性 Git 历史)
+# 2. 分支与显式同步策略 (线性 Git 历史)
 # ==============================================================================
 [init]
     defaultBranch = {{ .git.default_branch }}
 
 [pull]
-    rebase = true
+    ff = only
 
 [rebase]
     autoStash = true
@@ -177,6 +177,5 @@
     dfs = diff --staged
     amend = commit --amend --no-edit
     sweep = !git branch -vv | grep ': gone]' | awk '{print $1}' | xargs git branch -D 2>/dev/null || true
-    sync  = !git pull --rebase && git push
     undo  = reset HEAD~1 --mixed
     rescue = reflog show --date=iso
