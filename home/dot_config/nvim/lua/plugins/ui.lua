@@ -47,6 +47,14 @@ return {
     opts = { colorscheme = "catppuccin" },
   },
   {
+    "folke/noice.nvim",
+    opts = {
+      -- Pyright emits frequent progress completions while editing. Diagnostics,
+      -- completion, hover and signature help remain enabled without this noise.
+      lsp = { progress = { enabled = false } },
+    },
+  },
+  {
     "nvim-mini/mini.icons",
     opts = {
       default = {
