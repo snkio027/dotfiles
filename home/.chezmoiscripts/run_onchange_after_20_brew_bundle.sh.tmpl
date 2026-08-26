@@ -11,12 +11,32 @@ BREWFILE="{{ .chezmoi.workingTree }}/Brewfile"
 
 if command -v brew &>/dev/null && [ -f "$BREWFILE" ]; then
     echo "📦  正在同步 Brewfile 中未锁定的最新稳定版工具..."
-    brew update
+    for attempt in 1 2 3; do
+        if brew update; then
+            break
+        fi
+        if [ "$attempt" -eq 3 ]; then
+            echo "❌  Homebrew 元数据连续 3 次更新失败；保留现状并等待网络恢复。" >&2
+            exit 1
+        fi
+        echo "⚠️  Homebrew 更新失败，$((attempt * 2)) 秒后重试 ($attempt/3)..." >&2
+        sleep "$((attempt * 2))"
+    done
     # Homebrew 6 requires explicit trust for third-party formulae. Keep the
     # grant scoped to HashiCorp's Terraform formula instead of the whole tap.
     if brew commands | grep -qx "trust"; then
         brew trust --formula hashicorp/tap/terraform
     fi
-    brew bundle --file="$BREWFILE"
+    for attempt in 1 2 3; do
+        if brew bundle --file="$BREWFILE"; then
+            break
+        fi
+        if [ "$attempt" -eq 3 ]; then
+            echo "❌  Brewfile 连续 3 次同步失败；保留已完成安装并等待网络恢复。" >&2
+            exit 1
+        fi
+        echo "⚠️  Brewfile 同步失败，$((attempt * 2)) 秒后重试 ($attempt/3)..." >&2
+        sleep "$((attempt * 2))"
+    done
     echo "✅  Homebrew 软件包同步完成。"
 fi

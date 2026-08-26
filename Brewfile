@@ -11,13 +11,19 @@ brew "sops"             # 结构化文件秘钥加密管理
 brew "gitleaks"         # 本地与 CI 秘钥泄漏安全检测工具
 cask "1password-cli" if OS.mac?  # 1Password 命令行工具 (op)
 
-# --- 最新稳定版语言 Runtime 与平台工具（不固定版本）---
+# --- 最新稳定版语言 Runtime、编译工具与平台工具（不固定版本）---
 tap "hashicorp/tap"
 brew "node"                      # 最新稳定版 Node.js
 brew "python"                    # 最新稳定版 Python
 brew "go"                        # 最新稳定版 Go
 brew "rust"                      # 最新稳定版 Rust 与 Cargo
 brew "rust-analyzer"             # Rust IDE / Neovim 语义支持
+brew "zig"                       # 最新稳定版 Zig 编译器
+brew "llvm"                      # C/C++ Clang/LLVM 工具链
+brew "cmake"                     # 跨平台 C/C++ 构建系统
+brew "ninja"                     # CMake 高性能构建后端
+brew "ccache"                    # C/C++ 增量编译缓存
+brew "pkgconf"                   # 跨平台原生依赖发现
 brew "uv"                        # 极速 Python 包与虚拟环境管理器
 brew "hashicorp/tap/terraform"   # 最新稳定版 Terraform
 brew "kubernetes-cli"            # 最新稳定版 kubectl
@@ -47,6 +53,7 @@ brew "duf"              # 现代磁盘空间概览
 brew "dust"             # 可视化目录空间分析
 brew "sd"               # 直观的 sed 替代品
 brew "xh"               # 现代 HTTP 客户端
+brew "wget"             # Mason/CI 下载器与 curl 故障回退
 
 # --- Git 生态增强 ---
 brew "git-delta"        # 语法高亮 Git Pager (Side-by-Side 对比)

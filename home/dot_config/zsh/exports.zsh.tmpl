@@ -17,13 +17,16 @@ unset ${(M)${(k)parameters}:#(MISE_*|__MISE_*)} 2>/dev/null
 path=(
 {{- if .is_mac }}
 {{- if .is_arm64 }}
+    /opt/homebrew/opt/llvm/bin
     /opt/homebrew/bin
     /opt/homebrew/sbin
 {{- else }}
+    /usr/local/opt/llvm/bin
     /usr/local/bin
     /usr/local/sbin
 {{- end }}
 {{- else if .is_linux }}
+    /home/linuxbrew/.linuxbrew/opt/llvm/bin
     /home/linuxbrew/.linuxbrew/bin
     /home/linuxbrew/.linuxbrew/sbin
 {{- end }}

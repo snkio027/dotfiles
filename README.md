@@ -6,15 +6,15 @@
 
 ```text
 State       │ chezmoi · Homebrew Bundle · Dev Container
-Runtime     │ Homebrew 全局工具 · uv 项目 Python · 项目级版本与锁文件
+Runtime     │ LLVM/CMake/Ninja · Zig · Go · Rust · Node · uv 项目 Python
 Shell       │ Zsh · Starship · Atuin · direnv · zoxide · Carapace · fzf
 Terminal    │ Ghostty · Zellij（按需）· Yazi · LazyGit
-Editor      │ Neovim 0.12 · LazyVim 16 · Catppuccin · fzf-lua · Snacks
+Editor      │ Neovim 0.12 · LazyVim 16 · LSP · Overseer · Neotest · DAP
 Security    │ age · SOPS · SSH signing · gitleaks · Zizmor
 Validation  │ actionlint · ShellCheck · shfmt · Taplo · Hadolint · StyLua
 ```
 
-Homebrew 负责全局 CLI 与语言 Runtime；uv 负责项目 Python、虚拟环境与依赖，Lazy 与 Mason 只管理 Neovim 内部插件和编辑器工具。Brewfile 不固定公式版本：每次先执行 `brew update`，再安装或升级到 Homebrew 当前提供的稳定版。不使用 mise、asdf、nvm、pyenv；项目仍应提交自身的版本声明与依赖锁文件。
+Homebrew 负责全局 CLI 与语言 Runtime；uv 负责项目 Python、虚拟环境与依赖，Lazy 与 Mason 只管理 Neovim 内部插件和编辑器工具。Brewfile 不固定公式版本：每次先执行 `brew update`，再安装或升级到 Homebrew 当前提供的稳定版。Mason 每 24 小时检查并更新编辑器工具；Lazy 每天提示插件更新。不使用 mise、asdf、nvm、pyenv；项目仍应提交自身的版本声明与依赖锁文件。
 
 ## 体验设计
 
@@ -29,13 +29,14 @@ Homebrew 负责全局 CLI 与语言 Runtime；uv 负责项目 Python、虚拟环
 - Markdown 在普通模式渲染标题、任务、表格与代码块，插入模式自动显示原文；Ghostty 直连会话支持文档内图片、数学公式与 Mermaid 预览。
 - markdownlint 全局保留结构与语义检查，仅关闭对表格、URL 和 CJK 文档噪音较大的 `MD013` 行宽规则。
 - uv 项目中存在 `uv.lock` 和 `.venv` 时，Neovim 会自动将 Pyright、Ruff、DAP、Neotest 与内置终端统一到项目 Python。
+- C/C++、Python、Zig、Go 与 Rust 共用 LSP、格式化、测试、任务和 DAP 工作流；项目的 `.vscode/launch.json` 也可直接复用。
 
 ## 目录
 
 ```text
 dotfiles/
 ├── .chezmoiroot                    # 将 chezmoi source state 指向 home/
-├── .devcontainer/                  # Ubuntu 24.04 + Linuxbrew 开发环境
+├── .devcontainer/                  # Ubuntu 26.04 + Linuxbrew 开发环境
 ├── .github/
 │   ├── Brewfile                    # CI 最新稳定版校验工具
 │   └── workflows/ci.yml            # 模板、配置、安全与供应链校验
@@ -92,9 +93,12 @@ chezmoi diff                      # 审核目标状态差异
 chezmoi apply                     # 应用已审核配置
 brew bundle --file="$(chezmoi source-path)/../Brewfile"
 brewup                            # update + upgrade + cleanup
+devup                             # 更新 Homebrew、Lazy lock 与 Mason 工具
 ```
 
-`devdoctor` 检查 Homebrew、chezmoi、age、SSH、gitleaks、语言 Runtime、IaC/Kubernetes CLI 和终端工具，并确认 Runtime 的实际路径来自 Homebrew；它不会自动修改系统。
+`devdoctor` 检查 Homebrew、chezmoi、age、SSH、gitleaks、语言 Runtime、LLVM/CMake/Ninja、IaC/Kubernetes CLI 和终端工具，并确认 Runtime 的实际路径来自 Homebrew；它不会自动修改系统。
+
+GitHub Actions 会在每次提交验证模板、Shell 行为、安全策略、macOS 配置和 Dev Container 构建；每周一还会从空缓存同步上游最新 Neovim 插件与 Mason 工具，运行语义冒烟测试，并在插件锁落后时提示执行 `devup`。Dependabot 每周更新 GitHub Actions、Dev Container 与 Docker 基础镜像引用。
 
 ## 功能与快捷键速查
 
@@ -162,9 +166,22 @@ Neovim 的 `<leader>` 是空格键；Ghostty 的 `Cmd` 快捷键属于 macOS，Z
 | `<leader>db` / `<leader>dc` | 设置断点 / 继续调试 |
 | `<leader>di` / `<leader>dO` / `<leader>do` | 步入 / 步过 / 步出 |
 | `<leader>du` / `<leader>de` / `<leader>dt` | DAP UI / 计算表达式 / 终止调试 |
+| `<leader>oo` / `<leader>ow` / `<leader>ot` | 运行任务 / 任务列表 / 对任务执行操作 |
 | `<leader>gs` / `<leader>gd` | Git 状态 / 当前文件 Diff |
 | `<leader>gc` / `<leader>gS` | 提交历史 / Stash |
 | `lg` | 在终端中启动 LazyGit |
+
+### 多语言开发环境
+
+| 语言 | 语义、检查与格式化 | 构建、测试与调试 |
+| --- | --- | --- |
+| C/C++ | clangd、clang-tidy、clang-format | CMake、Ninja、ccache、Overseer、codelldb |
+| Python | uv、Pyright、Ruff；`<leader>cT` 运行 `ty check` | pytest、Neotest、debugpy |
+| Zig | zls、`zig fmt` | `zig build test`、Neotest、codelldb |
+| Go | gopls、gofumpt、goimports、golangci-lint | `go test`、Neotest、Delve |
+| Rust | rust-analyzer、rustaceanvim、rustfmt、Clippy | Cargo、Neotest、codelldb |
+
+Mason 只安装编辑器侧的 LSP、格式化器与调试适配器；编译器和构建系统仍由 Homebrew 提供。CMake 和通用任务输出统一进入 Overseer，测试统一进入 Neotest，原生语言统一使用 codelldb。调试配置优先读取项目的 `.vscode/launch.json`，也可以使用内置的 launch/attach 配置。
 
 ### Markdown 与 Python
 
@@ -177,6 +194,7 @@ Markdown 在普通、命令和终端模式渲染标题、任务、表格、代�
 | `[[` / `]]` | 跳转到上一节 / 下一节 |
 | `gO` | 打开 Markdown 文档大纲 |
 | `<leader>cv` | 在 Python Buffer 中手动选择虚拟环境 |
+| `<leader>cT` | 使用 ty 对整个 Python 项目做补充类型检查 |
 
 打开 uv 项目的 Python 文件时，会依据 `uv.lock` 自动激活 `.venv/bin/python`，并把同一环境交给 Pyright、Ruff、DAP 与 Neotest；Ruff 负责 Lint 和 Import，Pyright 专注类型分析，避免重复诊断。
 
@@ -217,7 +235,7 @@ git rebase origin/main
 | `git rescue` | 查看 Reflog |
 | `cz` / `cza` / `czd` | chezmoi 命令入口 / 应用目标状态 / 查看目标差异 |
 | `cze` / `czu` | 编辑受管文件 / 更新并应用仓库 |
-| `brewup` / `devup` | 更新并清理 Homebrew / 更新 Homebrew 工具链 |
+| `brewup` / `devup` | 更新并清理 Homebrew / 更新 Homebrew、Neovim 插件锁与 Mason 工具 |
 | `devdoctor` | 只读检查配置、Runtime 来源、签名和关键工具 |
 | `scan-secrets` | 使用 gitleaks 扫描暂存内容 |
 

@@ -6,6 +6,11 @@
   "containerEnv": {
     "CHEZMOI_PROFILE": "devcontainer"
   },
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "runArgs": [
+    "--cap-add=SYS_PTRACE",
+    "--security-opt=seccomp=unconfined"
+  ],
   "remoteUser": "vscode",
-  "postCreateCommand": "GIT_AUTHOR_NAME=\"${GIT_AUTHOR_NAME:-Dev Container}\" GIT_AUTHOR_EMAIL=\"${GIT_AUTHOR_EMAIL:-devcontainer@localhost}\" chezmoi init --apply --source=/workspaces/dotfiles"
+  "postCreateCommand": "GIT_AUTHOR_NAME=\"${GIT_AUTHOR_NAME:-Dev Container}\" GIT_AUTHOR_EMAIL=\"${GIT_AUTHOR_EMAIL:-devcontainer@localhost}\" chezmoi init --apply --source=\"/workspaces/${localWorkspaceFolderBasename}\""
 }

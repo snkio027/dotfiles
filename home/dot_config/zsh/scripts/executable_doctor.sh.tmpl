@@ -177,6 +177,41 @@ else
     check_status "Go Toolchain" "warn" "Go toolchain missing"
 fi
 
+if command -v zig &>/dev/null; then
+    ZIG_VER="$(zig version 2>/dev/null || echo "installed")"
+    check_status "Zig Toolchain" "pass" "v$ZIG_VER"
+else
+    check_status "Zig Toolchain" "warn" "Zig toolchain missing"
+fi
+
+if command -v clang &>/dev/null; then
+    CLANG_VER="$(clang --version 2>/dev/null | head -n1 || echo "installed")"
+    check_status "LLVM C/C++ Toolchain" "pass" "$CLANG_VER"
+else
+    check_status "LLVM C/C++ Toolchain" "warn" "Homebrew LLVM missing"
+fi
+
+if command -v cmake &>/dev/null; then
+    CMAKE_VER="$(cmake --version 2>/dev/null | head -n1 || echo "installed")"
+    check_status "CMake Build System" "pass" "$CMAKE_VER"
+else
+    check_status "CMake Build System" "warn" "CMake missing"
+fi
+
+if command -v ninja &>/dev/null; then
+    NINJA_VER="$(ninja --version 2>/dev/null || echo "installed")"
+    check_status "Ninja Build Backend" "pass" "v$NINJA_VER"
+else
+    check_status "Ninja Build Backend" "warn" "Ninja missing"
+fi
+
+if command -v ccache &>/dev/null; then
+    CCACHE_VER="$(ccache --version 2>/dev/null | head -n1 || echo "installed")"
+    check_status "C/C++ Compiler Cache" "pass" "$CCACHE_VER"
+else
+    check_status "C/C++ Compiler Cache" "warn" "ccache missing"
+fi
+
 if command -v terraform &>/dev/null; then
     TF_VER="$(terraform version -json 2>/dev/null | jq -r '.terraform_version' || echo "installed")"
     check_status "Terraform CLI" "pass" "v$TF_VER"
@@ -202,7 +237,7 @@ RUNTIME_SOURCE_OK=true
 if [ -z "$BREW_PREFIX" ]; then
     RUNTIME_SOURCE_OK=false
 else
-    for tool in uv python3 node rustc go terraform kubectl helm; do
+    for tool in uv python3 node rustc go zig clang cmake ninja ccache terraform kubectl helm; do
         tool_path="$(command -v "$tool" 2>/dev/null || true)"
         case "$tool_path" in
             "$BREW_PREFIX"/*) ;;
