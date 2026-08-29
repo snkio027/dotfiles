@@ -6,16 +6,25 @@
 # 1. 外观样式与色彩主题
 # Always use the dark palette, independent of the macOS appearance setting.
 theme = "Catppuccin Mocha"
-# Three independent layers keep code, private-use icons, and CJK fallback
-# diagnosable without patching the licensed MonoLisa font files.
+# Independent fallback layers keep code, CJK, and private-use icons diagnosable
+# without patching the licensed MonoLisa font files.
 font-family = "MonoLisaCode Variable"
-font-family = "Symbols Nerd Font Mono"
 font-family = "PingFang SC"
+font-family = "Maple Mono NF CN"
+font-family = "Symbols Nerd Font Mono"
 font-style = "Regular"
-font-style-bold = "Bold"
+font-style-bold = "Regular"
 font-style-italic = "Italic"
-font-style-bold-italic = "Bold Italic"
+font-style-bold-italic = "Italic"
 font-synthetic-style = false
+font-variation = "wght=600"
+font-variation = "GRAD=25"
+font-variation-bold = "wght=800"
+font-variation-bold = "GRAD=25"
+font-variation-italic = "wght=600"
+font-variation-italic = "GRAD=25"
+font-variation-bold-italic = "wght=800"
+font-variation-bold-italic = "GRAD=25"
 font-size = 14
 font-thicken = false
 # Keep MonoLisa defaults intact while explicitly disabling discretionary ligatures.

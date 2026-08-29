@@ -87,7 +87,7 @@ cask "1password" if OS.mac?  # 密码管理器与 SSH Agent 凭据提供商
 cask "orbstack" if OS.mac?   # 轻量极速 Docker 容器与 Linux 虚拟机运行时
 
 # --- Terminal & Starship Nerd Fonts ---
-cask "font-maple-mono-nf-cn" if OS.mac?          # 开源 CJK/Nerd Font 备选
+cask "font-maple-mono-nf-cn" if OS.mac?          # Ghostty 首选 Nerd 图标 fallback 及 CJK 备选
 cask "font-jetbrains-mono-nerd-font" if OS.mac?
-cask "font-symbols-only-nerd-font" if OS.mac?     # Ghostty 单字符宽度图标 fallback
+cask "font-symbols-only-nerd-font" if OS.mac?     # Ghostty 单字符宽度末级 fallback
 cask "font-inter" if OS.mac?
