@@ -5,6 +5,21 @@ end
 assert(vim.fn.exists(":OverseerRun") == 2, "Overseer command is unavailable")
 assert(vim.fn.exists(":MasonToolsInstallSync") == 2, "Mason tool installer command is unavailable")
 
+require("lazy").load({ plugins = { "mini.icons" } })
+local icon_cases_path = vim.fn.getcwd() .. "/tests/icons/generated_cases.json"
+local icon_payload = vim.json.decode(table.concat(vim.fn.readfile(icon_cases_path), "\n"))
+local mini_icons = require("mini.icons")
+local verified_icons = 0
+for _, case in ipairs(icon_payload.cases) do
+	local glyph, highlight = mini_icons.get("file", case.fixture)
+	assert(glyph == case.glyph, ("Icon glyph mismatch for %s"):format(case.pattern))
+	assert(highlight == case.nvim_highlight, ("Icon highlight mismatch for %s"):format(case.pattern))
+	verified_icons = verified_icons + 1
+end
+assert(verified_icons == icon_payload.expected, "Icon contract coverage is incomplete")
+print(("Icon contract verification %d/%d"):format(verified_icons, icon_payload.expected))
+print(("Real-project observation %d/%d"):format(icon_payload.real_project_expected, icon_payload.expected))
+
 local mason = LazyVim.opts("mason.nvim")
 for _, tool in ipairs({
 	"codelldb",

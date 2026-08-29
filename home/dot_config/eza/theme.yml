@@ -1,0 +1,438 @@
+# Generated from icons/contract.toml by icons/generate.py. Do not edit.
+filenames:
+  ".clang-format":
+    icon:
+      glyph: "󱁻"
+      style:
+        foreground: "#cba6f7"
+  ".coveragerc":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#bac2de"
+  ".dockerignore":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#74c7ec"
+  ".git-blame-ignore-revs":
+    icon:
+      glyph: "󰊢"
+      style:
+        foreground: "#bac2de"
+  ".gitignore":
+    icon:
+      glyph: "󰊢"
+      style:
+        foreground: "#bac2de"
+  ".pre-commit-config.yaml":
+    icon:
+      glyph: "󰛢"
+      style:
+        foreground: "#bac2de"
+  ".shellcheckrc":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#bac2de"
+  "CMakeLists.txt":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#fab387"
+  "CMakePresets.json":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#fab387"
+  "CMakeUserPresets.json":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#fab387"
+  "CODE_OF_CONDUCT.md":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#bac2de"
+  "CONTRIBUTING.md":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#bac2de"
+  "Cargo.lock":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#fab387"
+  "Cargo.toml":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#fab387"
+  "DCO":
+    icon:
+      glyph: "󰡯"
+      style:
+        foreground: "#bac2de"
+  "Dockerfile":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#74c7ec"
+  "Justfile":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#fab387"
+  "LICENSE":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#f9e2af"
+  "MANIFEST.in":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#f9e2af"
+  "Makefile":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#fab387"
+  "README.md":
+    icon:
+      glyph: "󰂺"
+      style:
+        foreground: "#f9e2af"
+  "SECURITY.md":
+    icon:
+      glyph: "󰒃"
+      style:
+        foreground: "#f38ba8"
+  "Taskfile.yml":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#fab387"
+  "build.zig":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#f9e2af"
+  "build.zig.zon":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#f9e2af"
+  "bun.lock":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#f9e2af"
+  "compose.yaml":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#74c7ec"
+  "docker-compose.yml":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#74c7ec"
+  "go.mod":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#74c7ec"
+  "go.sum":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#74c7ec"
+  "meson.build":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#fab387"
+  "package-lock.json":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#f9e2af"
+  "package.json":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#f9e2af"
+  "pnpm-lock.yaml":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#f9e2af"
+  "pyproject.toml":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#f9e2af"
+  "requirements.txt":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#f9e2af"
+  "rust-toolchain.toml":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#fab387"
+  "uv.lock":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#f9e2af"
+  "yarn.lock":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#f9e2af"
+extensions:
+  "c":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#89b4fa"
+  "cc":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#89b4fa"
+  "cmake":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#fab387"
+  "cpp":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#89b4fa"
+  "css":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#89b4fa"
+  "csv":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#94e2d5"
+  "cxx":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#89b4fa"
+  "env":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#94e2d5"
+  "fish":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#a6e3a1"
+  "go":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#74c7ec"
+  "graphql":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#cba6f7"
+  "h":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#89b4fa"
+  "hcl":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#cba6f7"
+  "hh":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#89b4fa"
+  "hpp":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#89b4fa"
+  "html":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#fab387"
+  "ini":
+    icon:
+      glyph: "󱁻"
+      style:
+        foreground: "#cba6f7"
+  "ipynb":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#fab387"
+  "js":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#f9e2af"
+  "json":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#bac2de"
+  "jsonc":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#bac2de"
+  "jsx":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#f9e2af"
+  "kdl":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#bac2de"
+  "lock":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#f9e2af"
+  "lua":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#89b4fa"
+  "md":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#bac2de"
+  "mjs":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#f9e2af"
+  "nix":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#89b4fa"
+  "proto":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#cba6f7"
+  "py":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#f9e2af"
+  "pyi":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#f9e2af"
+  "rs":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#fab387"
+  "rst":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#bac2de"
+  "scss":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#89b4fa"
+  "sh":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#a6e3a1"
+  "sql":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#94e2d5"
+  "tf":
+    icon:
+      glyph: "󱁢"
+      style:
+        foreground: "#cba6f7"
+  "tfvars":
+    icon:
+      glyph: "󱁢"
+      style:
+        foreground: "#cba6f7"
+  "toml":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#bac2de"
+  "ts":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#89b4fa"
+  "tsx":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#89b4fa"
+  "txt":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#bac2de"
+  "vim":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#a6e3a1"
+  "xml":
+    icon:
+      glyph: "󰗀"
+      style:
+        foreground: "#fab387"
+  "yaml":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#bac2de"
+  "yml":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#bac2de"
+  "zig":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#f9e2af"
+  "zsh":
+    icon:
+      glyph: ""
+      style:
+        foreground: "#a6e3a1"

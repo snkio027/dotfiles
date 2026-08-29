@@ -1,0 +1,562 @@
+[contract]
+version = 1
+source_eza_version = "0.23.5"
+snapshot_date = "2026-08-30"
+priority = ["file", "extension", "default"]
+
+[defaults.file]
+glyph = ""
+color_role = "grey"
+
+[defaults.directory]
+glyph = ""
+color_role = "azure"
+
+[colors.grey]
+nvim = "MiniIconsGrey"
+eza = "#bac2de"
+
+[colors.azure]
+nvim = "MiniIconsAzure"
+eza = "#74c7ec"
+
+[colors.blue]
+nvim = "MiniIconsBlue"
+eza = "#89b4fa"
+
+[colors.green]
+nvim = "MiniIconsGreen"
+eza = "#a6e3a1"
+
+[colors.yellow]
+nvim = "MiniIconsYellow"
+eza = "#f9e2af"
+
+[colors.orange]
+nvim = "MiniIconsOrange"
+eza = "#fab387"
+
+[colors.red]
+nvim = "MiniIconsRed"
+eza = "#f38ba8"
+
+[colors.purple]
+nvim = "MiniIconsPurple"
+eza = "#cba6f7"
+
+[colors.teal]
+nvim = "MiniIconsCyan"
+eza = "#94e2d5"
+
+[[files]]
+name = ".clang-format"
+glyph = "󱁻"
+color_role = "purple"
+
+[[files]]
+name = ".coveragerc"
+glyph = ""
+color_role = "grey"
+
+[[files]]
+name = ".dockerignore"
+glyph = ""
+color_role = "azure"
+
+[[files]]
+name = ".git-blame-ignore-revs"
+glyph = "󰊢"
+color_role = "grey"
+
+[[files]]
+name = ".gitignore"
+glyph = "󰊢"
+color_role = "grey"
+
+[[files]]
+name = ".pre-commit-config.yaml"
+glyph = "󰛢"
+color_role = "grey"
+
+[[files]]
+name = ".shellcheckrc"
+glyph = ""
+color_role = "grey"
+
+[[files]]
+name = "CMakeLists.txt"
+glyph = ""
+color_role = "orange"
+
+[[files]]
+name = "CMakePresets.json"
+glyph = ""
+color_role = "orange"
+
+[[files]]
+name = "CMakeUserPresets.json"
+glyph = ""
+color_role = "orange"
+
+[[files]]
+name = "CODE_OF_CONDUCT.md"
+glyph = ""
+color_role = "grey"
+
+[[files]]
+name = "CONTRIBUTING.md"
+glyph = ""
+color_role = "grey"
+
+[[files]]
+name = "Cargo.lock"
+glyph = ""
+color_role = "orange"
+
+[[files]]
+name = "Cargo.toml"
+glyph = ""
+color_role = "orange"
+
+[[files]]
+name = "DCO"
+glyph = "󰡯"
+color_role = "grey"
+
+[[files]]
+name = "Dockerfile"
+glyph = ""
+color_role = "azure"
+
+[[files]]
+name = "Justfile"
+glyph = ""
+color_role = "orange"
+
+[[files]]
+name = "LICENSE"
+glyph = ""
+color_role = "yellow"
+
+[[files]]
+name = "MANIFEST.in"
+glyph = ""
+color_role = "yellow"
+
+[[files]]
+name = "Makefile"
+glyph = ""
+color_role = "orange"
+
+[[files]]
+name = "README.md"
+glyph = "󰂺"
+color_role = "yellow"
+
+[[files]]
+name = "SECURITY.md"
+glyph = "󰒃"
+color_role = "red"
+
+[[files]]
+name = "Taskfile.yml"
+glyph = ""
+color_role = "orange"
+
+[[files]]
+name = "build.zig"
+glyph = ""
+color_role = "yellow"
+
+[[files]]
+name = "build.zig.zon"
+glyph = ""
+color_role = "yellow"
+
+[[files]]
+name = "bun.lock"
+glyph = ""
+color_role = "yellow"
+
+[[files]]
+name = "compose.yaml"
+glyph = ""
+color_role = "azure"
+
+[[files]]
+name = "docker-compose.yml"
+glyph = ""
+color_role = "azure"
+
+[[files]]
+name = "go.mod"
+glyph = ""
+color_role = "azure"
+
+[[files]]
+name = "go.sum"
+glyph = ""
+color_role = "azure"
+
+[[files]]
+name = "meson.build"
+glyph = ""
+color_role = "orange"
+
+[[files]]
+name = "package-lock.json"
+glyph = ""
+color_role = "yellow"
+
+[[files]]
+name = "package.json"
+glyph = ""
+color_role = "yellow"
+
+[[files]]
+name = "pnpm-lock.yaml"
+glyph = ""
+color_role = "yellow"
+
+[[files]]
+name = "pyproject.toml"
+glyph = ""
+color_role = "yellow"
+
+[[files]]
+name = "requirements.txt"
+glyph = ""
+color_role = "yellow"
+
+[[files]]
+name = "rust-toolchain.toml"
+glyph = ""
+color_role = "orange"
+
+[[files]]
+name = "uv.lock"
+glyph = ""
+color_role = "yellow"
+
+[[files]]
+name = "yarn.lock"
+glyph = ""
+color_role = "yellow"
+
+[[extensions]]
+name = "c"
+glyph = ""
+color_role = "blue"
+
+[[extensions]]
+name = "cc"
+glyph = ""
+color_role = "blue"
+
+[[extensions]]
+name = "cmake"
+glyph = ""
+color_role = "orange"
+
+[[extensions]]
+name = "cpp"
+glyph = ""
+color_role = "blue"
+
+[[extensions]]
+name = "css"
+glyph = ""
+color_role = "blue"
+
+[[extensions]]
+name = "csv"
+glyph = ""
+color_role = "teal"
+
+[[extensions]]
+name = "cxx"
+glyph = ""
+color_role = "blue"
+
+[[extensions]]
+name = "env"
+glyph = ""
+color_role = "teal"
+
+[[extensions]]
+name = "fish"
+glyph = ""
+color_role = "green"
+
+[[extensions]]
+name = "go"
+glyph = ""
+color_role = "azure"
+
+[[extensions]]
+name = "graphql"
+glyph = ""
+color_role = "purple"
+
+[[extensions]]
+name = "h"
+glyph = ""
+color_role = "blue"
+
+[[extensions]]
+name = "hcl"
+glyph = ""
+color_role = "purple"
+
+[[extensions]]
+name = "hh"
+glyph = ""
+color_role = "blue"
+
+[[extensions]]
+name = "hpp"
+glyph = ""
+color_role = "blue"
+
+[[extensions]]
+name = "html"
+glyph = ""
+color_role = "orange"
+
+[[extensions]]
+name = "ini"
+glyph = "󱁻"
+color_role = "purple"
+
+[[extensions]]
+name = "ipynb"
+glyph = ""
+color_role = "orange"
+
+[[extensions]]
+name = "js"
+glyph = ""
+color_role = "yellow"
+
+[[extensions]]
+name = "json"
+glyph = ""
+color_role = "grey"
+
+[[extensions]]
+name = "jsonc"
+glyph = ""
+color_role = "grey"
+
+[[extensions]]
+name = "jsx"
+glyph = ""
+color_role = "yellow"
+
+[[extensions]]
+name = "kdl"
+glyph = ""
+color_role = "grey"
+
+[[extensions]]
+name = "lock"
+glyph = ""
+color_role = "yellow"
+
+[[extensions]]
+name = "lua"
+glyph = ""
+color_role = "blue"
+
+[[extensions]]
+name = "md"
+glyph = ""
+color_role = "grey"
+
+[[extensions]]
+name = "mjs"
+glyph = ""
+color_role = "yellow"
+
+[[extensions]]
+name = "nix"
+glyph = ""
+color_role = "blue"
+
+[[extensions]]
+name = "proto"
+glyph = ""
+color_role = "purple"
+
+[[extensions]]
+name = "py"
+glyph = ""
+color_role = "yellow"
+
+[[extensions]]
+name = "pyi"
+glyph = ""
+color_role = "yellow"
+
+[[extensions]]
+name = "rs"
+glyph = ""
+color_role = "orange"
+
+[[extensions]]
+name = "rst"
+glyph = ""
+color_role = "grey"
+
+[[extensions]]
+name = "scss"
+glyph = ""
+color_role = "blue"
+
+[[extensions]]
+name = "sh"
+glyph = ""
+color_role = "green"
+
+[[extensions]]
+name = "sql"
+glyph = ""
+color_role = "teal"
+
+[[extensions]]
+name = "tf"
+glyph = "󱁢"
+color_role = "purple"
+
+[[extensions]]
+name = "tfvars"
+glyph = "󱁢"
+color_role = "purple"
+
+[[extensions]]
+name = "toml"
+glyph = ""
+color_role = "grey"
+
+[[extensions]]
+name = "ts"
+glyph = ""
+color_role = "blue"
+
+[[extensions]]
+name = "tsx"
+glyph = ""
+color_role = "blue"
+
+[[extensions]]
+name = "txt"
+glyph = ""
+color_role = "grey"
+
+[[extensions]]
+name = "vim"
+glyph = ""
+color_role = "green"
+
+[[extensions]]
+name = "xml"
+glyph = "󰗀"
+color_role = "orange"
+
+[[extensions]]
+name = "yaml"
+glyph = ""
+color_role = "grey"
+
+[[extensions]]
+name = "yml"
+glyph = ""
+color_role = "grey"
+
+[[extensions]]
+name = "zig"
+glyph = ""
+color_role = "yellow"
+
+[[extensions]]
+name = "zsh"
+glyph = ""
+color_role = "green"
+
+[coverage]
+expected = 72
+real_project_expected = 47
+cases = [
+  { pattern = "*.c", fixture = "sample.c", observed = true },
+  { pattern = "*.h", fixture = "sample.h", observed = true },
+  { pattern = "*.cc", fixture = "sample.cc", observed = true },
+  { pattern = "*.cpp", fixture = "sample.cpp", observed = true },
+  { pattern = "*.cxx", fixture = "sample.cxx", observed = false },
+  { pattern = "*.hh", fixture = "sample.hh", observed = false },
+  { pattern = "*.hpp", fixture = "sample.hpp", observed = true },
+  { pattern = "*.cmake", fixture = "sample.cmake", observed = true },
+  { pattern = "CMakePresets.json", fixture = "CMakePresets.json", observed = true },
+  { pattern = "CMakeUserPresets.json", fixture = "CMakeUserPresets.json", observed = false },
+  { pattern = "Makefile", fixture = "Makefile", observed = true },
+  { pattern = "meson.build", fixture = "meson.build", observed = false },
+  { pattern = "*.py", fixture = "sample.py", observed = true },
+  { pattern = "*.pyi", fixture = "sample.pyi", observed = false },
+  { pattern = "pyproject.toml", fixture = "pyproject.toml", observed = true },
+  { pattern = "uv.lock", fixture = "uv.lock", observed = true },
+  { pattern = "requirements.txt", fixture = "requirements.txt", observed = true },
+  { pattern = "*.rs", fixture = "sample.rs", observed = true },
+  { pattern = "Cargo.toml", fixture = "Cargo.toml", observed = true },
+  { pattern = "Cargo.lock", fixture = "Cargo.lock", observed = true },
+  { pattern = "rust-toolchain.toml", fixture = "rust-toolchain.toml", observed = true },
+  { pattern = "*.zig", fixture = "sample.zig", observed = true },
+  { pattern = "build.zig", fixture = "build.zig", observed = true },
+  { pattern = "build.zig.zon", fixture = "build.zig.zon", observed = true },
+  { pattern = "*.go", fixture = "sample.go", observed = false },
+  { pattern = "go.mod", fixture = "go.mod", observed = false },
+  { pattern = "go.sum", fixture = "go.sum", observed = false },
+  { pattern = "*.lua", fixture = "sample.lua", observed = true },
+  { pattern = "*.vim", fixture = "sample.vim", observed = false },
+  { pattern = "*.sh", fixture = "sample.sh", observed = true },
+  { pattern = "*.zsh", fixture = "sample.zsh", observed = true },
+  { pattern = "*.fish", fixture = "sample.fish", observed = true },
+  { pattern = "*.js", fixture = "sample.js", observed = true },
+  { pattern = "*.jsx", fixture = "sample.jsx", observed = false },
+  { pattern = "*.mjs", fixture = "sample.mjs", observed = false },
+  { pattern = "*.ts", fixture = "sample.ts", observed = true },
+  { pattern = "*.tsx", fixture = "sample.tsx", observed = false },
+  { pattern = "package.json", fixture = "package.json", observed = true },
+  { pattern = "package-lock.json", fixture = "package-lock.json", observed = false },
+  { pattern = "pnpm-lock.yaml", fixture = "pnpm-lock.yaml", observed = true },
+  { pattern = "yarn.lock", fixture = "yarn.lock", observed = false },
+  { pattern = "bun.lock", fixture = "bun.lock", observed = false },
+  { pattern = "*.json", fixture = "sample.json", observed = true },
+  { pattern = "*.jsonc", fixture = "sample.jsonc", observed = true },
+  { pattern = "*.yaml", fixture = "sample.yaml", observed = true },
+  { pattern = "*.yml", fixture = "sample.yml", observed = true },
+  { pattern = "*.toml", fixture = "sample.toml", observed = true },
+  { pattern = "*.ini", fixture = "sample.ini", observed = false },
+  { pattern = "*.env", fixture = "sample.env", observed = true },
+  { pattern = "Dockerfile", fixture = "Dockerfile", observed = true },
+  { pattern = "docker-compose.yml", fixture = "docker-compose.yml", observed = true },
+  { pattern = "compose.yaml", fixture = "compose.yaml", observed = true },
+  { pattern = "Justfile", fixture = "Justfile", observed = false },
+  { pattern = "Taskfile.yml", fixture = "Taskfile.yml", observed = true },
+  { pattern = "*.md", fixture = "sample.md", observed = true },
+  { pattern = "*.rst", fixture = "sample.rst", observed = false },
+  { pattern = "*.txt", fixture = "sample.txt", observed = true },
+  { pattern = "*.sql", fixture = "sample.sql", observed = true },
+  { pattern = "*.proto", fixture = "sample.proto", observed = true },
+  { pattern = "*.graphql", fixture = "sample.graphql", observed = false },
+  { pattern = "*.tf", fixture = "sample.tf", observed = false },
+  { pattern = "*.tfvars", fixture = "sample.tfvars", observed = false },
+  { pattern = "*.hcl", fixture = "sample.hcl", observed = true },
+  { pattern = "*.nix", fixture = "sample.nix", observed = false },
+  { pattern = "*.kdl", fixture = "sample.kdl", observed = true },
+  { pattern = "*.css", fixture = "sample.css", observed = true },
+  { pattern = "*.scss", fixture = "sample.scss", observed = false },
+  { pattern = "*.html", fixture = "sample.html", observed = true },
+  { pattern = "*.xml", fixture = "sample.xml", observed = false },
+  { pattern = "*.csv", fixture = "sample.csv", observed = true },
+  { pattern = "*.ipynb", fixture = "sample.ipynb", observed = false },
+  { pattern = "*.lock", fixture = "sample.lock", observed = true },
+]

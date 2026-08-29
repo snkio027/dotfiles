@@ -8,6 +8,8 @@
 *~
 nvim.log
 .idea/
+__pycache__/
+*.pyc
 
 # 归档压缩包
 git.tar

@@ -5,6 +5,7 @@ brew "chezmoi"
 brew "gitleaks"
 brew "hadolint"
 brew "fd"
+brew "eza"
 brew "lazygit"
 brew "cmake"
 brew "llvm"
@@ -25,3 +26,5 @@ brew "zellij"
 brew "zizmor"
 brew "zsh"
 cask "ghostty" if OS.mac?
+cask "font-maple-mono-nf-cn" if OS.mac?
+cask "font-symbols-only-nerd-font" if OS.mac?

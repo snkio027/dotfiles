@@ -38,6 +38,7 @@ Homebrew 负责全局 CLI 与语言 Runtime；uv 负责项目 Python、虚拟环
 - Atuin 以 daemon fuzzy 模式持续记录、同步历史，FZF 接管 `Ctrl-R` 检索界面，方向键保留原生历史行为。
 - Neovim 是唯一编辑器；Git、Yazi、sudo、systemd 与 kubectl 的编辑入口统一指向 Neovim。
 - Neovim/LazyVim、LazyGit、Yazi 与全部颜色配置均由 chezmoi 纳管。
+- `icons/contract.toml` 是 Neovim `mini.icons` 与 eza 的版本化图标契约；精确文件名优先于扩展名与默认值，glyph 和 Catppuccin 语义颜色由同一份数据生成，不跟随任一工具的实时内置表漂移。
 - Markdown 在普通模式渲染标题、任务、表格与代码块，插入模式自动显示原文；Ghostty 直连及其承载的 Zellij 0.45+ 会话均支持文档内图片、数学公式与 Mermaid 预览。
 - markdownlint 全局保留结构与语义检查，仅关闭对表格、URL 和 CJK 文档噪音较大的 `MD013` 行宽规则。
 - `CMakeLists.txt` 是 CMake 源文件而非 Markdown；neocmake 负责语义和 100 列诊断，gersemi 按同一宽度统一格式。
@@ -55,6 +56,8 @@ dotfiles/
 │   ├── Brewfile                    # CI 最新稳定版校验工具
 │   └── workflows/ci.yml            # 模板、配置、安全与供应链校验
 ├── Brewfile                        # Runtime、CLI、应用与字体
+├── icons/                           # 跨 Neovim/eza 的声明式 Icon Contract 与生成器
+├── tests/icons/                     # 72 类 fixture、消费者、字体与宽度验证
 └── home/                           # 唯一会映射到 $HOME 的 source state
     ├── .chezmoi.toml.tmpl          # 本机数据与仓库 sourceDir
     ├── .chezmoidata.yaml           # Git 默认值与功能开关
@@ -65,6 +68,7 @@ dotfiles/
     ├── private_dot_ssh/             # OpenSSH 原生固定目录
     └── dot_config/
         ├── atuin/                  # 历史检索
+        ├── eza/theme.yml           # 由 Icon Contract 生成的文件图标主题
         ├── ghostty/                # macOS Ghostty 外观与宿主快捷键
         ├── git/                    # Git 全局配置与 ignore
         ├── lazygit/                # Git TUI 与 Catppuccin 主题
@@ -108,9 +112,13 @@ chezmoi apply                     # 应用已审核配置
 brew bundle --file="$(chezmoi source-path)/../Brewfile"
 brewup                            # update + upgrade + cleanup
 devup                             # 更新 Homebrew、cxx-init、Lazy lock 与 Mason 工具
+python3 icons/generate.py --write # 修改契约后重建 Neovim、eza 与测试制品
+python3 icons/generate.py --check # 验证生成制品未漂移
 ```
 
 `devdoctor` 检查 Homebrew、chezmoi、age、SSH、gitleaks、语言 Runtime、LLVM/CMake/Ninja、cxx-init、IaC/Kubernetes CLI 和终端工具，并确认 Runtime 的实际路径来自 Homebrew；它不会自动修改系统。
+
+Icon Contract 固定采用“精确文件名 > 扩展名 > filetype/default”的解析顺序。生成器拒绝重复键、非法码点、缺失颜色角色和非单字符宽度 glyph；CI 使用临时 fixture 分别验证 Neovim 与 eza 消费结果，并在 macOS 验证 glyph 可由 Maple Mono NF CN 或末级 Symbols Nerd Font 覆盖。当前逻辑契约覆盖为 `72/72`，真实项目观察为 `47/72`；其余 25 类是合成 fixture，不能表述为真实项目样本。升级 eza 或 `mini.icons` 时只报告上游默认差异，不会自动改写本仓库拥有的契约。
 
 GitHub Actions 会在每次提交验证模板、Shell 行为、安全策略、macOS 配置、cxx-init 最新发布版的完整生成/构建/测试流程和 Dev Container 构建；每周一还会从空缓存同步上游最新 Neovim 插件与 Mason 工具，运行语义冒烟测试，并在插件锁落后时提示执行 `devup`。Dependabot 每周更新 GitHub Actions、Dev Container 与 Docker 基础镜像引用。
 

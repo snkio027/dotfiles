@@ -118,6 +118,8 @@ jobs:
 
       - name: Validate static configuration
         run: |
+          python3 icons/generate.py --check
+          python3 tests/icons/test_icon_contract.py
           find . -path ./.git -prune -o -type f -name '*.json' -print0 | xargs -0 -n1 jq empty
           find . -path ./.git -prune -o -type f \( -name '*.yml' -o -name '*.yaml' \) -print0 | xargs -0 -n1 ruby -e 'require "yaml"; YAML.load_file(ARGV.fetch(0))'
           find home/dot_config .github -type f -name '*.toml' -print0 | xargs -0 taplo format --check
@@ -180,6 +182,7 @@ jobs:
           zsh -n "$tmp_dir/exports.zsh"
           /Applications/Ghostty.app/Contents/MacOS/ghostty +validate-config \
             --config-file="$PWD/home/dot_config/ghostty/config"
+          python3 tests/icons/test_icon_contract.py --font-check
           chezmoi apply --dry-run --source=.
 
   devcontainer-build:
@@ -224,6 +227,8 @@ jobs:
           nvim --headless "+Lazy! sync" +qa
           nvim --headless "+MasonToolsUpdateSync" +qa
           nvim --headless "+luafile tests/nvim/smoke.lua" +qa
+          python3 tests/icons/test_icon_contract.py --drift
+          nvim --headless "+luafile tests/nvim/icon_drift.lua" +qa
           if ! git diff --exit-code -- home/dot_config/nvim/lazy-lock.json; then
             echo "::error::Neovim plugins have newer validated commits; run devup and commit lazy-lock.json."
             exit 1
