@@ -129,6 +129,18 @@ jobs:
           STARSHIP_CONFIG="$PWD/home/dot_config/starship.toml" starship print-config > /dev/null
           zellij --config "$PWD/home/dot_config/zellij/config.kdl" setup --check
 
+      - name: Validate latest cxx-init release
+        run: |
+          uv tool install --upgrade --no-config cxx-init
+          cxx_bin="$(uv tool dir --bin)/cxx"
+          "$cxx_bin" --version
+          tmp_dir="$(mktemp -d)"
+          trap 'rm -rf "$tmp_dir"' EXIT
+          cd "$tmp_dir"
+          "$cxx_bin" init smoke-project --no-git
+          cd smoke-project
+          cmake --workflow --preset dev
+
       - name: Test chezmoi apply --dry-run
         run: |
           chezmoi apply --dry-run --source=.

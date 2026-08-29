@@ -94,11 +94,12 @@ alias doctor='bash "${XDG_CONFIG_HOME:-$HOME/.config}/zsh/scripts/doctor.sh"'
 alias devdoctor='bash "${XDG_CONFIG_HOME:-$HOME/.config}/zsh/scripts/doctor.sh"'
 alias scan-secrets="gitleaks git --pre-commit --staged --redact --verbose ."
 
-# 更新全局 Homebrew 工具、Neovim 插件锁和 Mason 编辑器工具。Lazy 在
-# chezmoi source state 上运行，确保更新后的 lockfile 可直接审阅和提交。
+# 更新全局 Homebrew 与 uv 工具、Neovim 插件锁和 Mason 编辑器工具。
+# Lazy 在 chezmoi source state 上运行，确保更新后的 lockfile 可直接审阅和提交。
 function devup() {
     local source_config
     brew update && brew upgrade || return
+    uv tool install --upgrade --no-config cxx-init || return
     source_config="$(chezmoi source-path)/dot_config" || return
     XDG_CONFIG_HOME="$source_config" nvim --headless "+Lazy! sync" +qa &&
         XDG_CONFIG_HOME="$source_config" nvim --headless "+MasonToolsUpdateSync" +qa

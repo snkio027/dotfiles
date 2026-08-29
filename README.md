@@ -8,13 +8,25 @@
 State       │ chezmoi · Homebrew Bundle · Dev Container
 Runtime     │ LLVM/CMake/Ninja · Zig · Go · Rust · Node · uv 项目 Python
 Shell       │ Zsh · Starship · Atuin · direnv · zoxide · Carapace · fzf
-Terminal    │ Ghostty · Zellij（按需）· Yazi · LazyGit
+Terminal    │ Ghostty（macOS）· Zellij（跨平台、按需）· Yazi · LazyGit
 Editor      │ Neovim 0.12 · LazyVim 16 · LSP · Overseer · Neotest · DAP
 Security    │ age · SOPS · SSH signing · gitleaks · Zizmor
 Validation  │ actionlint · ShellCheck · shfmt · Taplo · Hadolint · StyLua
 ```
 
-Homebrew 负责全局 CLI 与语言 Runtime；uv 负责项目 Python、虚拟环境与依赖，Lazy 与 Mason 只管理 Neovim 内部插件和编辑器工具。Brewfile 不固定公式版本：每次先执行 `brew update`，再安装或升级到 Homebrew 当前提供的稳定版。Mason 每 24 小时检查并更新编辑器工具；Lazy 每天提示插件更新。不使用 mise、asdf、nvm、pyenv；项目仍应提交自身的版本声明与依赖锁文件。
+Homebrew 负责全局 CLI 与语言 Runtime；uv 负责项目 Python、虚拟环境、依赖，以及 Python 原生全局 CLI 的隔离工具环境（当前为 cxx-init）；Lazy 与 Mason 只管理 Neovim 内部插件和编辑器工具。Brewfile 与 uv tool 都不固定工具版本，更新时选择当前最新稳定版。Mason 每 24 小时检查并更新编辑器工具；Lazy 每天提示插件更新。不使用 mise、asdf、nvm、pyenv；项目仍应提交自身的版本声明与依赖锁文件。
+
+## 平台支持边界
+
+| 配置层 | macOS | Linux 工作站 | Dev Container |
+| --- | --- | --- | --- |
+| Homebrew/Linuxbrew、Zsh、CLI 与语言工具链 | 支持 | 支持 | 支持 |
+| Neovim、LSP、格式化、测试与 DAP | 支持 | 支持 | 支持 |
+| Zellij、Yazi 与 LazyGit | 支持 | 支持 | 支持 |
+| Ghostty 安装、Cmd 快捷键与 Quick Terminal | 支持 | 不纳管 | 不纳管 |
+| 1Password GUI、OrbStack、字体与系统偏好 | 支持 | 不纳管 | 不纳管 |
+
+因此，“跨平台”指核心终端开发环境与编辑器工作流一致，不表示各系统的 GUI 应用完全相同。Linux 保留用户已有的终端模拟器；本仓库不会为 Linux 安装 Ghostty，也不会占用桌面环境的 Super 键。
 
 ## 体验设计
 
@@ -22,13 +34,14 @@ Homebrew 负责全局 CLI 与语言 Runtime；uv 负责项目 Python、虚拟环
 - Starship、Atuin、fzf、direnv、zoxide 与 Carapace 的生成脚本按二进制修改时间缓存，升级后自动刷新。
 - Starship 只在对应项目中显示 Node、Go、Rust、Python 与 Terraform 的实际版本。
 - Ghostty 固定使用 Catppuccin Mocha 暗色主题，以 Maple Mono NF CN Italic 作为主字面，保留圆润连字、Nerd 图标与 CJK 2:1 对齐，并提供 GPU 渲染和原生分屏。
-- Zellij 默认处于 locked mode，避免占用 Shell、Neovim 和 macOS 的 Alt 快捷键。
+- Zellij 默认处于 locked mode，避免在 macOS 和 Linux 上占用 Shell、Neovim 的 Alt 快捷键。
 - Atuin 以 daemon fuzzy 模式持续记录、同步历史，FZF 接管 `Ctrl-R` 检索界面，方向键保留原生历史行为。
 - Neovim 是唯一编辑器；Git、Yazi、sudo、systemd 与 kubectl 的编辑入口统一指向 Neovim。
 - Neovim/LazyVim、LazyGit、Yazi 与全部颜色配置均由 chezmoi 纳管。
 - Markdown 在普通模式渲染标题、任务、表格与代码块，插入模式自动显示原文；Ghostty 直连会话支持文档内图片、数学公式与 Mermaid 预览。
 - markdownlint 全局保留结构与语义检查，仅关闭对表格、URL 和 CJK 文档噪音较大的 `MD013` 行宽规则。
 - `CMakeLists.txt` 是 CMake 源文件而非 Markdown；neocmake 负责语义和 100 列诊断，gersemi 按同一宽度统一格式。
+- `cxx init <name>` 从离线内置模板创建 C++23/CMake/Ninja 项目，生成后直接使用标准工具链，不依赖 cxx-init 运行。
 - uv 项目中存在 `uv.lock` 和 `.venv` 时，Neovim 会自动将 Pyright、Ruff、DAP、Neotest 与内置终端统一到项目 Python。
 - C/C++、Python、Zig、Go 与 Rust 共用 LSP、格式化、测试、任务和 DAP 工作流；项目的 `.vscode/launch.json` 也可直接复用。
 
@@ -52,7 +65,7 @@ dotfiles/
     ├── private_dot_ssh/             # OpenSSH 原生固定目录
     └── dot_config/
         ├── atuin/                  # 历史检索
-        ├── ghostty/                # 终端外观与快捷键
+        ├── ghostty/                # macOS Ghostty 外观与宿主快捷键
         ├── git/                    # Git 全局配置与 ignore
         ├── lazygit/                # Git TUI 与 Catppuccin 主题
         ├── markdownlint-cli2/      # Markdown 全局规则
@@ -81,7 +94,7 @@ dotfiles/
 chezmoi init --apply https://github.com/snkio027/dotfiles
 ```
 
-初始化会询问 Git 姓名和邮箱，安装 Homebrew/Linuxbrew，更新公式元数据，同步 Brewfile，配置 SSH 签名与 gitleaks hook，并在 macOS 上应用键盘、Finder、Dock 和截图偏好。本地新建的长期 SSH key 必须由用户设置口令；启用 1Password Agent 时不会生成磁盘私钥。
+初始化会询问 Git 姓名和邮箱，安装 Homebrew/Linuxbrew，更新公式元数据，同步 Brewfile，配置 SSH 签名与 gitleaks hook，并在 macOS 上安装 Ghostty 及应用键盘、Finder、Dock 和截图偏好。Linux 使用现有终端模拟器，只部署跨平台的 Shell、TUI 与 Neovim 配置。本地新建的长期 SSH key 必须由用户设置口令；启用 1Password Agent 时不会生成磁盘私钥。
 
 Dev Container 使用 `CHEZMOI_PROFILE=devcontainer`，通过 Linuxbrew 获得同样的最新工具链，但不会生成宿主密钥、修改宿主 Git hooks 或应用 macOS 偏好。可用 `GIT_AUTHOR_NAME` 与 `GIT_AUTHOR_EMAIL` 覆盖缺省身份。
 
@@ -94,16 +107,25 @@ chezmoi diff                      # 审核目标状态差异
 chezmoi apply                     # 应用已审核配置
 brew bundle --file="$(chezmoi source-path)/../Brewfile"
 brewup                            # update + upgrade + cleanup
-devup                             # 更新 Homebrew、Lazy lock 与 Mason 工具
+devup                             # 更新 Homebrew、cxx-init、Lazy lock 与 Mason 工具
 ```
 
-`devdoctor` 检查 Homebrew、chezmoi、age、SSH、gitleaks、语言 Runtime、LLVM/CMake/Ninja、IaC/Kubernetes CLI 和终端工具，并确认 Runtime 的实际路径来自 Homebrew；它不会自动修改系统。
+`devdoctor` 检查 Homebrew、chezmoi、age、SSH、gitleaks、语言 Runtime、LLVM/CMake/Ninja、cxx-init、IaC/Kubernetes CLI 和终端工具，并确认 Runtime 的实际路径来自 Homebrew；它不会自动修改系统。
 
-GitHub Actions 会在每次提交验证模板、Shell 行为、安全策略、macOS 配置和 Dev Container 构建；每周一还会从空缓存同步上游最新 Neovim 插件与 Mason 工具，运行语义冒烟测试，并在插件锁落后时提示执行 `devup`。Dependabot 每周更新 GitHub Actions、Dev Container 与 Docker 基础镜像引用。
+GitHub Actions 会在每次提交验证模板、Shell 行为、安全策略、macOS 配置、cxx-init 最新发布版的完整生成/构建/测试流程和 Dev Container 构建；每周一还会从空缓存同步上游最新 Neovim 插件与 Mason 工具，运行语义冒烟测试，并在插件锁落后时提示执行 `devup`。Dependabot 每周更新 GitHub Actions、Dev Container 与 Docker 基础镜像引用。
 
 ## 功能与快捷键速查
 
-Neovim 的 `<leader>` 是空格键；Ghostty 的 `Cmd` 快捷键属于 macOS，Zellij 默认 locked mode，不会在启动后立即占用 Shell 或 Neovim 按键。以下只记录本仓库显式配置或当前上游配置实际提供的高频功能。
+修饰键按作用层解释，不把 macOS 的物理按键名称与终端协议混用：
+
+| 文档记法 | macOS | Linux | 作用范围 |
+| --- | --- | --- | --- |
+| `Cmd` | Command（⌘） | 无对应绑定 | 仅 macOS Ghostty 宿主快捷键 |
+| `Alt` | Ghostty 中的左 Option（⌥）；右 Option 保留字符输入 | Alt | Shell 与 Zellij 收到的 Alt/Meta |
+| `Ctrl` | Control | Ctrl | Shell、Neovim 与 Zellij |
+| `<leader>` | 空格 | 空格 | 仅 Neovim |
+
+除明确标为 macOS Ghostty 的 `Cmd` 项以外，本节的 Shell、Neovim 与 Zellij 快捷键均适用于 macOS 和 Linux。在 macOS 上换用其他终端模拟器时，需要自行启用“Option 作为 Alt/Meta”，否则 `Alt-C`、`Alt-F` 和 Zellij 的 Alt 快捷键可能不会发送预期序列。Zellij 默认处于 locked mode，不会在启动后立即占用 Shell 或 Neovim 按键。
 
 ### Shell 与终端工具
 
@@ -176,13 +198,23 @@ Neovim 的 `<leader>` 是空格键；Ghostty 的 `Cmd` 快捷键属于 macOS，Z
 
 | 语言 | 语义、检查与格式化 | 构建、测试与调试 |
 | --- | --- | --- |
-| C/C++ | clangd、clang-tidy、clang-format | CMake、Ninja、ccache、Overseer、codelldb |
+| C/C++ | clangd、clang-tidy、clang-format | cxx-init、CMake、Ninja、ccache、Overseer、codelldb |
 | Python | uv、Pyright、Ruff；`<leader>cT` 运行 `ty check` | pytest、Neotest、debugpy |
 | Zig | zls、`zig fmt` | `zig build test`、Neotest、codelldb |
 | Go | gopls、gofumpt、goimports、golangci-lint | `go test`、Neotest、Delve |
 | Rust | rust-analyzer、rustaceanvim、rustfmt、Clippy | Cargo、Neotest、codelldb |
 
 Mason 只安装编辑器侧的 LSP、格式化器与调试适配器；编译器和构建系统仍由 Homebrew 提供。C/C++ 的 clangd 与 clang-format 是例外：两者显式使用 Homebrew LLVM 的同一滚动版本，避免 Mason 与终端工具链发生版本漂移。CMake 使用 neocmake 与 gersemi，两者统一为 100 列；neocmake 保留内置语义和样式诊断，不再额外启动固定 80 列且维护停滞的 cmakelint。CMake 和通用任务输出统一进入 Overseer，测试统一进入 Neotest，原生语言统一使用 codelldb。调试配置优先读取项目的 `.vscode/launch.json`，也可以使用内置的 launch/attach 配置。
+
+新建规范 C++ 项目时直接运行：
+
+```bash
+cxx init hello
+cd hello
+cmake --workflow --preset dev
+```
+
+模板内置 C++23、CMake Presets、Ninja、clangd、clang-format、clang-tidy、CTest 与 Sanitizer 配置；创建过程不访问网络，生成项目也不依赖 `cxx` 命令。
 
 ### Markdown 与 Python
 
@@ -199,22 +231,22 @@ Markdown 在普通、命令和终端模式渲染标题、任务、表格、代�
 
 打开 uv 项目的 Python 文件时，会依据 `uv.lock` 自动激活 `.venv/bin/python`，并把同一环境交给 Pyright、Ruff、DAP 与 Neotest；Ruff 负责 Lint 和 Import，Pyright 专注类型分析，避免重复诊断。
 
-### Ghostty 与 Zellij
+### Ghostty（macOS）与 Zellij（macOS/Linux）
 
 Ghostty 固定使用 Catppuccin Mocha 暗色主题，以 Maple Mono NF CN Italic 与 Bold Italic 作为默认字面，PingFang SC 负责缺字回退；同时提供透明模糊背景、10 万行回滚、剪贴板读取确认和失焦窗口长命令完成通知。Zellij 保留会话结构恢复，但不把 Pane 可见内容序列化到缓存。
 
-| 快捷键 | 功能 |
-| --- | --- |
-| `Cmd-Alt-Space` | 显示/隐藏 Ghostty Quick Terminal |
-| `Cmd-D` / `Cmd-Shift-D` | 向右 / 向下创建 Ghostty 分屏 |
-| `Cmd-H/J/K/L` | 在 Ghostty 分屏间移动 |
-| `Cmd-Z` | 放大/恢复当前 Ghostty 分屏 |
-| `Ctrl-G` | 解锁或重新锁定 Zellij |
-| `Alt-H/J/K/L` | 在已解锁的 Zellij Pane 间移动 |
-| `Alt-N` / `Alt-F` | 新建 Pane / 切换浮动 Pane |
-| `Ctrl-P` / `Ctrl-T` | 进入 Zellij Pane / Tab 模式 |
-| `Ctrl-S`，然后 `e` | 进入滚动模式并用 Neovim 编辑滚动缓冲区 |
-| `Ctrl-O`，然后 `w` / `d` | 打开 Session Manager / Detach |
+| 平台与程序 | 快捷键 | 功能 |
+| --- | --- | --- |
+| macOS · Ghostty | `Cmd-Alt-Space` | 显示/隐藏 Quick Terminal；此处 Alt 是左 Option |
+| macOS · Ghostty | `Cmd-D` / `Cmd-Shift-D` | 向右 / 向下创建分屏 |
+| macOS · Ghostty | `Cmd-H/J/K/L` | 在分屏间移动 |
+| macOS · Ghostty | `Cmd-Z` | 放大/恢复当前分屏 |
+| macOS/Linux · Zellij | `Ctrl-G` | 解锁或重新锁定 Zellij |
+| macOS/Linux · Zellij | `Alt-H/J/K/L` | 在已解锁的 Pane 间移动 |
+| macOS/Linux · Zellij | `Alt-N` / `Alt-F` | 新建 Pane / 切换浮动 Pane |
+| macOS/Linux · Zellij | `Ctrl-P` / `Ctrl-T` | 进入 Pane / Tab 模式 |
+| macOS/Linux · Zellij | `Ctrl-S`，然后 `e` | 进入滚动模式并用 Neovim 编辑滚动缓冲区 |
+| macOS/Linux · Zellij | `Ctrl-O`，然后 `w` / `d` | 打开 Session Manager / Detach |
 
 Ghostty 直连会话适合内联图片；Zellij 当前不透传 Kitty Graphics Protocol，应使用 Neovim 浮动窗口或浏览器预览。
 
@@ -236,7 +268,7 @@ git rebase origin/main
 | `git rescue` | 查看 Reflog |
 | `cz` / `cza` / `czd` | chezmoi 命令入口 / 应用目标状态 / 查看目标差异 |
 | `cze` / `czu` | 编辑受管文件 / 更新并应用仓库 |
-| `brewup` / `devup` | 更新并清理 Homebrew / 更新 Homebrew、Neovim 插件锁与 Mason 工具 |
+| `brewup` / `devup` | 更新并清理 Homebrew / 更新 Homebrew、cxx-init、Neovim 插件锁与 Mason 工具 |
 | `devdoctor` | 只读检查配置、Runtime 来源、签名和关键工具 |
 | `scan-secrets` | 使用 gitleaks 扫描暂存内容 |
 

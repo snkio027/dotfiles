@@ -212,6 +212,13 @@ else
     check_status "C/C++ Compiler Cache" "warn" "ccache missing"
 fi
 
+if command -v cxx &>/dev/null; then
+    CXX_INIT_VER="$(cxx --version 2>/dev/null | head -n1 || echo "installed")"
+    check_status "C++ Project Initializer" "pass" "$CXX_INIT_VER"
+else
+    check_status "C++ Project Initializer" "warn" "cxx-init missing (run chezmoi apply)"
+fi
+
 if command -v terraform &>/dev/null; then
     TF_VER="$(terraform version -json 2>/dev/null | jq -r '.terraform_version' || echo "installed")"
     check_status "Terraform CLI" "pass" "v$TF_VER"

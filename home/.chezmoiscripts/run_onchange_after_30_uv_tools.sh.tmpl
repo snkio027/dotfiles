@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# ------------------------------------------------------------------------------
+# Install Python-native developer CLIs in isolated uv tool environments.
+# The package is intentionally unpinned so each run selects the newest stable
+# release, matching the workstation's rolling-latest policy.
+# ------------------------------------------------------------------------------
+
+set -euo pipefail
+
+if ! command -v uv &>/dev/null; then
+    echo "❌  uv 不可用；请先完成 Brewfile 同步。" >&2
+    exit 1
+fi
+
+echo "🧰  正在同步最新稳定版 cxx-init..."
+uv tool install --upgrade --no-config cxx-init
+CXX_INIT_BIN="$(uv tool dir --bin)/cxx"
+if [ ! -x "$CXX_INIT_BIN" ]; then
+    echo "❌  cxx-init 安装完成但 cxx 入口不可执行: $CXX_INIT_BIN" >&2
+    exit 1
+fi
+echo "✅  cxx-init 已就绪：$("$CXX_INIT_BIN" --version)"
