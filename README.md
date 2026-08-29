@@ -28,6 +28,7 @@ Homebrew 负责全局 CLI 与语言 Runtime；uv 负责项目 Python、虚拟环
 - Neovim/LazyVim、LazyGit、Yazi 与全部颜色配置均由 chezmoi 纳管。
 - Markdown 在普通模式渲染标题、任务、表格与代码块，插入模式自动显示原文；Ghostty 直连会话支持文档内图片、数学公式与 Mermaid 预览。
 - markdownlint 全局保留结构与语义检查，仅关闭对表格、URL 和 CJK 文档噪音较大的 `MD013` 行宽规则。
+- `CMakeLists.txt` 是 CMake 源文件而非 Markdown；neocmake 负责语义和 100 列诊断，gersemi 按同一宽度统一格式。
 - uv 项目中存在 `uv.lock` 和 `.venv` 时，Neovim 会自动将 Pyright、Ruff、DAP、Neotest 与内置终端统一到项目 Python。
 - C/C++、Python、Zig、Go 与 Rust 共用 LSP、格式化、测试、任务和 DAP 工作流；项目的 `.vscode/launch.json` 也可直接复用。
 
@@ -181,7 +182,7 @@ Neovim 的 `<leader>` 是空格键；Ghostty 的 `Cmd` 快捷键属于 macOS，Z
 | Go | gopls、gofumpt、goimports、golangci-lint | `go test`、Neotest、Delve |
 | Rust | rust-analyzer、rustaceanvim、rustfmt、Clippy | Cargo、Neotest、codelldb |
 
-Mason 只安装编辑器侧的 LSP、格式化器与调试适配器；编译器和构建系统仍由 Homebrew 提供。CMake 和通用任务输出统一进入 Overseer，测试统一进入 Neotest，原生语言统一使用 codelldb。调试配置优先读取项目的 `.vscode/launch.json`，也可以使用内置的 launch/attach 配置。
+Mason 只安装编辑器侧的 LSP、格式化器与调试适配器；编译器和构建系统仍由 Homebrew 提供。C/C++ 的 clangd 与 clang-format 是例外：两者显式使用 Homebrew LLVM 的同一滚动版本，避免 Mason 与终端工具链发生版本漂移。CMake 使用 neocmake 与 gersemi，两者统一为 100 列；neocmake 保留内置语义和样式诊断，不再额外启动固定 80 列且维护停滞的 cmakelint。CMake 和通用任务输出统一进入 Overseer，测试统一进入 Neotest，原生语言统一使用 codelldb。调试配置优先读取项目的 `.vscode/launch.json`，也可以使用内置的 launch/attach 配置。
 
 ### Markdown 与 Python
 

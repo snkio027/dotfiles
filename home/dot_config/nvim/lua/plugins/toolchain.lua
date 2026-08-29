@@ -1,10 +1,8 @@
 local mason_tools = {
-  -- C/C++ and shared native debugging
-  "clangd",
-  "clang-format",
+  -- Shared native debugging. clangd and clang-format come from the same
+  -- rolling Homebrew LLVM toolchain as the compiler.
   "codelldb",
-  "cmakelang",
-  "cmakelint",
+  "gersemi",
   -- Python
   "debugpy",
   "pyright",
@@ -20,12 +18,39 @@ local mason_tools = {
   "gopls",
 }
 
+local function homebrew_llvm_tool(name)
+  for _, bindir in ipairs({
+    "/opt/homebrew/opt/llvm/bin",
+    "/usr/local/opt/llvm/bin",
+    "/home/linuxbrew/.linuxbrew/opt/llvm/bin",
+  }) do
+    local path = vim.fs.joinpath(bindir, name)
+    if vim.fn.executable(path) == 1 then
+      return path
+    end
+  end
+  return name
+end
+
 local function extend_unique(target, values)
   for _, value in ipairs(values) do
     if not vim.tbl_contains(target, value) then
       target[#target + 1] = value
     end
   end
+end
+
+local function unique_tools(tools)
+  local result = {}
+  local seen = {}
+  for _, tool in ipairs(tools) do
+    local name = type(tool) == "table" and tool[1] or tool
+    if not seen[name] then
+      seen[name] = true
+      result[#result + 1] = tool
+    end
+  end
+  return result
 end
 
 local function project_executable(subdir)
@@ -38,8 +63,90 @@ return {
   {
     "mason-org/mason.nvim",
     opts = function(_, opts)
-      opts.ensure_installed = opts.ensure_installed or {}
+      -- LazyVim's CMake extra still selects the older cmakelang/cmakelint
+      -- pair. Prefer actively maintained gersemi and let neocmake own
+      -- diagnostics under the global 100-column policy.
+      opts.ensure_installed = vim.tbl_filter(function(tool)
+        return tool ~= "cmakelang" and tool ~= "cmakelint"
+      end, opts.ensure_installed or {})
       extend_unique(opts.ensure_installed, mason_tools)
+    end,
+  },
+
+  -- Keep C/C++ indexing and formatting on one rolling Homebrew LLVM release.
+  -- Explicit paths prevent Mason's bin directory from selecting a stale clangd.
+  {
+    "neovim/nvim-lspconfig",
+    opts = {
+      servers = {
+        clangd = {
+          mason = false,
+          cmd = {
+            homebrew_llvm_tool("clangd"),
+            "--background-index",
+            "--clang-tidy",
+            "--header-insertion=iwyu",
+            "--completion-style=detailed",
+            "--fallback-style=llvm",
+          },
+        },
+        neocmake = {
+          init_options = {
+            format = { enable = false },
+            lint = { enable = true },
+            scan_cmake_in_package = false,
+            semantic_token = false,
+          },
+        },
+        yamlls = {
+          before_init = function(_, new_config)
+            new_config.settings = new_config.settings or {}
+            new_config.settings.yaml = new_config.settings.yaml or {}
+            new_config.settings.yaml.schemas = vim.tbl_deep_extend(
+              "force",
+              new_config.settings.yaml.schemas or {},
+              require("schemastore").yaml.schemas({
+                ignore = { "clang-format (.clang-format)" },
+              })
+            )
+          end,
+        },
+      },
+    },
+  },
+
+  {
+    "stevearc/conform.nvim",
+    optional = true,
+    opts = {
+      formatters_by_ft = {
+        c = { "clang-format" },
+        cpp = { "clang-format" },
+        objc = { "clang-format" },
+        objcpp = { "clang-format" },
+        cuda = { "clang-format" },
+        cmake = { "gersemi" },
+      },
+      formatters = {
+        ["clang-format"] = {
+          command = homebrew_llvm_tool("clang-format"),
+        },
+        gersemi = {
+          prepend_args = { "--line-length", "100" },
+        },
+      },
+    },
+  },
+
+  -- neocmake owns CMake diagnostics. Disable LazyVim's redundant legacy
+  -- cmakelint process; the global neocmakelsp config keeps its internal lint
+  -- engine on the same 100-column policy as gersemi.
+  {
+    "mfussenegger/nvim-lint",
+    optional = true,
+    opts = function(_, opts)
+      opts.linters_by_ft = opts.linters_by_ft or {}
+      opts.linters_by_ft.cmake = {}
     end,
   },
 
@@ -64,7 +171,7 @@ return {
       debounce_hours = 24,
     },
     config = function(_, opts)
-      opts.ensure_installed = vim.deepcopy(LazyVim.opts("mason.nvim").ensure_installed or {})
+      opts.ensure_installed = unique_tools(vim.deepcopy(LazyVim.opts("mason.nvim").ensure_installed or {}))
       require("mason-tool-installer").setup(opts)
     end,
   },

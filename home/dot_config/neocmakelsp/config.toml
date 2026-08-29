@@ -1,0 +1,4 @@
+# Keep CMake diagnostics and formatting on the workstation-wide 100-column
+# policy. Project-local .neocmake.toml files can still override these defaults.
+line_max_words = 100
+enable_external_cmake_lint = false
