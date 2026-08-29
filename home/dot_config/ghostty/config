@@ -6,17 +6,20 @@
 # 1. 外观样式与色彩主题
 # Always use the dark palette, independent of the macOS appearance setting.
 theme = "Catppuccin Mocha"
-font-family = "Maple Mono NF CN"
+# Three independent layers keep code, private-use icons, and CJK fallback
+# diagnosable without patching the licensed MonoLisa font files.
+font-family = "MonoLisaCode Variable"
+font-family = "Symbols Nerd Font Mono"
 font-family = "PingFang SC"
-# Use Maple Mono's cursive italic face as the default terminal typography.
-font-style = "Italic"
-font-style-bold = "Bold Italic"
+font-style = "Regular"
+font-style-bold = "Bold"
 font-style-italic = "Italic"
 font-style-bold-italic = "Bold Italic"
+font-synthetic-style = false
 font-size = 14
-font-thicken = true
-# Maple Mono 官方建议组合：智能连字、字符变体与易辨识的 0。
-font-feature = ["calt", "cv01", "ss01", "zero"]
+font-thicken = false
+# Keep MonoLisa defaults intact while explicitly disabling discretionary ligatures.
+font-feature = ["-dlig"]
 minimum-contrast = 3
 
 # 玻璃透明度与阴影效果
