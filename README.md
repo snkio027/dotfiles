@@ -32,7 +32,7 @@ Homebrew 负责全局 CLI 与语言 Runtime；uv 负责项目 Python、虚拟环
 
 - `.zshenv` 只定义 XDG Base Directory；`.zprofile` 只初始化登录环境；`.zshrc` 只处理交互功能。
 - Starship、Atuin、fzf、direnv、zoxide 与 Carapace 的生成脚本按二进制修改时间缓存，升级后自动刷新。
-- Starship 使用 Maple Mono Nerd Font 的单宽图标，在对应项目中区分显示 Node、Go、Rust、Zig、C、C++、CMake、Python、Terraform、Helm 与包版本，并标识容器、Docker 和 Kubernetes 上下文；非零退出只将输入箭头变红，不在下一次提示符中重复显示数字状态码。
+- Starship 使用 Quiet Ops Prompt：默认只显示目录、Git 状态和低频高价值反馈；语言、构建工具、包版本、Python 环境、容器、Docker context 与 Kubernetes 保持静默。非零退出只将输入箭头变红，后台任务数与超过 2 秒的命令耗时显示在第二行右侧。
 - Ghostty 固定使用 Catppuccin Mocha 暗色主题，以 Maple Mono NF CN Italic 作为主字面，保留圆润连字、Nerd 图标与 CJK 2:1 对齐，并提供 GPU 渲染和原生分屏。
 - Zellij 默认处于 locked mode，避免在 macOS 和 Linux 上占用 Shell、Neovim 的 Alt 快捷键。
 - Atuin 以 daemon fuzzy 模式持续记录、同步历史，FZF 接管 `Ctrl-R` 检索界面，方向键保留原生历史行为。
@@ -130,6 +130,8 @@ GitHub Actions 会在每次提交验证模板、Shell 行为、安全策略、ma
 ### Shell 与终端工具
 
 兼容性敏感的 `find`、`grep` 与 `cd` 保留原始语义；现代搜索使用 `ff`（fd）、`rgg`（ripgrep）和 `z`（zoxide）。交互展示命令仍会在工具存在时增强：`ls` → `eza`、`cat` → `bat`、`top` → `btop`、`vi`/`vim` → `nvim`。
+
+Quiet Ops Prompt 将第一行留给位置与 Git 状态，第二行留给命令输入。Node、Go、Rust、Zig、C/C++、CMake、Helm、package、Python 环境、容器与 Kubernetes 信息默认永不显示；需要时使用对应工具的专用命令查询。
 
 | 快捷键或命令 | 功能 |
 | --- | --- |

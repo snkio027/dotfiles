@@ -1,6 +1,6 @@
 # ------------------------------------------------------------------------------
-# Starship 命令行提示符配置文件
-# DevSecOps 生产级 Profile | 全栈 Catppuccin Mocha 调色板与 Monorepo 优化
+# Quiet Ops Prompt
+# 只显示位置、代码状态、显式执行目标与低频高价值反馈。
 # ------------------------------------------------------------------------------
 
 "$schema" = "https://starship.rs/config-schema.json"
@@ -10,178 +10,113 @@ add_newline = false
 scan_timeout = 30
 command_timeout = 800
 
-# 左侧提示符双行结构 (右侧 RPROMPT 已禁用，防止并行任务输出与 RPROMPT 光标定位冲突)
+# 第一行左侧是位置与 Git 状态，fill 之后是下一条命令的执行目标。
+# 第二行只保留输入箭头；右侧仅显示后台任务数与长命令耗时。
 format = """
 $username\
 $hostname\
-$container\
 $directory\
 $git_branch\
-$git_commit\
 $git_state\
 $git_status\
-$nodejs\
-$golang\
-$rust\
-$zig\
-$c\
-$cpp\
-$cmake\
-$python\
+$fill\
+$direnv\
 $terraform\
-$helm\
-$docker_context\
-$kubernetes\
-$package\
-$sudo\
 $line_break\
 $character"""
 
-# 右侧只显示长命令耗时；失败状态由红色输入箭头表达，避免上一条命令的
-# 数字退出码悬浮在下一次提示符右侧。
-right_format = """$cmd_duration"""
+right_format = """$jobs$cmd_duration"""
+
+[fill]
+symbol = " "
 
 [character]
-success_symbol = "[❯](bold green)"
+success_symbol = "[❯](teal)"
 error_symbol = "[❯](bold red)"
-vimcmd_symbol = "[❮](bold mauve)"
+vimcmd_symbol = "[❮](mauve)"
+
+# 用户名只在 root、SSH 或身份发生变化时出现。
+[username]
+style_user = "overlay1"
+style_root = "bold red"
+format = "[$user]($style) "
+show_always = false
+
+[hostname]
+ssh_only = true
+ssh_symbol = " "
+style = "overlay1"
+format = "[$ssh_symbol$hostname]($style) "
 
 [directory]
 truncation_length = 3
-truncate_to_repo = true                                                                                                      # Monorepo 锚点自动截断
-style = "bold blue"
-read_only = " 󰌾"
+truncate_to_repo = false
+truncation_symbol = "…/"
+home_symbol = "~"
+style = "sapphire"
+before_repo_root_style = "sapphire"
 repo_root_style = "bold sapphire"
-repo_root_format = "[$before_root_path]($style)[$repo_root]($repo_root_style)[$path]($style)[$read_only]($read_only_style) "
-
-[hostname]
-ssh_symbol = " "
-
-[container]
-symbol = " "
-style = "bold peach"
-format = "inside [$symbol$name]($style) "
-
-[cmd_duration]
-min_time = 2000                      # 仅对执行超过 2s 的命令显示耗时，防止 Atuin precmd 重绘引发的虚假 0s
-style = "bold yellow"
-format = "took [$duration]($style) "
+read_only = " 󰌾"
+read_only_style = "bold red"
+repo_root_format = "[$before_root_path]($before_repo_root_style)[$repo_root]($repo_root_style)[$path]($style)[$read_only]($read_only_style) "
 
 [git_branch]
 symbol = " "
-style = "bold mauve"
-format = "on [$symbol$branch]($style) "
+style = "overlay2"
+format = "[$symbol$branch]($style) "
+truncation_length = 24
+truncation_symbol = "…"
 
-[git_commit]
-tag_symbol = "  "
+[git_state]
+style = "bold yellow"
+format = "[$state( $progress_current/$progress_total)]($style) "
 
 [git_status]
-style = "red"
-format = '([\[$all_status$ahead_behind\]]($style) )'
-ignore_submodules = true                             # 消除超大微服务仓库回车延迟
-conflicted = "⚔${count}"
-ahead = "⇡${count}"
-behind = "⇣${count}"
-diverged = "⇕⇡${ahead_count}⇣${behind_count}"
-untracked = "?${count}"
-modified = "!${count}"
-staged = "+${count}"
-renamed = "»${count}"
-deleted = "✘${count}"
+style = "yellow"
+format = '([$all_status$ahead_behind]($style) )'
+ignore_submodules = true
+conflicted = "[!${count}](bold red) "
+ahead = "[⇡${count}](overlay2) "
+behind = "[⇣${count}](overlay2) "
+diverged = "[⇕⇡${ahead_count}⇣${behind_count}](bold red) "
+up_to_date = ""
+untracked = "?${count} "
+stashed = "≡${count} "
+modified = "~${count} "
+staged = "+${count} "
+renamed = "»${count} "
+deleted = "-${count} "
+typechanged = "~${count} "
 
-[nodejs]
-symbol = " "
-style = "bold green"
-format = "via [$symbol$version]($style) "
-
-[golang]
-symbol = " "
-style = "bold sky"
-format = "via [$symbol$version]($style) "
-
-[rust]
-symbol = "󱘗 "
-style = "bold peach"
-detect_extensions = ["rs"]
-detect_files = ["Cargo.toml"]
-format = "via [$symbol$version]($style) "
-
-[zig]
-symbol = " "
-style = "bold yellow"
-detect_extensions = ["zig"]
-detect_files = ["build.zig", "build.zig.zon"]
-format = "via [$symbol$version]($style) "
-
-[c]
-symbol = " "
-style = "bold sapphire"
-detect_extensions = ["c"]
-commands = [["clang", "--version"], ["gcc", "--version"], ["cc", "--version"]]
-format = "via [$symbol$version]($style) "
-
-[cpp]
+# 健康的 direnv 完全静默，只显示未加载、未授权或拒绝状态。
+[direnv]
 disabled = false
-symbol = " "
-style = "bold blue"
-commands = [
-  [
-    "clang++",
-    "--version",
-  ],
-  [
-    "g++",
-    "--version",
-  ],
-  [
-    "c++",
-    "--version",
-  ],
-]
-format = "via [$symbol$version]($style) "
+style = "yellow"
+symbol = ""
+format = '([󰅖 $loaded( $allowed)]($style) )'
+allowed_msg = ""
+not_allowed_msg = "allow"
+denied_msg = "denied"
+loaded_msg = ""
+unloaded_msg = "unloaded"
 
-[cmake]
-symbol = " "
-style = "bold lavender"
-format = "via [$symbol$version]($style) "
-
-[python]
-symbol = " "
-style = "bold yellow"
-detect_extensions = ["py"]
-detect_files = ["requirements.txt", "pyproject.toml", "Pipfile", "setup.py"]
-format = 'via [$symbol$version( \($virtualenv\))]($style) '
-
+# Terraform 项目只显示 workspace，不执行无关的版本展示。
 [terraform]
 symbol = " "
-style = "bold mauve"
-format = "via [$symbol$version]($style) "
+style = "teal"
+format = "[$symbol$workspace]($style) "
 
-[helm]
-symbol = " "
-style = "bold teal"
-format = "via [$symbol$version]($style) "
+[jobs]
+symbol = "✦"
+style = "yellow"
+format = "[$symbol$number]($style) "
+symbol_threshold = 1
+number_threshold = 1
 
-[docker_context]
-symbol = " "
-style = "bold blue"
-format = "via [$symbol$context]($style) "
-
-[kubernetes]
-disabled = false
-symbol = "󱃾 "
-style = "bold sapphire"
-format = 'on [$symbol$context( \($namespace\))]($style) '
-
-[package]
-symbol = "󰏗 "
-style = "bold peach"
-format = "is [$symbol$version]($style) "
-
-[sudo]
-style = "bold red"
-symbol = " "
-disabled = false
+[cmd_duration]
+min_time = 2000
+style = "overlay1"
+format = "[$duration]($style)"
 
 # Catppuccin Mocha 官方调色板
 [palettes.catppuccin_mocha]
