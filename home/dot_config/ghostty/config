@@ -38,11 +38,12 @@ background-blur-radius = 12
 window-padding-x = 14
 window-padding-y = 14
 window-decoration = true
-window-title-font-family = "Inter"
+window-title-font-family = "MonoLisaCode Variable-cv04-cv08-ss03-ss07-ss11"
 unfocused-split-opacity = 0.75
 
 # 2. 窗口行为与光标样式
 macos-titlebar-style = transparent
+macos-titlebar-proxy-icon = hidden
 window-height = 42
 window-width = 135
 cursor-style = block

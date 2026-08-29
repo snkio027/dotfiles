@@ -247,6 +247,8 @@ Markdown 在普通、命令和终端模式渲染标题、任务、表格、代�
 
 Ghostty 固定使用 Catppuccin Mocha 暗色主题，并使用职责明确的字体栈：MonoLisa customizer 输出的 `MonoLisaCode Variable-cv04-cv08-ss03-ss07-ss11` 变量字体负责拉丁文字、代码、字重与斜体，PingFang SC 负责中文，Maple Mono NF CN 是 Nerd Font 图标的首选 fallback，`Symbols Nerd Font Mono` 保留为单字符宽度末级符号兜底。默认字面使用 MonoLisa 原生 `wght=600 / GRAD=25`，ANSI 强调使用 `wght=800 / GRAD=25`，斜体由独立 Italic 字形文件提供并使用相同的对应端点。OpenType 偏好记录在 `fonts/monolisa-opentype.toml`：启用标准/上下文连字、`cv04` 往返箭头、`cv08` 箭头、`ss03` 直立体 alternate g、`ss07` traditional `*` 与 `ss11` alternate braces；禁用 discretionary coding ligatures、slashed zero，以及其余 alternates。该策略由 MonoLisa customizer 固化到用户授权字体，并通过 `tests/fonts/test_monolisa_manifest.py --upright <font> --italic <font>` 验证；Ghostty 1.3 的 feature 会作用于全部 fallback，因此终端配置不直接设置 `font-feature`。配置同时关闭字体增重和合成字形，不额外缩放图标；fallback 仅按缺字与配置顺序发生，不按 Git、Prompt 或 Neovim 等语义强制分配，也不维护脆弱的码点映射。MonoLisa 字体文件不进入本仓库；Maple 与 Symbols Nerd Font 由 Brewfile 管理。终端同时提供透明模糊背景、10 万行回滚、剪贴板读取确认和失焦窗口长命令完成通知。Zellij 保留会话结构恢复，但不把 Pane 可见内容序列化到缓存。
 
+Ghostty 标题文字同样使用授权的 MonoLisa customizer family；保留 macOS 红黄绿窗口按钮，隐藏只能显示或关闭、无法自定义的当前目录代理文件夹图标。
+
 | 平台与程序 | 快捷键 | 功能 |
 | --- | --- | --- |
 | macOS · Ghostty | `Cmd-Alt-Space` | 显示/隐藏 Quick Terminal；此处 Alt 是左 Option |
