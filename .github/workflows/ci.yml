@@ -98,10 +98,11 @@ jobs:
             shfmt -d -i 4 -ci "$rendered"
           done
 
-      - name: Test Zsh behavior
+      - name: Test Shell and apply behavior
         run: |
           zsh -f tests/zsh/aliases_test.zsh
           zsh -f tests/zsh/history_test.zsh
+          bash tests/chezmoi/apply_contract_test.sh
 
       - name: Run chezmoi doctor
         continue-on-error: true

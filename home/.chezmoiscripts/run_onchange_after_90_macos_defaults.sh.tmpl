@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
 # ------------------------------------------------------------------------------
 # run_onchange_after_90_macos_defaults.sh.tmpl
-# macOS 系统偏好自动化脚本 (run_onchange 增量触发 + killall 实时生效)
+# macOS 系统偏好自动化脚本（仅本脚本内容变化时增量触发）
 # ------------------------------------------------------------------------------
-
-# Hash trigger: {{ include "dot_config/ghostty/config" | sha256sum }}
 
 {{- if .is_mac }}
 set -euo pipefail

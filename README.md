@@ -100,7 +100,7 @@ dotfiles/
 chezmoi init --apply https://github.com/snkio027/dotfiles
 ```
 
-初始化会询问 Git 姓名和邮箱，安装 Homebrew/Linuxbrew，更新公式元数据，同步 Brewfile，配置 SSH 签名与 gitleaks hook，并在 macOS 上安装 Ghostty 及应用键盘、Finder、Dock 和截图偏好。Linux 使用现有终端模拟器，只部署跨平台的 Shell、TUI 与 Neovim 配置。本地新建的长期 SSH key 必须由用户设置口令；启用 1Password Agent 时不会生成磁盘私钥。
+初始化会询问 Git 姓名和邮箱，安装 Homebrew/Linuxbrew，按现有元数据安装 Brewfile 缺失依赖，配置 SSH 签名与 gitleaks hook，并在 macOS 上安装 Ghostty 及应用键盘、Finder、Dock 和截图偏好。日常 `chezmoi apply` 不更新 Homebrew 元数据、不主动批量升级已安装工具，也不会因 Ghostty 配置变化而重新应用 macOS defaults；安装新依赖所必需的依赖链升级仍由 Homebrew 决定，全量更新由 `brewup` 或 `devup` 显式触发。Linux 使用现有终端模拟器，只部署跨平台的 Shell、TUI 与 Neovim 配置。本地新建的长期 SSH key 必须由用户设置口令；启用 1Password Agent 时不会生成磁盘私钥。
 
 Dev Container 使用 `CHEZMOI_PROFILE=devcontainer`，通过 Linuxbrew 获得同样的最新工具链，但不会生成宿主密钥、修改宿主 Git hooks 或应用 macOS 偏好。可用 `GIT_AUTHOR_NAME` 与 `GIT_AUTHOR_EMAIL` 覆盖缺省身份。
 
@@ -110,8 +110,8 @@ Dev Container 使用 `CHEZMOI_PROFILE=devcontainer`，通过 Linuxbrew 获得同
 devdoctor                         # 只读环境与工具来源诊断
 scan-secrets                      # 扫描暂存内容中的凭据泄漏
 chezmoi diff                      # 审核目标状态差异
-chezmoi apply                     # 应用已审核配置
-brew bundle --file="$(chezmoi source-path)/../Brewfile"
+chezmoi apply                     # 应用配置、安装缺失依赖；不主动全局升级
+HOMEBREW_NO_AUTO_UPDATE=1 brew bundle install --no-upgrade --file="$(chezmoi source-path)/../Brewfile"
 brewup                            # update + upgrade + cleanup
 devup                             # 更新 Homebrew、cxx-init、Lazy lock 与 Mason 工具
 python3 icons/generate.py --write # 修改契约后重建 Neovim、eza 与测试制品
