@@ -243,7 +243,7 @@ Markdown 在普通、命令和终端模式渲染标题、任务、表格、代�
 
 ### Ghostty（macOS）与 Zellij（macOS/Linux）
 
-Ghostty 固定使用 Catppuccin Mocha 暗色主题，并使用职责明确的字体栈：`MonoLisaCode Variable` 负责拉丁文字、代码、字重与斜体，PingFang SC 负责中文，Maple Mono NF CN 是 Nerd Font 图标的首选 fallback，`Symbols Nerd Font Mono` 保留为单字符宽度末级符号兜底。默认字面使用 MonoLisa 原生 `wght=600 / GRAD=25`，ANSI 强调使用 `wght=800 / GRAD=25`，斜体由独立 Italic 字形文件提供并使用相同的对应端点。该组合在保持字宽的同时增强正文笔画，并为强调文本保留清晰层级。配置关闭字体增重和合成字形，不额外缩放图标；fallback 仅按缺字与配置顺序发生，不按 Git、Prompt 或 Neovim 等语义强制分配，也不维护脆弱的码点映射。MonoLisa 是用户单独购买和安装的授权字体，字体文件不进入本仓库；Maple 与 Symbols Nerd Font 由 Brewfile 管理。终端同时提供透明模糊背景、10 万行回滚、剪贴板读取确认和失焦窗口长命令完成通知。Zellij 保留会话结构恢复，但不把 Pane 可见内容序列化到缓存。
+Ghostty 固定使用 Catppuccin Mocha 暗色主题，并使用职责明确的字体栈：`MonoLisaCode Variable` 负责拉丁文字、代码、字重与斜体，PingFang SC 负责中文，Maple Mono NF CN 是 Nerd Font 图标的首选 fallback，`Symbols Nerd Font Mono` 保留为单字符宽度末级符号兜底。默认字面使用 MonoLisa 原生 `wght=600 / GRAD=25`，ANSI 强调使用 `wght=800 / GRAD=25`，斜体由独立 Italic 字形文件提供并使用相同的对应端点。OpenType 偏好逐项对应 MonoLisa customizer 的红色选择：启用标准/上下文连字、`cv08` 箭头、`ss03` 直立体 alternate g、`ss07` traditional `*` 与 `ss11` alternate braces；禁用 discretionary coding ligatures、slashed zero，以及其余 `cv01–cv12`、`ss01–ss15` alternates。该组合在保持字宽的同时增强正文笔画，并为强调文本保留清晰层级。配置关闭字体增重和合成字形，不额外缩放图标；fallback 仅按缺字与配置顺序发生，不按 Git、Prompt 或 Neovim 等语义强制分配，也不维护脆弱的码点映射。MonoLisa 是用户单独购买和安装的授权字体，字体文件不进入本仓库；Maple 与 Symbols Nerd Font 由 Brewfile 管理。终端同时提供透明模糊背景、10 万行回滚、剪贴板读取确认和失焦窗口长命令完成通知。Zellij 保留会话结构恢复，但不把 Pane 可见内容序列化到缓存。
 
 | 平台与程序 | 快捷键 | 功能 |
 | --- | --- | --- |

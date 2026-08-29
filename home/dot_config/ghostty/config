@@ -27,8 +27,13 @@ font-variation-bold-italic = "wght=800"
 font-variation-bold-italic = "GRAD=25"
 font-size = 14
 font-thicken = false
-# Keep MonoLisa defaults intact while explicitly disabling discretionary ligatures.
-font-feature = ["-dlig"]
+# Personal MonoLisa feature contract. Every switch mirrors the selected red
+# sample in the MonoLisa customizer; disabled alternates are explicit too.
+font-feature = ["+calt", "+liga", "-dlig", "-zero"]
+font-feature = ["-cv01", "-cv02", "-cv03", "-cv04", "-cv05", "-cv06", "-cv07", "+cv08"]
+font-feature = ["-cv09", "-cv10", "-cv11", "-cv12"]
+font-feature = ["-ss01", "-ss02", "+ss03", "-ss04", "-ss05", "-ss06", "+ss07", "-ss08"]
+font-feature = ["-ss09", "-ss10", "+ss11", "-ss12", "-ss13", "-ss14", "-ss15"]
 minimum-contrast = 3
 
 # 玻璃透明度与阴影效果
