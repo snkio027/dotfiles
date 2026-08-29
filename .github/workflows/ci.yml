@@ -99,7 +99,9 @@ jobs:
           done
 
       - name: Test Zsh behavior
-        run: zsh -f tests/zsh/aliases_test.zsh
+        run: |
+          zsh -f tests/zsh/aliases_test.zsh
+          zsh -f tests/zsh/history_test.zsh
 
       - name: Run chezmoi doctor
         continue-on-error: true

@@ -18,15 +18,16 @@ if command -v direnv &>/dev/null; then
     _zsh_cached_init direnv direnv hook zsh
 fi
 
+if command -v fzf &>/dev/null; then
+    _zsh_cached_init fzf fzf --zsh
+fi
+
 {{- if .features.use_atuin }}
+# Atuin 在 fzf 之后加载，即使上游 fzf 行为改变，Ctrl-R 的最终所有者仍是 Atuin。
 if command -v atuin &>/dev/null; then
     _zsh_cached_init atuin atuin init zsh --disable-up-arrow
 fi
 {{- end }}
-
-if command -v fzf &>/dev/null; then
-    _zsh_cached_init fzf fzf --zsh
-fi
 
 if command -v zoxide &>/dev/null; then
     _zsh_cached_init zoxide zoxide init zsh

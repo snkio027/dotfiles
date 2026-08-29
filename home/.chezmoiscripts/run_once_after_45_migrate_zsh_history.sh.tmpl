@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# ------------------------------------------------------------------------------
+# 将旧 ~/.zsh_history 无损迁移到 XDG state，并为尚未重启的旧 Shell
+# 保留兼容 symlink，确保所有会话继续写入同一份历史。
+# ------------------------------------------------------------------------------
+
+set -euo pipefail
+
+LEGACY_HISTORY="$HOME/.zsh_history"
+XDG_HISTORY="${XDG_STATE_HOME:-$HOME/.local/state}/zsh/history"
+HISTORY_DIR="$(dirname "$XDG_HISTORY")"
+
+mkdir -p "$HISTORY_DIR"
+chmod 700 "$HISTORY_DIR"
+
+if [ -L "$LEGACY_HISTORY" ]; then
+    if [ "$(readlink "$LEGACY_HISTORY")" = "$XDG_HISTORY" ]; then
+        exit 0
+    fi
+    echo "⚠️  $LEGACY_HISTORY 指向其他目标；为避免覆盖手工配置，已跳过历史迁移。" >&2
+    exit 0
+fi
+
+if [ -f "$LEGACY_HISTORY" ]; then
+    if [ -s "$XDG_HISTORY" ]; then
+        MERGED_HISTORY="$(mktemp "$HISTORY_DIR/history.merge.XXXXXX")"
+        trap 'rm -f -- "${MERGED_HISTORY:-}"' EXIT
+        command cat "$LEGACY_HISTORY" "$XDG_HISTORY" >"$MERGED_HISTORY"
+        chmod 600 "$MERGED_HISTORY"
+        mv -f "$MERGED_HISTORY" "$XDG_HISTORY"
+        trap - EXIT
+        rm -f -- "$LEGACY_HISTORY"
+    else
+        mv "$LEGACY_HISTORY" "$XDG_HISTORY"
+        chmod 600 "$XDG_HISTORY"
+    fi
+    ln -s "$XDG_HISTORY" "$LEGACY_HISTORY"
+    echo "✅  Zsh 历史已迁移至 ${XDG_HISTORY}。"
+fi

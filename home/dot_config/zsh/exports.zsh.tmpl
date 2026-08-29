@@ -62,3 +62,5 @@ export FZF_DEFAULT_OPTS="--height 40% --layout=reverse --border \
   --color=marker:#b4befe,fg+:#cdd6f4,prompt:#cba6f7,hl+:#f38ba8"
 export FZF_CTRL_T_OPTS="--preview 'bat --color=always --style=numbers --line-range=:200 {} 2>/dev/null || eza --tree --level=2 --color=always {} 2>/dev/null'"
 export FZF_ALT_C_OPTS="--preview 'eza --tree --level=2 --color=always {} 2>/dev/null'"
+# Atuin 独占 Ctrl-R；fzf 只负责 Ctrl-T 与 Alt-C。空值会让 `fzf --zsh` 不创建历史绑定。
+export FZF_CTRL_R_COMMAND=""

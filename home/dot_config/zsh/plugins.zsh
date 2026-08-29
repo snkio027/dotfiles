@@ -3,9 +3,26 @@
 # 由 chezmoi 托管 | DevSecOps 生产级 Profile
 # ------------------------------------------------------------------------------
 
-# --- 1. Zsh Shell 行为选项设置 ---
+# --- 1. Zsh 原生历史持久化与 Shell 行为选项 ---
+typeset -g HISTFILE="${XDG_STATE_HOME:-$HOME/.local/state}/zsh/history"
+typeset -g HISTSIZE=200000
+typeset -g SAVEHIST=100000
+
+# Atuin 是主要检索界面，但原生历史仍是 Shell 降级与 fzf/`fc` 的可恢复底座。
+_zsh_history_dir="${HISTFILE:h}"
+if [[ ! -d "$_zsh_history_dir" ]]; then
+    command mkdir -p -- "$_zsh_history_dir" 2>/dev/null || true
+    command chmod 700 -- "$_zsh_history_dir" 2>/dev/null || true
+fi
+unset _zsh_history_dir
+
 setopt AUTO_CD              # 输入目录路径直接 cd 进入
+setopt APPEND_HISTORY       # 追加写入而不覆盖现有历史
 setopt HIST_IGNORE_DUPS     # 忽略连续重复的历史命令
+setopt HIST_SAVE_NO_DUPS    # 持久化时不重复写入已有命令
+setopt HIST_EXPIRE_DUPS_FIRST # 容量收缩时优先清理重复项
+setopt HIST_FIND_NO_DUPS    # 原生检索不重复展示同一命令
+setopt HIST_FCNTL_LOCK      # 使用 fcntl 降低多会话并发写入冲突
 setopt HIST_REDUCE_BLANKS   # 移除历史命令中多余的空格
 setopt SHARE_HISTORY        # 多个终端会话间实时共享历史
 setopt EXTENDED_HISTORY     # 记录命令执行的时间戳

@@ -35,7 +35,7 @@ Homebrew 负责全局 CLI 与语言 Runtime；uv 负责项目 Python、虚拟环
 - Starship 使用 Quiet Ops Prompt：默认只显示目录、Git 状态和低频高价值反馈；语言、构建工具、包版本、Python 环境、容器、Docker context 与 Kubernetes 保持静默。非零退出只将输入箭头变红，后台任务数与超过 2 秒的命令耗时显示在第二行右侧。
 - Ghostty 固定使用 Catppuccin Mocha 暗色主题；MonoLisa customizer 输出的 `MonoLisaCode Variable-cv04-cv08-ss03-ss07-ss11` 变量字体负责拉丁文字与真实字重/斜体，PingFang SC 负责中文，Maple Mono NF CN 是 Nerd Font 图标的首选 fallback，`Symbols Nerd Font Mono` 保留为单字符宽度末级兜底，并提供 GPU 渲染和原生分屏。
 - Zellij 默认处于 locked mode，避免在 macOS 和 Linux 上占用 Shell、Neovim 的 Alt 快捷键。
-- Atuin 以 daemon fuzzy 模式持续记录、同步历史，FZF 接管 `Ctrl-R` 检索界面，方向键保留原生历史行为。
+- Zsh 将原生历史持久化到 `$XDG_STATE_HOME/zsh/history`；Atuin 独占 `Ctrl-R` 并负责加密同步，选中命令只回填供复核，fzf 仅管理 `Ctrl-T/Alt-C`。
 - Neovim 是唯一编辑器；Git、Yazi、sudo、systemd 与 kubectl 的编辑入口统一指向 Neovim。
 - Neovim/LazyVim、LazyGit、Yazi 与全部颜色配置均由 chezmoi 纳管。
 - `icons/contract.toml` 是 Neovim `mini.icons` 与 eza 的版本化图标契约；87 项显式映射使用“精确文件名 > 扩展名 > 消费者默认值”的优先级，glyph 和 Catppuccin 语义 RGB 由同一份数据生成，不跟随任一工具的实时内置表漂移。
@@ -88,11 +88,11 @@ dotfiles/
 | --- | --- | --- |
 | 配置 | `~/.config` | Neovim、Ghostty、Git、Zsh 模块及所有支持 XDG 的 TUI |
 | 数据 | `~/.local/share` | Atuin 数据库、Neovim 插件和工具持久数据 |
-| 状态 | `~/.local/state` | Neovim 日志及可跨会话恢复的状态 |
+| 状态 | `~/.local/state` | Zsh 历史、Neovim 日志及可跨会话恢复的状态 |
 | 缓存 | `~/.cache` | Zsh 初始化缓存、补全、uv 与可安全重建的数据 |
 | 可执行文件 | `~/.local/bin` | 用户级引导程序与脚本 |
 
-`~/.zshenv`、`~/.zprofile`、`~/.zshrc` 是 Zsh 原生启动入口，`~/.ssh` 是 OpenSSH 固定发现位置，因此保留在 HOME。Markdownlint 的 Zsh alias 与 Neovim 都显式加载 XDG 主配置，项目内规则仍可覆盖。Cargo 与 Go 保留各自官方数据目录，避免破坏已安装工具和升级机制。
+`~/.zshenv`、`~/.zprofile`、`~/.zshrc` 是 Zsh 原生启动入口，`~/.ssh` 是 OpenSSH 固定发现位置，因此保留在 HOME。首次应用会把旧 `~/.zsh_history` 无损迁移到 XDG state，并保留兼容 symlink。Markdownlint 的 Zsh alias 与 Neovim 都显式加载 XDG 主配置，项目内规则仍可覆盖。Cargo 与 Go 保留各自官方数据目录，避免破坏已安装工具和升级机制。
 
 ## 初始化
 
@@ -145,7 +145,7 @@ Quiet Ops Prompt 将第一行留给位置与 Git 状态，第二行留给命令�
 
 | 快捷键或命令 | 功能 |
 | --- | --- |
-| `Ctrl-R` | 使用 FZF 检索 Shell 历史；Atuin 在后台负责持久记录与同步 |
+| `Ctrl-R` | 使用 Atuin 检索加密同步历史；Enter 只回填命令行，复核后再执行 |
 | `Ctrl-T` | 使用 FZF 选择文件并插入命令行 |
 | `Alt-C` | 使用 FZF 选择并进入目录 |
 | `Ctrl-F` | 接受完整的 Zsh 自动建议 |
