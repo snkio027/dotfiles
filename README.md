@@ -32,13 +32,13 @@ Homebrew 负责全局 CLI 与语言 Runtime；uv 负责项目 Python、虚拟环
 
 - `.zshenv` 只定义 XDG Base Directory；`.zprofile` 只初始化登录环境；`.zshrc` 只处理交互功能。
 - Starship、Atuin、fzf、direnv、zoxide 与 Carapace 的生成脚本按二进制修改时间缓存，升级后自动刷新。
-- Starship 只在对应项目中显示 Node、Go、Rust、Python 与 Terraform 的实际版本。
+- Starship 使用 Maple Mono Nerd Font 的单宽图标，在对应项目中区分显示 Node、Go、Rust、Zig、C、C++、CMake、Python、Terraform、Helm 与包版本，并标识容器、Docker 和 Kubernetes 上下文；非零退出只将输入箭头变红，不在下一次提示符中重复显示数字状态码。
 - Ghostty 固定使用 Catppuccin Mocha 暗色主题，以 Maple Mono NF CN Italic 作为主字面，保留圆润连字、Nerd 图标与 CJK 2:1 对齐，并提供 GPU 渲染和原生分屏。
 - Zellij 默认处于 locked mode，避免在 macOS 和 Linux 上占用 Shell、Neovim 的 Alt 快捷键。
 - Atuin 以 daemon fuzzy 模式持续记录、同步历史，FZF 接管 `Ctrl-R` 检索界面，方向键保留原生历史行为。
 - Neovim 是唯一编辑器；Git、Yazi、sudo、systemd 与 kubectl 的编辑入口统一指向 Neovim。
 - Neovim/LazyVim、LazyGit、Yazi 与全部颜色配置均由 chezmoi 纳管。
-- Markdown 在普通模式渲染标题、任务、表格与代码块，插入模式自动显示原文；Ghostty 直连会话支持文档内图片、数学公式与 Mermaid 预览。
+- Markdown 在普通模式渲染标题、任务、表格与代码块，插入模式自动显示原文；Ghostty 直连及其承载的 Zellij 0.45+ 会话均支持文档内图片、数学公式与 Mermaid 预览。
 - markdownlint 全局保留结构与语义检查，仅关闭对表格、URL 和 CJK 文档噪音较大的 `MD013` 行宽规则。
 - `CMakeLists.txt` 是 CMake 源文件而非 Markdown；neocmake 负责语义和 100 列诊断，gersemi 按同一宽度统一格式。
 - `cxx init <name>` 从离线内置模板创建 C++23/CMake/Ninja 项目，生成后直接使用标准工具链，不依赖 cxx-init 运行。
@@ -248,7 +248,7 @@ Ghostty 固定使用 Catppuccin Mocha 暗色主题，以 Maple Mono NF CN Italic
 | macOS/Linux · Zellij | `Ctrl-S`，然后 `e` | 进入滚动模式并用 Neovim 编辑滚动缓冲区 |
 | macOS/Linux · Zellij | `Ctrl-O`，然后 `w` / `d` | 打开 Session Manager / Detach |
 
-Ghostty 直连会话适合内联图片；Zellij 当前不透传 Kitty Graphics Protocol，应使用 Neovim 浮动窗口或浏览器预览。
+Ghostty 与 Zellij 0.45+ 均支持 Kitty Graphics Protocol；Zellij 会按 Pane 跟踪图片位置，因此内联图片在缩放、重排、滚动、全屏和浮动 Pane 中仍能正确显示。浏览器预览继续作为 Mermaid 交互查看和非兼容终端的通用回退。
 
 ### Git 同步、chezmoi 与维护
 
@@ -274,7 +274,7 @@ git rebase origin/main
 
 ## Neovim 文档与 Python 工作流
 
-- Markdown 使用 `<leader>um` 切换 Neovim 内渲染，使用 `<leader>cp` 切换浏览器预览。Ghostty 支持内联图片；Zellij 暂不支持 Kitty Graphics Protocol 透传，在 Zellij 中使用浮动/浏览器预览。
+- Markdown 使用 `<leader>um` 切换 Neovim 内渲染，使用 `<leader>cp` 切换浏览器预览。Ghostty 与 Zellij 0.45+ 支持 Kitty Graphics Protocol，可在 Zellij Pane 中显示内联图片；浏览器预览适合 Mermaid 交互查看，也作为其他终端的回退方案。
 - 新 uv 项目先运行 `uv sync`，再直接打开 `nvim`。`.venv/bin/python` 会自动激活；需要临时切换环境时使用 `<leader>cv`。
 
 ## SSH 与提交签名
