@@ -16,7 +16,6 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ANSI_ESCAPE = re.compile(r"\x1b\[[0-9;]*m")
 ALLOWED_ICON_FACES = ("Maple Mono NF CN", "Symbols Nerd Font")
@@ -33,17 +32,26 @@ def load_generator() -> ModuleType:
     return module
 
 
-def run_eza(eza: str, config_dir: Path, path: Path, color: bool) -> str:
+def run_eza(
+    eza: str,
+    config_dir: Path,
+    path: Path,
+    color: bool,
+    list_dirs: bool = False,
+) -> str:
     environment = os.environ.copy()
     environment["EZA_CONFIG_DIR"] = str(config_dir)
+    arguments = [
+        eza,
+        "--icons=always",
+        f"--color={'always' if color else 'never'}",
+        "--oneline",
+    ]
+    if list_dirs:
+        arguments.append("--list-dirs")
+    arguments.append(str(path))
     result = subprocess.run(
-        [
-            eza,
-            "--icons=always",
-            f"--color={'always' if color else 'never'}",
-            "--oneline",
-            str(path),
-        ],
+        arguments,
         check=True,
         capture_output=True,
         env=environment,
@@ -90,7 +98,9 @@ def check_schema_rejections(generator: ModuleType, contract: dict[str, Any]) -> 
     rejected(duplicate_file, "duplicate filename")
 
     duplicate_extension = copy.deepcopy(contract)
-    duplicate_extension["extensions"].append(copy.deepcopy(duplicate_extension["extensions"][0]))
+    duplicate_extension["extensions"].append(
+        copy.deepcopy(duplicate_extension["extensions"][0])
+    )
     rejected(duplicate_extension, "duplicate extension")
 
     illegal_codepoint = copy.deepcopy(contract)
@@ -105,9 +115,22 @@ def check_schema_rejections(generator: ModuleType, contract: dict[str, Any]) -> 
     missing_role["files"][0]["color_role"] = "missing"
     rejected(missing_role, "missing color role")
 
+    invalid_color = copy.deepcopy(contract)
+    invalid_color["colors"]["grey"]["eza"] = "#not-rgb"
+    rejected(invalid_color, "invalid shared RGB")
+
+    missing_runtime_case = copy.deepcopy(contract)
+    missing_runtime_case["runtime"]["eza"].pop("empty_directory")
+    rejected(missing_runtime_case, "incomplete consumer runtime observations")
+
+    invalid_runtime_highlight = copy.deepcopy(contract)
+    invalid_runtime_highlight["runtime"]["nvim"]["build_directory"]["highlight"] = (
+        "UnknownHighlight"
+    )
+    rejected(invalid_runtime_highlight, "invalid runtime highlight")
+
 
 def check_eza(
-    generator: ModuleType,
     contract: dict[str, Any],
     cases: list[dict[str, Any]],
 ) -> None:
@@ -138,10 +161,57 @@ def check_eza(
                 f"({case['color_role']} / {case['eza_color']})"
             )
 
+    expected = len(contract["files"]) + len(contract["extensions"])
+    print(f"Explicit consumer mappings  {len(cases)}/{expected}")
+
+
+def check_audit(contract: dict[str, Any], cases: list[dict[str, Any]]) -> None:
     expected = contract["coverage"]["expected"]
     observed = contract["coverage"]["real_project_expected"]
-    print(f"Contract verification   {len(cases)}/{expected}")
-    print(f"Real-project observation {observed}/{expected}")
+    assert len(cases) == expected
+    assert sum(case["observed"] is True for case in cases) == observed
+    print(f"Audit scope                 {len(cases)}/{expected}")
+    print(f"Real-project observations   {observed}/{expected}")
+
+
+def check_eza_runtime(observations: list[dict[str, Any]]) -> None:
+    eza = shutil.which("eza")
+    if eza is None:
+        raise AssertionError("eza is required for runtime observation verification")
+
+    with tempfile.TemporaryDirectory(prefix="icon-runtime-") as directory:
+        root = Path(directory)
+        config_dir = root / "empty-config"
+        fixture_dir = root / "fixtures"
+        config_dir.mkdir()
+        fixture_dir.mkdir()
+        differences = []
+        for observation in observations:
+            path = fixture_dir / observation["fixture"]
+            if observation["kind"] == "directory":
+                path.mkdir()
+                if observation["populate"]:
+                    (path / "child").touch()
+            else:
+                path.touch()
+            output = run_eza(
+                eza,
+                config_dir,
+                path,
+                color=False,
+                list_dirs=observation["kind"] == "directory",
+            )
+            actual = visible_glyph(output)
+            expected = observation["glyph"]
+            if actual != expected:
+                differences.append(
+                    f"{observation['label']}: baseline {expected} "
+                    f"U+{ord(expected):04X}, upstream {actual} U+{ord(actual):04X}"
+                )
+    verified = len(observations) - len(differences)
+    print(f"eza runtime observations    {verified}/{len(observations)} (informational)")
+    for difference in differences:
+        print(f"  {difference}")
 
 
 def ghostty_binary() -> str:
@@ -154,15 +224,15 @@ def ghostty_binary() -> str:
     raise AssertionError("Ghostty is required for font coverage verification")
 
 
-def check_fonts(cases: list[dict[str, Any]]) -> None:
+def check_fonts(glyphs: list[str]) -> None:
     ghostty = ghostty_binary()
-    glyphs = "".join(sorted({case["glyph"] for case in cases}, key=ord))
+    glyph_string = "".join(glyphs)
     result = subprocess.run(
         [
             ghostty,
             f"--config-file={REPO_ROOT / 'home/dot_config/ghostty/config'}",
             "+show-face",
-            f"--string={glyphs}",
+            f"--string={glyph_string}",
         ],
         check=False,
         capture_output=True,
@@ -176,13 +246,13 @@ def check_fonts(cases: list[dict[str, Any]]) -> None:
         )
     }
     failures = []
-    for glyph in glyphs:
+    for glyph in glyph_string:
         face = found.get(ord(glyph))
         if face is None or not face.startswith(ALLOWED_ICON_FACES):
             failures.append(f"U+{ord(glyph):04X} -> {face or 'missing'}")
     if failures:
         raise AssertionError("font coverage failed: " + ", ".join(failures))
-    print(f"Font coverage          {len(glyphs)}/{len(glyphs)}")
+    print(f"Unique glyph font coverage  {len(glyphs)}/{len(glyphs)}")
 
 
 def report_eza_drift(cases: list[dict[str, Any]]) -> None:
@@ -220,14 +290,19 @@ def main() -> int:
     generator = load_generator()
     contract = generator.load_contract()
     generator.check_outputs(generator.render_outputs(contract))
-    cases = generator.generated_cases(contract)
+    audit_cases = generator.generated_cases(contract)
+    mappings = generator.explicit_cases(contract)
+    runtime = generator.runtime_observations(contract)
+    glyphs = generator.contract_glyphs(contract)
     check_priority(generator, contract)
     check_schema_rejections(generator, contract)
-    check_eza(generator, contract, cases)
+    check_audit(contract, audit_cases)
+    check_eza(contract, mappings)
+    check_eza_runtime(runtime["eza"])
     if arguments.font_check:
-        check_fonts(cases)
+        check_fonts(glyphs)
     if arguments.drift:
-        report_eza_drift(cases)
+        report_eza_drift(mappings)
     return 0
 
 

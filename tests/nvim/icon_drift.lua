@@ -6,7 +6,7 @@ local mini_icons = require("mini.icons")
 mini_icons.setup({})
 
 local differences = {}
-for _, case in ipairs(payload.cases) do
+for _, case in ipairs(payload.explicit_cases) do
 	local glyph, highlight = mini_icons.get("file", case.fixture)
 	if glyph ~= case.glyph or highlight ~= case.nvim_highlight then
 		table.insert(
@@ -22,7 +22,7 @@ for _, case in ipairs(payload.cases) do
 	end
 end
 
-print(("Upstream mini.icons drift %d/%d (informational)"):format(#differences, payload.expected))
+print(("Upstream mini.icons drift %d/%d (informational)"):format(#differences, payload.explicit_expected))
 for index, difference in ipairs(differences) do
 	if index > 20 then
 		print(("  ... %d additional differences"):format(#differences - 20))

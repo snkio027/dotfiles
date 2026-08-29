@@ -12,9 +12,90 @@ color_role = "grey"
 glyph = ""
 color_role = "azure"
 
+[runtime]
+ownership = "upstream-observation"
+
+[runtime.eza.unknown_extension]
+fixture = "unknown.contract_unknown_extension"
+kind = "file"
+populate = false
+glyph = ""
+
+[runtime.eza.extensionless_file]
+fixture = "unknownfile"
+kind = "file"
+populate = false
+glyph = "󰡯"
+
+[runtime.eza.ordinary_directory]
+fixture = "ordinary-directory"
+kind = "directory"
+populate = true
+glyph = ""
+
+[runtime.eza.empty_directory]
+fixture = "empty-directory"
+kind = "directory"
+populate = false
+glyph = ""
+
+[runtime.eza.github_directory]
+fixture = ".github"
+kind = "directory"
+populate = true
+glyph = ""
+
+[runtime.eza.build_directory]
+fixture = "build"
+kind = "directory"
+populate = true
+glyph = "󱧼"
+
+[runtime.nvim.unknown_extension]
+fixture = "unknown.contract_unknown_extension"
+kind = "file"
+populate = false
+glyph = ""
+highlight = "MiniIconsGrey"
+
+[runtime.nvim.extensionless_file]
+fixture = "unknownfile"
+kind = "file"
+populate = false
+glyph = ""
+highlight = "MiniIconsGrey"
+
+[runtime.nvim.ordinary_directory]
+fixture = "ordinary-directory"
+kind = "directory"
+populate = true
+glyph = ""
+highlight = "MiniIconsAzure"
+
+[runtime.nvim.empty_directory]
+fixture = "empty-directory"
+kind = "directory"
+populate = false
+glyph = ""
+highlight = "MiniIconsAzure"
+
+[runtime.nvim.github_directory]
+fixture = ".github"
+kind = "directory"
+populate = true
+glyph = ""
+highlight = "MiniIconsAzure"
+
+[runtime.nvim.build_directory]
+fixture = "build"
+kind = "directory"
+populate = true
+glyph = "󱧼"
+highlight = "MiniIconsGrey"
+
 [colors.grey]
 nvim = "MiniIconsGrey"
-eza = "#bac2de"
+eza = "#cdd6f4"
 
 [colors.azure]
 nvim = "MiniIconsAzure"

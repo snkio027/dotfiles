@@ -6,9 +6,9 @@
     "extension",
     "default"
   ],
-  "expected": 72,
+  "audit_expected": 72,
   "real_project_expected": 47,
-  "cases": [
+  "audit_cases": [
     {
       "pattern": "*.c",
       "fixture": "sample.c",
@@ -480,7 +480,7 @@
       "glyph": "",
       "color_role": "grey",
       "nvim_highlight": "MiniIconsGrey",
-      "eza_color": "#bac2de"
+      "eza_color": "#cdd6f4"
     },
     {
       "pattern": "*.jsonc",
@@ -491,7 +491,7 @@
       "glyph": "",
       "color_role": "grey",
       "nvim_highlight": "MiniIconsGrey",
-      "eza_color": "#bac2de"
+      "eza_color": "#cdd6f4"
     },
     {
       "pattern": "*.yaml",
@@ -502,7 +502,7 @@
       "glyph": "",
       "color_role": "grey",
       "nvim_highlight": "MiniIconsGrey",
-      "eza_color": "#bac2de"
+      "eza_color": "#cdd6f4"
     },
     {
       "pattern": "*.yml",
@@ -513,7 +513,7 @@
       "glyph": "",
       "color_role": "grey",
       "nvim_highlight": "MiniIconsGrey",
-      "eza_color": "#bac2de"
+      "eza_color": "#cdd6f4"
     },
     {
       "pattern": "*.toml",
@@ -524,7 +524,7 @@
       "glyph": "",
       "color_role": "grey",
       "nvim_highlight": "MiniIconsGrey",
-      "eza_color": "#bac2de"
+      "eza_color": "#cdd6f4"
     },
     {
       "pattern": "*.ini",
@@ -612,7 +612,7 @@
       "glyph": "",
       "color_role": "grey",
       "nvim_highlight": "MiniIconsGrey",
-      "eza_color": "#bac2de"
+      "eza_color": "#cdd6f4"
     },
     {
       "pattern": "*.rst",
@@ -623,7 +623,7 @@
       "glyph": "",
       "color_role": "grey",
       "nvim_highlight": "MiniIconsGrey",
-      "eza_color": "#bac2de"
+      "eza_color": "#cdd6f4"
     },
     {
       "pattern": "*.txt",
@@ -634,7 +634,7 @@
       "glyph": "",
       "color_role": "grey",
       "nvim_highlight": "MiniIconsGrey",
-      "eza_color": "#bac2de"
+      "eza_color": "#cdd6f4"
     },
     {
       "pattern": "*.sql",
@@ -722,7 +722,7 @@
       "glyph": "",
       "color_role": "grey",
       "nvim_highlight": "MiniIconsGrey",
-      "eza_color": "#bac2de"
+      "eza_color": "#cdd6f4"
     },
     {
       "pattern": "*.css",
@@ -801,5 +801,1062 @@
       "nvim_highlight": "MiniIconsYellow",
       "eza_color": "#f9e2af"
     }
-  ]
+  ],
+  "explicit_expected": 87,
+  "explicit_cases": [
+    {
+      "pattern": ".clang-format",
+      "fixture": ".clang-format",
+      "category": "file",
+      "key": ".clang-format",
+      "glyph": "󱁻",
+      "color_role": "purple",
+      "nvim_highlight": "MiniIconsPurple",
+      "eza_color": "#cba6f7"
+    },
+    {
+      "pattern": ".coveragerc",
+      "fixture": ".coveragerc",
+      "category": "file",
+      "key": ".coveragerc",
+      "glyph": "",
+      "color_role": "grey",
+      "nvim_highlight": "MiniIconsGrey",
+      "eza_color": "#cdd6f4"
+    },
+    {
+      "pattern": ".dockerignore",
+      "fixture": ".dockerignore",
+      "category": "file",
+      "key": ".dockerignore",
+      "glyph": "",
+      "color_role": "azure",
+      "nvim_highlight": "MiniIconsAzure",
+      "eza_color": "#74c7ec"
+    },
+    {
+      "pattern": ".git-blame-ignore-revs",
+      "fixture": ".git-blame-ignore-revs",
+      "category": "file",
+      "key": ".git-blame-ignore-revs",
+      "glyph": "󰊢",
+      "color_role": "grey",
+      "nvim_highlight": "MiniIconsGrey",
+      "eza_color": "#cdd6f4"
+    },
+    {
+      "pattern": ".gitignore",
+      "fixture": ".gitignore",
+      "category": "file",
+      "key": ".gitignore",
+      "glyph": "󰊢",
+      "color_role": "grey",
+      "nvim_highlight": "MiniIconsGrey",
+      "eza_color": "#cdd6f4"
+    },
+    {
+      "pattern": ".pre-commit-config.yaml",
+      "fixture": ".pre-commit-config.yaml",
+      "category": "file",
+      "key": ".pre-commit-config.yaml",
+      "glyph": "󰛢",
+      "color_role": "grey",
+      "nvim_highlight": "MiniIconsGrey",
+      "eza_color": "#cdd6f4"
+    },
+    {
+      "pattern": ".shellcheckrc",
+      "fixture": ".shellcheckrc",
+      "category": "file",
+      "key": ".shellcheckrc",
+      "glyph": "",
+      "color_role": "grey",
+      "nvim_highlight": "MiniIconsGrey",
+      "eza_color": "#cdd6f4"
+    },
+    {
+      "pattern": "CMakeLists.txt",
+      "fixture": "CMakeLists.txt",
+      "category": "file",
+      "key": "CMakeLists.txt",
+      "glyph": "",
+      "color_role": "orange",
+      "nvim_highlight": "MiniIconsOrange",
+      "eza_color": "#fab387"
+    },
+    {
+      "pattern": "CMakePresets.json",
+      "fixture": "CMakePresets.json",
+      "category": "file",
+      "key": "CMakePresets.json",
+      "glyph": "",
+      "color_role": "orange",
+      "nvim_highlight": "MiniIconsOrange",
+      "eza_color": "#fab387"
+    },
+    {
+      "pattern": "CMakeUserPresets.json",
+      "fixture": "CMakeUserPresets.json",
+      "category": "file",
+      "key": "CMakeUserPresets.json",
+      "glyph": "",
+      "color_role": "orange",
+      "nvim_highlight": "MiniIconsOrange",
+      "eza_color": "#fab387"
+    },
+    {
+      "pattern": "CODE_OF_CONDUCT.md",
+      "fixture": "CODE_OF_CONDUCT.md",
+      "category": "file",
+      "key": "CODE_OF_CONDUCT.md",
+      "glyph": "",
+      "color_role": "grey",
+      "nvim_highlight": "MiniIconsGrey",
+      "eza_color": "#cdd6f4"
+    },
+    {
+      "pattern": "CONTRIBUTING.md",
+      "fixture": "CONTRIBUTING.md",
+      "category": "file",
+      "key": "CONTRIBUTING.md",
+      "glyph": "",
+      "color_role": "grey",
+      "nvim_highlight": "MiniIconsGrey",
+      "eza_color": "#cdd6f4"
+    },
+    {
+      "pattern": "Cargo.lock",
+      "fixture": "Cargo.lock",
+      "category": "file",
+      "key": "Cargo.lock",
+      "glyph": "",
+      "color_role": "orange",
+      "nvim_highlight": "MiniIconsOrange",
+      "eza_color": "#fab387"
+    },
+    {
+      "pattern": "Cargo.toml",
+      "fixture": "Cargo.toml",
+      "category": "file",
+      "key": "Cargo.toml",
+      "glyph": "",
+      "color_role": "orange",
+      "nvim_highlight": "MiniIconsOrange",
+      "eza_color": "#fab387"
+    },
+    {
+      "pattern": "DCO",
+      "fixture": "DCO",
+      "category": "file",
+      "key": "DCO",
+      "glyph": "󰡯",
+      "color_role": "grey",
+      "nvim_highlight": "MiniIconsGrey",
+      "eza_color": "#cdd6f4"
+    },
+    {
+      "pattern": "Dockerfile",
+      "fixture": "Dockerfile",
+      "category": "file",
+      "key": "Dockerfile",
+      "glyph": "",
+      "color_role": "azure",
+      "nvim_highlight": "MiniIconsAzure",
+      "eza_color": "#74c7ec"
+    },
+    {
+      "pattern": "Justfile",
+      "fixture": "Justfile",
+      "category": "file",
+      "key": "Justfile",
+      "glyph": "",
+      "color_role": "orange",
+      "nvim_highlight": "MiniIconsOrange",
+      "eza_color": "#fab387"
+    },
+    {
+      "pattern": "LICENSE",
+      "fixture": "LICENSE",
+      "category": "file",
+      "key": "LICENSE",
+      "glyph": "",
+      "color_role": "yellow",
+      "nvim_highlight": "MiniIconsYellow",
+      "eza_color": "#f9e2af"
+    },
+    {
+      "pattern": "MANIFEST.in",
+      "fixture": "MANIFEST.in",
+      "category": "file",
+      "key": "MANIFEST.in",
+      "glyph": "",
+      "color_role": "yellow",
+      "nvim_highlight": "MiniIconsYellow",
+      "eza_color": "#f9e2af"
+    },
+    {
+      "pattern": "Makefile",
+      "fixture": "Makefile",
+      "category": "file",
+      "key": "Makefile",
+      "glyph": "",
+      "color_role": "orange",
+      "nvim_highlight": "MiniIconsOrange",
+      "eza_color": "#fab387"
+    },
+    {
+      "pattern": "README.md",
+      "fixture": "README.md",
+      "category": "file",
+      "key": "README.md",
+      "glyph": "󰂺",
+      "color_role": "yellow",
+      "nvim_highlight": "MiniIconsYellow",
+      "eza_color": "#f9e2af"
+    },
+    {
+      "pattern": "SECURITY.md",
+      "fixture": "SECURITY.md",
+      "category": "file",
+      "key": "SECURITY.md",
+      "glyph": "󰒃",
+      "color_role": "red",
+      "nvim_highlight": "MiniIconsRed",
+      "eza_color": "#f38ba8"
+    },
+    {
+      "pattern": "Taskfile.yml",
+      "fixture": "Taskfile.yml",
+      "category": "file",
+      "key": "Taskfile.yml",
+      "glyph": "",
+      "color_role": "orange",
+      "nvim_highlight": "MiniIconsOrange",
+      "eza_color": "#fab387"
+    },
+    {
+      "pattern": "build.zig",
+      "fixture": "build.zig",
+      "category": "file",
+      "key": "build.zig",
+      "glyph": "",
+      "color_role": "yellow",
+      "nvim_highlight": "MiniIconsYellow",
+      "eza_color": "#f9e2af"
+    },
+    {
+      "pattern": "build.zig.zon",
+      "fixture": "build.zig.zon",
+      "category": "file",
+      "key": "build.zig.zon",
+      "glyph": "",
+      "color_role": "yellow",
+      "nvim_highlight": "MiniIconsYellow",
+      "eza_color": "#f9e2af"
+    },
+    {
+      "pattern": "bun.lock",
+      "fixture": "bun.lock",
+      "category": "file",
+      "key": "bun.lock",
+      "glyph": "",
+      "color_role": "yellow",
+      "nvim_highlight": "MiniIconsYellow",
+      "eza_color": "#f9e2af"
+    },
+    {
+      "pattern": "compose.yaml",
+      "fixture": "compose.yaml",
+      "category": "file",
+      "key": "compose.yaml",
+      "glyph": "",
+      "color_role": "azure",
+      "nvim_highlight": "MiniIconsAzure",
+      "eza_color": "#74c7ec"
+    },
+    {
+      "pattern": "docker-compose.yml",
+      "fixture": "docker-compose.yml",
+      "category": "file",
+      "key": "docker-compose.yml",
+      "glyph": "",
+      "color_role": "azure",
+      "nvim_highlight": "MiniIconsAzure",
+      "eza_color": "#74c7ec"
+    },
+    {
+      "pattern": "go.mod",
+      "fixture": "go.mod",
+      "category": "file",
+      "key": "go.mod",
+      "glyph": "",
+      "color_role": "azure",
+      "nvim_highlight": "MiniIconsAzure",
+      "eza_color": "#74c7ec"
+    },
+    {
+      "pattern": "go.sum",
+      "fixture": "go.sum",
+      "category": "file",
+      "key": "go.sum",
+      "glyph": "",
+      "color_role": "azure",
+      "nvim_highlight": "MiniIconsAzure",
+      "eza_color": "#74c7ec"
+    },
+    {
+      "pattern": "meson.build",
+      "fixture": "meson.build",
+      "category": "file",
+      "key": "meson.build",
+      "glyph": "",
+      "color_role": "orange",
+      "nvim_highlight": "MiniIconsOrange",
+      "eza_color": "#fab387"
+    },
+    {
+      "pattern": "package-lock.json",
+      "fixture": "package-lock.json",
+      "category": "file",
+      "key": "package-lock.json",
+      "glyph": "",
+      "color_role": "yellow",
+      "nvim_highlight": "MiniIconsYellow",
+      "eza_color": "#f9e2af"
+    },
+    {
+      "pattern": "package.json",
+      "fixture": "package.json",
+      "category": "file",
+      "key": "package.json",
+      "glyph": "",
+      "color_role": "yellow",
+      "nvim_highlight": "MiniIconsYellow",
+      "eza_color": "#f9e2af"
+    },
+    {
+      "pattern": "pnpm-lock.yaml",
+      "fixture": "pnpm-lock.yaml",
+      "category": "file",
+      "key": "pnpm-lock.yaml",
+      "glyph": "",
+      "color_role": "yellow",
+      "nvim_highlight": "MiniIconsYellow",
+      "eza_color": "#f9e2af"
+    },
+    {
+      "pattern": "pyproject.toml",
+      "fixture": "pyproject.toml",
+      "category": "file",
+      "key": "pyproject.toml",
+      "glyph": "",
+      "color_role": "yellow",
+      "nvim_highlight": "MiniIconsYellow",
+      "eza_color": "#f9e2af"
+    },
+    {
+      "pattern": "requirements.txt",
+      "fixture": "requirements.txt",
+      "category": "file",
+      "key": "requirements.txt",
+      "glyph": "",
+      "color_role": "yellow",
+      "nvim_highlight": "MiniIconsYellow",
+      "eza_color": "#f9e2af"
+    },
+    {
+      "pattern": "rust-toolchain.toml",
+      "fixture": "rust-toolchain.toml",
+      "category": "file",
+      "key": "rust-toolchain.toml",
+      "glyph": "",
+      "color_role": "orange",
+      "nvim_highlight": "MiniIconsOrange",
+      "eza_color": "#fab387"
+    },
+    {
+      "pattern": "uv.lock",
+      "fixture": "uv.lock",
+      "category": "file",
+      "key": "uv.lock",
+      "glyph": "",
+      "color_role": "yellow",
+      "nvim_highlight": "MiniIconsYellow",
+      "eza_color": "#f9e2af"
+    },
+    {
+      "pattern": "yarn.lock",
+      "fixture": "yarn.lock",
+      "category": "file",
+      "key": "yarn.lock",
+      "glyph": "",
+      "color_role": "yellow",
+      "nvim_highlight": "MiniIconsYellow",
+      "eza_color": "#f9e2af"
+    },
+    {
+      "pattern": "*.c",
+      "fixture": "contract-sample.c",
+      "category": "extension",
+      "key": "c",
+      "glyph": "",
+      "color_role": "blue",
+      "nvim_highlight": "MiniIconsBlue",
+      "eza_color": "#89b4fa"
+    },
+    {
+      "pattern": "*.cc",
+      "fixture": "contract-sample.cc",
+      "category": "extension",
+      "key": "cc",
+      "glyph": "",
+      "color_role": "blue",
+      "nvim_highlight": "MiniIconsBlue",
+      "eza_color": "#89b4fa"
+    },
+    {
+      "pattern": "*.cmake",
+      "fixture": "contract-sample.cmake",
+      "category": "extension",
+      "key": "cmake",
+      "glyph": "",
+      "color_role": "orange",
+      "nvim_highlight": "MiniIconsOrange",
+      "eza_color": "#fab387"
+    },
+    {
+      "pattern": "*.cpp",
+      "fixture": "contract-sample.cpp",
+      "category": "extension",
+      "key": "cpp",
+      "glyph": "",
+      "color_role": "blue",
+      "nvim_highlight": "MiniIconsBlue",
+      "eza_color": "#89b4fa"
+    },
+    {
+      "pattern": "*.css",
+      "fixture": "contract-sample.css",
+      "category": "extension",
+      "key": "css",
+      "glyph": "",
+      "color_role": "blue",
+      "nvim_highlight": "MiniIconsBlue",
+      "eza_color": "#89b4fa"
+    },
+    {
+      "pattern": "*.csv",
+      "fixture": "contract-sample.csv",
+      "category": "extension",
+      "key": "csv",
+      "glyph": "",
+      "color_role": "teal",
+      "nvim_highlight": "MiniIconsCyan",
+      "eza_color": "#94e2d5"
+    },
+    {
+      "pattern": "*.cxx",
+      "fixture": "contract-sample.cxx",
+      "category": "extension",
+      "key": "cxx",
+      "glyph": "",
+      "color_role": "blue",
+      "nvim_highlight": "MiniIconsBlue",
+      "eza_color": "#89b4fa"
+    },
+    {
+      "pattern": "*.env",
+      "fixture": "contract-sample.env",
+      "category": "extension",
+      "key": "env",
+      "glyph": "",
+      "color_role": "teal",
+      "nvim_highlight": "MiniIconsCyan",
+      "eza_color": "#94e2d5"
+    },
+    {
+      "pattern": "*.fish",
+      "fixture": "contract-sample.fish",
+      "category": "extension",
+      "key": "fish",
+      "glyph": "",
+      "color_role": "green",
+      "nvim_highlight": "MiniIconsGreen",
+      "eza_color": "#a6e3a1"
+    },
+    {
+      "pattern": "*.go",
+      "fixture": "contract-sample.go",
+      "category": "extension",
+      "key": "go",
+      "glyph": "",
+      "color_role": "azure",
+      "nvim_highlight": "MiniIconsAzure",
+      "eza_color": "#74c7ec"
+    },
+    {
+      "pattern": "*.graphql",
+      "fixture": "contract-sample.graphql",
+      "category": "extension",
+      "key": "graphql",
+      "glyph": "",
+      "color_role": "purple",
+      "nvim_highlight": "MiniIconsPurple",
+      "eza_color": "#cba6f7"
+    },
+    {
+      "pattern": "*.h",
+      "fixture": "contract-sample.h",
+      "category": "extension",
+      "key": "h",
+      "glyph": "",
+      "color_role": "blue",
+      "nvim_highlight": "MiniIconsBlue",
+      "eza_color": "#89b4fa"
+    },
+    {
+      "pattern": "*.hcl",
+      "fixture": "contract-sample.hcl",
+      "category": "extension",
+      "key": "hcl",
+      "glyph": "",
+      "color_role": "purple",
+      "nvim_highlight": "MiniIconsPurple",
+      "eza_color": "#cba6f7"
+    },
+    {
+      "pattern": "*.hh",
+      "fixture": "contract-sample.hh",
+      "category": "extension",
+      "key": "hh",
+      "glyph": "",
+      "color_role": "blue",
+      "nvim_highlight": "MiniIconsBlue",
+      "eza_color": "#89b4fa"
+    },
+    {
+      "pattern": "*.hpp",
+      "fixture": "contract-sample.hpp",
+      "category": "extension",
+      "key": "hpp",
+      "glyph": "",
+      "color_role": "blue",
+      "nvim_highlight": "MiniIconsBlue",
+      "eza_color": "#89b4fa"
+    },
+    {
+      "pattern": "*.html",
+      "fixture": "contract-sample.html",
+      "category": "extension",
+      "key": "html",
+      "glyph": "",
+      "color_role": "orange",
+      "nvim_highlight": "MiniIconsOrange",
+      "eza_color": "#fab387"
+    },
+    {
+      "pattern": "*.ini",
+      "fixture": "contract-sample.ini",
+      "category": "extension",
+      "key": "ini",
+      "glyph": "󱁻",
+      "color_role": "purple",
+      "nvim_highlight": "MiniIconsPurple",
+      "eza_color": "#cba6f7"
+    },
+    {
+      "pattern": "*.ipynb",
+      "fixture": "contract-sample.ipynb",
+      "category": "extension",
+      "key": "ipynb",
+      "glyph": "",
+      "color_role": "orange",
+      "nvim_highlight": "MiniIconsOrange",
+      "eza_color": "#fab387"
+    },
+    {
+      "pattern": "*.js",
+      "fixture": "contract-sample.js",
+      "category": "extension",
+      "key": "js",
+      "glyph": "",
+      "color_role": "yellow",
+      "nvim_highlight": "MiniIconsYellow",
+      "eza_color": "#f9e2af"
+    },
+    {
+      "pattern": "*.json",
+      "fixture": "contract-sample.json",
+      "category": "extension",
+      "key": "json",
+      "glyph": "",
+      "color_role": "grey",
+      "nvim_highlight": "MiniIconsGrey",
+      "eza_color": "#cdd6f4"
+    },
+    {
+      "pattern": "*.jsonc",
+      "fixture": "contract-sample.jsonc",
+      "category": "extension",
+      "key": "jsonc",
+      "glyph": "",
+      "color_role": "grey",
+      "nvim_highlight": "MiniIconsGrey",
+      "eza_color": "#cdd6f4"
+    },
+    {
+      "pattern": "*.jsx",
+      "fixture": "contract-sample.jsx",
+      "category": "extension",
+      "key": "jsx",
+      "glyph": "",
+      "color_role": "yellow",
+      "nvim_highlight": "MiniIconsYellow",
+      "eza_color": "#f9e2af"
+    },
+    {
+      "pattern": "*.kdl",
+      "fixture": "contract-sample.kdl",
+      "category": "extension",
+      "key": "kdl",
+      "glyph": "",
+      "color_role": "grey",
+      "nvim_highlight": "MiniIconsGrey",
+      "eza_color": "#cdd6f4"
+    },
+    {
+      "pattern": "*.lock",
+      "fixture": "contract-sample.lock",
+      "category": "extension",
+      "key": "lock",
+      "glyph": "",
+      "color_role": "yellow",
+      "nvim_highlight": "MiniIconsYellow",
+      "eza_color": "#f9e2af"
+    },
+    {
+      "pattern": "*.lua",
+      "fixture": "contract-sample.lua",
+      "category": "extension",
+      "key": "lua",
+      "glyph": "",
+      "color_role": "blue",
+      "nvim_highlight": "MiniIconsBlue",
+      "eza_color": "#89b4fa"
+    },
+    {
+      "pattern": "*.md",
+      "fixture": "contract-sample.md",
+      "category": "extension",
+      "key": "md",
+      "glyph": "",
+      "color_role": "grey",
+      "nvim_highlight": "MiniIconsGrey",
+      "eza_color": "#cdd6f4"
+    },
+    {
+      "pattern": "*.mjs",
+      "fixture": "contract-sample.mjs",
+      "category": "extension",
+      "key": "mjs",
+      "glyph": "",
+      "color_role": "yellow",
+      "nvim_highlight": "MiniIconsYellow",
+      "eza_color": "#f9e2af"
+    },
+    {
+      "pattern": "*.nix",
+      "fixture": "contract-sample.nix",
+      "category": "extension",
+      "key": "nix",
+      "glyph": "",
+      "color_role": "blue",
+      "nvim_highlight": "MiniIconsBlue",
+      "eza_color": "#89b4fa"
+    },
+    {
+      "pattern": "*.proto",
+      "fixture": "contract-sample.proto",
+      "category": "extension",
+      "key": "proto",
+      "glyph": "",
+      "color_role": "purple",
+      "nvim_highlight": "MiniIconsPurple",
+      "eza_color": "#cba6f7"
+    },
+    {
+      "pattern": "*.py",
+      "fixture": "contract-sample.py",
+      "category": "extension",
+      "key": "py",
+      "glyph": "",
+      "color_role": "yellow",
+      "nvim_highlight": "MiniIconsYellow",
+      "eza_color": "#f9e2af"
+    },
+    {
+      "pattern": "*.pyi",
+      "fixture": "contract-sample.pyi",
+      "category": "extension",
+      "key": "pyi",
+      "glyph": "",
+      "color_role": "yellow",
+      "nvim_highlight": "MiniIconsYellow",
+      "eza_color": "#f9e2af"
+    },
+    {
+      "pattern": "*.rs",
+      "fixture": "contract-sample.rs",
+      "category": "extension",
+      "key": "rs",
+      "glyph": "",
+      "color_role": "orange",
+      "nvim_highlight": "MiniIconsOrange",
+      "eza_color": "#fab387"
+    },
+    {
+      "pattern": "*.rst",
+      "fixture": "contract-sample.rst",
+      "category": "extension",
+      "key": "rst",
+      "glyph": "",
+      "color_role": "grey",
+      "nvim_highlight": "MiniIconsGrey",
+      "eza_color": "#cdd6f4"
+    },
+    {
+      "pattern": "*.scss",
+      "fixture": "contract-sample.scss",
+      "category": "extension",
+      "key": "scss",
+      "glyph": "",
+      "color_role": "blue",
+      "nvim_highlight": "MiniIconsBlue",
+      "eza_color": "#89b4fa"
+    },
+    {
+      "pattern": "*.sh",
+      "fixture": "contract-sample.sh",
+      "category": "extension",
+      "key": "sh",
+      "glyph": "",
+      "color_role": "green",
+      "nvim_highlight": "MiniIconsGreen",
+      "eza_color": "#a6e3a1"
+    },
+    {
+      "pattern": "*.sql",
+      "fixture": "contract-sample.sql",
+      "category": "extension",
+      "key": "sql",
+      "glyph": "",
+      "color_role": "teal",
+      "nvim_highlight": "MiniIconsCyan",
+      "eza_color": "#94e2d5"
+    },
+    {
+      "pattern": "*.tf",
+      "fixture": "contract-sample.tf",
+      "category": "extension",
+      "key": "tf",
+      "glyph": "󱁢",
+      "color_role": "purple",
+      "nvim_highlight": "MiniIconsPurple",
+      "eza_color": "#cba6f7"
+    },
+    {
+      "pattern": "*.tfvars",
+      "fixture": "contract-sample.tfvars",
+      "category": "extension",
+      "key": "tfvars",
+      "glyph": "󱁢",
+      "color_role": "purple",
+      "nvim_highlight": "MiniIconsPurple",
+      "eza_color": "#cba6f7"
+    },
+    {
+      "pattern": "*.toml",
+      "fixture": "contract-sample.toml",
+      "category": "extension",
+      "key": "toml",
+      "glyph": "",
+      "color_role": "grey",
+      "nvim_highlight": "MiniIconsGrey",
+      "eza_color": "#cdd6f4"
+    },
+    {
+      "pattern": "*.ts",
+      "fixture": "contract-sample.ts",
+      "category": "extension",
+      "key": "ts",
+      "glyph": "",
+      "color_role": "blue",
+      "nvim_highlight": "MiniIconsBlue",
+      "eza_color": "#89b4fa"
+    },
+    {
+      "pattern": "*.tsx",
+      "fixture": "contract-sample.tsx",
+      "category": "extension",
+      "key": "tsx",
+      "glyph": "",
+      "color_role": "blue",
+      "nvim_highlight": "MiniIconsBlue",
+      "eza_color": "#89b4fa"
+    },
+    {
+      "pattern": "*.txt",
+      "fixture": "contract-sample.txt",
+      "category": "extension",
+      "key": "txt",
+      "glyph": "",
+      "color_role": "grey",
+      "nvim_highlight": "MiniIconsGrey",
+      "eza_color": "#cdd6f4"
+    },
+    {
+      "pattern": "*.vim",
+      "fixture": "contract-sample.vim",
+      "category": "extension",
+      "key": "vim",
+      "glyph": "",
+      "color_role": "green",
+      "nvim_highlight": "MiniIconsGreen",
+      "eza_color": "#a6e3a1"
+    },
+    {
+      "pattern": "*.xml",
+      "fixture": "contract-sample.xml",
+      "category": "extension",
+      "key": "xml",
+      "glyph": "󰗀",
+      "color_role": "orange",
+      "nvim_highlight": "MiniIconsOrange",
+      "eza_color": "#fab387"
+    },
+    {
+      "pattern": "*.yaml",
+      "fixture": "contract-sample.yaml",
+      "category": "extension",
+      "key": "yaml",
+      "glyph": "",
+      "color_role": "grey",
+      "nvim_highlight": "MiniIconsGrey",
+      "eza_color": "#cdd6f4"
+    },
+    {
+      "pattern": "*.yml",
+      "fixture": "contract-sample.yml",
+      "category": "extension",
+      "key": "yml",
+      "glyph": "",
+      "color_role": "grey",
+      "nvim_highlight": "MiniIconsGrey",
+      "eza_color": "#cdd6f4"
+    },
+    {
+      "pattern": "*.zig",
+      "fixture": "contract-sample.zig",
+      "category": "extension",
+      "key": "zig",
+      "glyph": "",
+      "color_role": "yellow",
+      "nvim_highlight": "MiniIconsYellow",
+      "eza_color": "#f9e2af"
+    },
+    {
+      "pattern": "*.zsh",
+      "fixture": "contract-sample.zsh",
+      "category": "extension",
+      "key": "zsh",
+      "glyph": "",
+      "color_role": "green",
+      "nvim_highlight": "MiniIconsGreen",
+      "eza_color": "#a6e3a1"
+    }
+  ],
+  "unique_glyph_expected": 45,
+  "font_glyphs": [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "󰂺",
+    "󰊢",
+    "󰒃",
+    "󰗀",
+    "󰛢",
+    "󰡯",
+    "󱁢",
+    "󱁻"
+  ],
+  "color_role_expected": 9,
+  "color_roles": {
+    "azure": {
+      "nvim_highlight": "MiniIconsAzure",
+      "rgb": "#74c7ec"
+    },
+    "blue": {
+      "nvim_highlight": "MiniIconsBlue",
+      "rgb": "#89b4fa"
+    },
+    "green": {
+      "nvim_highlight": "MiniIconsGreen",
+      "rgb": "#a6e3a1"
+    },
+    "grey": {
+      "nvim_highlight": "MiniIconsGrey",
+      "rgb": "#cdd6f4"
+    },
+    "orange": {
+      "nvim_highlight": "MiniIconsOrange",
+      "rgb": "#fab387"
+    },
+    "purple": {
+      "nvim_highlight": "MiniIconsPurple",
+      "rgb": "#cba6f7"
+    },
+    "red": {
+      "nvim_highlight": "MiniIconsRed",
+      "rgb": "#f38ba8"
+    },
+    "teal": {
+      "nvim_highlight": "MiniIconsCyan",
+      "rgb": "#94e2d5"
+    },
+    "yellow": {
+      "nvim_highlight": "MiniIconsYellow",
+      "rgb": "#f9e2af"
+    }
+  },
+  "runtime_ownership": "upstream-observation",
+  "runtime_observations": {
+    "eza": [
+      {
+        "label": "build_directory",
+        "fixture": "build",
+        "kind": "directory",
+        "populate": true,
+        "glyph": "󱧼"
+      },
+      {
+        "label": "empty_directory",
+        "fixture": "empty-directory",
+        "kind": "directory",
+        "populate": false,
+        "glyph": ""
+      },
+      {
+        "label": "extensionless_file",
+        "fixture": "unknownfile",
+        "kind": "file",
+        "populate": false,
+        "glyph": "󰡯"
+      },
+      {
+        "label": "github_directory",
+        "fixture": ".github",
+        "kind": "directory",
+        "populate": true,
+        "glyph": ""
+      },
+      {
+        "label": "ordinary_directory",
+        "fixture": "ordinary-directory",
+        "kind": "directory",
+        "populate": true,
+        "glyph": ""
+      },
+      {
+        "label": "unknown_extension",
+        "fixture": "unknown.contract_unknown_extension",
+        "kind": "file",
+        "populate": false,
+        "glyph": ""
+      }
+    ],
+    "nvim": [
+      {
+        "label": "build_directory",
+        "fixture": "build",
+        "kind": "directory",
+        "populate": true,
+        "glyph": "󱧼",
+        "highlight": "MiniIconsGrey"
+      },
+      {
+        "label": "empty_directory",
+        "fixture": "empty-directory",
+        "kind": "directory",
+        "populate": false,
+        "glyph": "",
+        "highlight": "MiniIconsAzure"
+      },
+      {
+        "label": "extensionless_file",
+        "fixture": "unknownfile",
+        "kind": "file",
+        "populate": false,
+        "glyph": "",
+        "highlight": "MiniIconsGrey"
+      },
+      {
+        "label": "github_directory",
+        "fixture": ".github",
+        "kind": "directory",
+        "populate": true,
+        "glyph": "",
+        "highlight": "MiniIconsAzure"
+      },
+      {
+        "label": "ordinary_directory",
+        "fixture": "ordinary-directory",
+        "kind": "directory",
+        "populate": true,
+        "glyph": "",
+        "highlight": "MiniIconsAzure"
+      },
+      {
+        "label": "unknown_extension",
+        "fixture": "unknown.contract_unknown_extension",
+        "kind": "file",
+        "populate": false,
+        "glyph": "",
+        "highlight": "MiniIconsGrey"
+      }
+    ]
+  }
 }

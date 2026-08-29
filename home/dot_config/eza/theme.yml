@@ -9,7 +9,7 @@ filenames:
     icon:
       glyph: ""
       style:
-        foreground: "#bac2de"
+        foreground: "#cdd6f4"
   ".dockerignore":
     icon:
       glyph: ""
@@ -19,22 +19,22 @@ filenames:
     icon:
       glyph: "󰊢"
       style:
-        foreground: "#bac2de"
+        foreground: "#cdd6f4"
   ".gitignore":
     icon:
       glyph: "󰊢"
       style:
-        foreground: "#bac2de"
+        foreground: "#cdd6f4"
   ".pre-commit-config.yaml":
     icon:
       glyph: "󰛢"
       style:
-        foreground: "#bac2de"
+        foreground: "#cdd6f4"
   ".shellcheckrc":
     icon:
       glyph: ""
       style:
-        foreground: "#bac2de"
+        foreground: "#cdd6f4"
   "CMakeLists.txt":
     icon:
       glyph: ""
@@ -54,12 +54,12 @@ filenames:
     icon:
       glyph: ""
       style:
-        foreground: "#bac2de"
+        foreground: "#cdd6f4"
   "CONTRIBUTING.md":
     icon:
       glyph: ""
       style:
-        foreground: "#bac2de"
+        foreground: "#cdd6f4"
   "Cargo.lock":
     icon:
       glyph: ""
@@ -74,7 +74,7 @@ filenames:
     icon:
       glyph: "󰡯"
       style:
-        foreground: "#bac2de"
+        foreground: "#cdd6f4"
   "Dockerfile":
     icon:
       glyph: ""
@@ -295,12 +295,12 @@ extensions:
     icon:
       glyph: ""
       style:
-        foreground: "#bac2de"
+        foreground: "#cdd6f4"
   "jsonc":
     icon:
       glyph: ""
       style:
-        foreground: "#bac2de"
+        foreground: "#cdd6f4"
   "jsx":
     icon:
       glyph: ""
@@ -310,7 +310,7 @@ extensions:
     icon:
       glyph: ""
       style:
-        foreground: "#bac2de"
+        foreground: "#cdd6f4"
   "lock":
     icon:
       glyph: ""
@@ -325,7 +325,7 @@ extensions:
     icon:
       glyph: ""
       style:
-        foreground: "#bac2de"
+        foreground: "#cdd6f4"
   "mjs":
     icon:
       glyph: ""
@@ -360,7 +360,7 @@ extensions:
     icon:
       glyph: ""
       style:
-        foreground: "#bac2de"
+        foreground: "#cdd6f4"
   "scss":
     icon:
       glyph: ""
@@ -390,7 +390,7 @@ extensions:
     icon:
       glyph: ""
       style:
-        foreground: "#bac2de"
+        foreground: "#cdd6f4"
   "ts":
     icon:
       glyph: ""
@@ -405,7 +405,7 @@ extensions:
     icon:
       glyph: ""
       style:
-        foreground: "#bac2de"
+        foreground: "#cdd6f4"
   "vim":
     icon:
       glyph: ""
@@ -420,12 +420,12 @@ extensions:
     icon:
       glyph: ""
       style:
-        foreground: "#bac2de"
+        foreground: "#cdd6f4"
   "yml":
     icon:
       glyph: ""
       style:
-        foreground: "#bac2de"
+        foreground: "#cdd6f4"
   "zig":
     icon:
       glyph: ""

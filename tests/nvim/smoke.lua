@@ -10,15 +10,59 @@ local icon_cases_path = vim.fn.getcwd() .. "/tests/icons/generated_cases.json"
 local icon_payload = vim.json.decode(table.concat(vim.fn.readfile(icon_cases_path), "\n"))
 local mini_icons = require("mini.icons")
 local verified_icons = 0
-for _, case in ipairs(icon_payload.cases) do
+for _, case in ipairs(icon_payload.explicit_cases) do
 	local glyph, highlight = mini_icons.get("file", case.fixture)
 	assert(glyph == case.glyph, ("Icon glyph mismatch for %s"):format(case.pattern))
 	assert(highlight == case.nvim_highlight, ("Icon highlight mismatch for %s"):format(case.pattern))
 	verified_icons = verified_icons + 1
 end
-assert(verified_icons == icon_payload.expected, "Icon contract coverage is incomplete")
-print(("Icon contract verification %d/%d"):format(verified_icons, icon_payload.expected))
-print(("Real-project observation %d/%d"):format(icon_payload.real_project_expected, icon_payload.expected))
+assert(verified_icons == icon_payload.explicit_expected, "Explicit icon mappings are incomplete")
+
+local runtime_verified = 0
+for _, case in ipairs(icon_payload.runtime_observations.nvim) do
+	local glyph, highlight = mini_icons.get(case.kind, case.fixture)
+	if glyph == case.glyph and highlight == case.highlight then
+		runtime_verified = runtime_verified + 1
+	else
+		print(
+			("Neovim runtime drift %s: baseline=%s/%s upstream=%s/%s"):format(
+				case.label,
+				case.glyph,
+				case.highlight,
+				glyph,
+				highlight
+			)
+		)
+	end
+end
+
+local verified_colors = 0
+for role, expected in pairs(icon_payload.color_roles) do
+	local highlight = vim.api.nvim_get_hl(0, { name = expected.nvim_highlight, link = false })
+	local expected_rgb = tonumber(expected.rgb:sub(2), 16)
+	assert(
+		highlight.fg == expected_rgb,
+		("Final RGB mismatch for %s/%s: expected %s, got #%06x"):format(
+			role,
+			expected.nvim_highlight,
+			expected.rgb,
+			highlight.fg or 0
+		)
+	)
+	verified_colors = verified_colors + 1
+end
+assert(verified_colors == icon_payload.color_role_expected, "Color role coverage is incomplete")
+
+print(("Audit scope                 %d/%d"):format(icon_payload.audit_expected, icon_payload.audit_expected))
+print(("Explicit consumer mappings  %d/%d"):format(verified_icons, icon_payload.explicit_expected))
+print(("Real-project observations   %d/%d"):format(icon_payload.real_project_expected, icon_payload.audit_expected))
+print(("Final highlight RGB roles   %d/%d"):format(verified_colors, icon_payload.color_role_expected))
+print(
+	("Neovim runtime observations %d/%d (informational)"):format(
+		runtime_verified,
+		#icon_payload.runtime_observations.nvim
+	)
+)
 
 local mason = LazyVim.opts("mason.nvim")
 for _, tool in ipairs({
