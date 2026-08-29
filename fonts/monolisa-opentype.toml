@@ -1,0 +1,56 @@
+[policy]
+version = 1
+family = "MonoLisaCode"
+delivery = "customizer-font-build"
+source = "MonoLisa customizer red selections"
+
+enabled = ["calt", "liga", "cv08", "ss03", "ss07", "ss11"]
+
+disabled = [
+  "dlig",
+  "zero",
+  "cv01",
+  "cv02",
+  "cv03",
+  "cv04",
+  "cv05",
+  "cv06",
+  "cv07",
+  "cv09",
+  "cv10",
+  "cv11",
+  "cv12",
+  "ss01",
+  "ss02",
+  "ss04",
+  "ss05",
+  "ss06",
+  "ss08",
+  "ss09",
+  "ss10",
+  "ss12",
+  "ss13",
+  "ss14",
+  "ss15",
+]
+
+[probe.upright]
+text = "-> g * {} === 0"
+required_glyphs = [
+  "hyphen_greater.liga",
+  "g.ss03",
+  "asterisk.ss07",
+  "braceleft.ss11",
+  "braceright.ss11",
+]
+forbidden_glyphs = ["equal_equal_equal.liga", "zero.zero"]
+
+[probe.italic]
+text = "-> * {} === 0"
+required_glyphs = [
+  "hyphen_greater.liga",
+  "asterisk.ss07",
+  "braceleft.ss11",
+  "braceright.ss11",
+]
+forbidden_glyphs = ["equal_equal_equal.liga", "zero.zero"]

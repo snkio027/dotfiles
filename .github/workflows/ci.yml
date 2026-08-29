@@ -118,6 +118,7 @@ jobs:
 
       - name: Validate static configuration
         run: |
+          python3 tests/fonts/test_monolisa_manifest.py
           python3 icons/generate.py --check
           python3 tests/icons/test_icon_contract.py
           find . -path ./.git -prune -o -type f -name '*.json' -print0 | xargs -0 -n1 jq empty
