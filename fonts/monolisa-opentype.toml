@@ -1,10 +1,10 @@
 [policy]
 version = 1
-family = "MonoLisaCode"
+family = "MonoLisaCode Variable-cv04-cv08-ss03-ss07-ss11"
 delivery = "customizer-font-build"
 source = "MonoLisa customizer red selections"
 
-enabled = ["calt", "liga", "cv08", "ss03", "ss07", "ss11"]
+enabled = ["calt", "liga", "cv04", "cv08", "ss03", "ss07", "ss11"]
 
 disabled = [
   "dlig",
@@ -12,7 +12,6 @@ disabled = [
   "cv01",
   "cv02",
   "cv03",
-  "cv04",
   "cv05",
   "cv06",
   "cv07",
@@ -35,8 +34,9 @@ disabled = [
 ]
 
 [probe.upright]
-text = "-> g * {} === 0"
+text = "<-> -> g * {} === 0"
 required_glyphs = [
+  "less_hyphen_greater.liga",
   "hyphen_greater.liga",
   "g.ss03",
   "asterisk.ss07",
@@ -46,8 +46,9 @@ required_glyphs = [
 forbidden_glyphs = ["equal_equal_equal.liga", "zero.zero"]
 
 [probe.italic]
-text = "-> * {} === 0"
+text = "<-> -> * {} === 0"
 required_glyphs = [
+  "less_hyphen_greater.liga",
   "hyphen_greater.liga",
   "asterisk.ss07",
   "braceleft.ss11",
