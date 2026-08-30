@@ -3,26 +3,9 @@
 # 只放每个登录会话执行一次的初始化，避免拖慢每个交互式 Zsh。
 # ------------------------------------------------------------------------------
 
-{{- if .is_mac }}
-{{- if .is_arm64 }}
-HOMEBREW_PREFIX="/opt/homebrew"
-{{- else }}
-HOMEBREW_PREFIX="/usr/local"
-{{- end }}
-{{- else if .is_linux }}
-HOMEBREW_PREFIX="/home/linuxbrew/.linuxbrew"
-{{- end }}
+ZSH_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/zsh"
 
-# Homebrew 安装路径在受支持平台上是稳定的，无需每次 fork `brew shellenv`。
-if [[ -x "$HOMEBREW_PREFIX/bin/brew" ]]; then
-    export HOMEBREW_PREFIX
-    export HOMEBREW_CELLAR="$HOMEBREW_PREFIX/Cellar"
-    export HOMEBREW_REPOSITORY="$HOMEBREW_PREFIX"
-    export INFOPATH="$HOMEBREW_PREFIX/share/info:${INFOPATH:-}"
-    fpath=("$HOMEBREW_PREFIX/share/zsh/site-functions" $fpath)
-fi
+# 登录与交互 Shell 共享同一个 Homebrew 环境所有者。
+[[ -r "$ZSH_CONFIG_DIR/homebrew.zsh" ]] && source "$ZSH_CONFIG_DIR/homebrew.zsh"
 
-# 让非交互进程优先使用 Homebrew 管理的最新稳定版可执行文件。
-typeset -U path
-path=("$HOMEBREW_PREFIX/bin" "$HOMEBREW_PREFIX/sbin" "$HOME/.local/bin" $path)
-export FPATH PATH
+unset ZSH_CONFIG_DIR

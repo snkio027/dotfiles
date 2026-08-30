@@ -27,6 +27,8 @@ brew "yazi"
 brew "zellij"
 brew "zizmor"
 brew "zsh"
+brew "zsh-autosuggestions"
+brew "zsh-syntax-highlighting"
 cask "ghostty" if OS.mac?
 cask "font-maple-mono-nf-cn" if OS.mac?
 cask "font-symbols-only-nerd-font" if OS.mac?

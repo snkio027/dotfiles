@@ -7,37 +7,7 @@
 unset RUSTFLAGS ZIG_FLAGS CFLAGS CXXFLAGS
 unset UV_PYTHON_PREFERENCE ZVM_INSTALL
 
-# --- 1. 全局 PATH 环境变量设置 ---
-typeset -U path
-# 清理从旧父进程继承的 Runtime 管理器路径与环境覆盖。
-path=("${(@)path:#${HOME}/.local/share/mise/*}")
-unset GOROOT RUSTUP_TOOLCHAIN
-unset ${(M)${(k)parameters}:#(MISE_*|__MISE_*)} 2>/dev/null
-
-path=(
-{{- if .is_mac }}
-{{- if .is_arm64 }}
-    /opt/homebrew/opt/llvm/bin
-    /opt/homebrew/bin
-    /opt/homebrew/sbin
-{{- else }}
-    /usr/local/opt/llvm/bin
-    /usr/local/bin
-    /usr/local/sbin
-{{- end }}
-{{- else if .is_linux }}
-    /home/linuxbrew/.linuxbrew/opt/llvm/bin
-    /home/linuxbrew/.linuxbrew/bin
-    /home/linuxbrew/.linuxbrew/sbin
-{{- end }}
-    $HOME/.cargo/bin
-    $HOME/.local/bin
-    $HOME/go/bin
-    $path
-)
-export PATH
-
-# --- 2. 默认编辑器与 Pager 分页器 ---
+# --- 1. 默认编辑器与 Pager 分页器 ---
 export EDITOR="{{ .git.editor }}"
 export VISUAL="{{ .git.editor }}"
 export GIT_EDITOR="{{ .git.editor }}"
@@ -49,13 +19,13 @@ export NVIM_LOG_FILE="${XDG_STATE_HOME:-$HOME/.local/state}/nvim/log"
 export PAGER="less -RF"
 export LANG="en_US.UTF-8"
 
-# --- 3. 工具链与主题环境变量 ---
+# --- 2. 工具链与主题环境变量 ---
 export CARGO_HOME="$HOME/.cargo"
 export GOPATH="$HOME/go"
 export BAT_THEME="Catppuccin Mocha"
 export EZA_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/eza"
 
-# --- 4. FZF 配色主题配置 (Catppuccin Mocha 调色板) ---
+# --- 3. FZF 配色主题配置 (Catppuccin Mocha 调色板) ---
 export FZF_DEFAULT_OPTS="--height 40% --layout=reverse --border \
   --color=bg+:#313244,bg:#1e1e2e,spinner:#f5e0dc,hl:#f38ba8 \
   --color=fg:#cdd6f4,header:#f38ba8,info:#cba6f7,pointer:#f5e0dc \
