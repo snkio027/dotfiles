@@ -1,17 +1,27 @@
 #!/usr/bin/env bash
 # ------------------------------------------------------------------------------
 # run_onchange_after_20_brew_bundle.sh.tmpl
-# 当 Brewfile 发生变更或初始化应用时，只安装缺失依赖，不主动批量升级现有工具。
+# 当当前机器的 Brew profile 发生变更或初始化应用时，只安装缺失依赖，
+# 不主动批量升级现有工具。
 # 全量更新由显式的 brewup/devup 维护命令负责。
-# Brewfile 哈希值: {{ include "../Brewfile" | sha256sum }}
+{{- if eq .machine_profile "devcontainer" }}
+# Brew profile 哈希值: {{ include "../brew/profiles/devcontainer.Brewfile" | sha256sum }}
+{{- else }}
+# Brew profile 哈希值: {{ include "../brew/profiles/workstation.Brewfile" | sha256sum }}
+{{- end }}
 # ------------------------------------------------------------------------------
 
 set -euo pipefail
 
-BREWFILE="{{ .chezmoi.workingTree }}/Brewfile"
+{{- if eq .machine_profile "devcontainer" }}
+BREW_PROFILE="devcontainer"
+{{- else }}
+BREW_PROFILE="workstation"
+{{- end }}
+BREWFILE="{{ .chezmoi.workingTree }}/brew/profiles/${BREW_PROFILE}.Brewfile"
 
 if command -v brew &>/dev/null && [ -f "$BREWFILE" ]; then
-    echo "📦  正在按现有 Homebrew 元数据安装 Brewfile 缺失依赖..."
+    echo "📦  正在按现有 Homebrew 元数据安装 ${BREW_PROFILE} profile 缺失依赖..."
     # Homebrew 6 requires explicit trust for third-party formulae. Keep the
     # grant scoped to HashiCorp's Terraform formula instead of the whole tap.
     if brew commands | grep -qx "trust"; then
@@ -22,11 +32,11 @@ if command -v brew &>/dev/null && [ -f "$BREWFILE" ]; then
             break
         fi
         if [ "$attempt" -eq 3 ]; then
-            echo "❌  Brewfile 缺失依赖连续 3 次安装失败；保留已完成安装并等待网络恢复。" >&2
+            echo "❌  ${BREW_PROFILE} profile 缺失依赖连续 3 次安装失败；保留已完成安装并等待网络恢复。" >&2
             exit 1
         fi
         echo "⚠️  Brewfile 安装失败，$((attempt * 2)) 秒后重试 ($attempt/3)..." >&2
         sleep "$((attempt * 2))"
     done
-    echo "✅  Brewfile 缺失依赖安装完成；未主动执行批量升级。"
+    echo "✅  ${BREW_PROFILE} profile 缺失依赖安装完成；未主动执行批量升级。"
 fi

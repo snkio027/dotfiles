@@ -1,0 +1,520 @@
+schema_version = 1
+
+[profiles.core]
+description = "跨平台开发基座；仅包含语言、构建、配置和编辑器核心工具"
+automation = "ci"
+
+[profiles.workstation]
+description = "完整个人工作站；包含 core、交互式 CLI、质量工具及 macOS GUI/字体"
+automation = "manual-boundary"
+boundary = "CLI 可自动安装；1Password、OrbStack、GUI、字体及授权 MonoLisa 需要真实 macOS 主机或人工验证"
+
+[profiles.devcontainer]
+description = "完整非 root Dev Container；保持 Linux 工作站 CLI 与语言工具集合"
+automation = "ci"
+
+[profiles.quality]
+description = "GitHub Actions 使用的最小验证工具链"
+automation = "ci"
+
+# 每个工具只在这里声明一次 owner。profiles 决定它进入哪些可安装快照；
+# conditions 只描述特定 profile 的平台条件（all/mac/linux）。
+
+[[tools]]
+kind = "brew"
+name = "chezmoi"
+owner = "core"
+profiles = ["core", "workstation", "devcontainer", "quality"]
+description = "Dotfiles 配置管理引擎"
+
+[[tools]]
+kind = "brew"
+name = "age"
+owner = "core"
+profiles = ["core", "workstation", "devcontainer"]
+description = "现代文件加密工具"
+
+[[tools]]
+kind = "brew"
+name = "sops"
+owner = "core"
+profiles = ["core", "workstation", "devcontainer"]
+description = "结构化配置加密"
+
+[[tools]]
+kind = "tap"
+name = "hashicorp/tap"
+owner = "core"
+profiles = ["workstation", "devcontainer"]
+description = "Terraform 官方 Homebrew tap"
+
+[[tools]]
+kind = "brew"
+name = "node"
+owner = "core"
+profiles = ["core", "workstation", "devcontainer"]
+description = "最新稳定版 Node.js"
+
+[[tools]]
+kind = "brew"
+name = "python"
+owner = "core"
+profiles = ["core", "workstation", "devcontainer", "quality"]
+description = "最新稳定版 Python"
+
+[[tools]]
+kind = "brew"
+name = "go"
+owner = "core"
+profiles = ["core", "workstation", "devcontainer"]
+description = "最新稳定版 Go"
+
+[[tools]]
+kind = "brew"
+name = "rust"
+owner = "core"
+profiles = ["core", "workstation", "devcontainer"]
+description = "Rust 与 Cargo"
+
+[[tools]]
+kind = "brew"
+name = "rust-analyzer"
+owner = "core"
+profiles = ["core", "workstation", "devcontainer"]
+description = "Rust 语义分析"
+
+[[tools]]
+kind = "brew"
+name = "zig"
+owner = "core"
+profiles = ["core", "workstation", "devcontainer"]
+description = "Zig 编译器"
+
+[[tools]]
+kind = "brew"
+name = "llvm"
+owner = "core"
+profiles = ["core", "workstation", "devcontainer", "quality"]
+description = "C/C++ Clang/LLVM 工具链"
+
+[[tools]]
+kind = "brew"
+name = "cmake"
+owner = "core"
+profiles = ["core", "workstation", "devcontainer", "quality"]
+description = "跨平台 C/C++ 构建系统"
+
+[[tools]]
+kind = "brew"
+name = "ninja"
+owner = "core"
+profiles = ["core", "workstation", "devcontainer", "quality"]
+description = "CMake 高性能构建后端"
+
+[[tools]]
+kind = "brew"
+name = "ccache"
+owner = "core"
+profiles = ["core", "workstation", "devcontainer"]
+description = "C/C++ 增量编译缓存"
+
+[[tools]]
+kind = "brew"
+name = "pkgconf"
+owner = "core"
+profiles = ["core", "workstation", "devcontainer"]
+description = "原生依赖发现"
+
+[[tools]]
+kind = "brew"
+name = "uv"
+owner = "core"
+profiles = ["core", "workstation", "devcontainer", "quality"]
+description = "Python 包与虚拟环境管理"
+
+[[tools]]
+kind = "brew"
+name = "hashicorp/tap/terraform"
+owner = "core"
+profiles = ["workstation", "devcontainer"]
+description = "Terraform"
+
+[[tools]]
+kind = "brew"
+name = "kubernetes-cli"
+owner = "core"
+profiles = ["core", "workstation", "devcontainer"]
+description = "kubectl"
+
+[[tools]]
+kind = "brew"
+name = "helm"
+owner = "core"
+profiles = ["core", "workstation", "devcontainer"]
+description = "Helm"
+
+[[tools]]
+kind = "brew"
+name = "git"
+owner = "core"
+profiles = ["core", "workstation", "devcontainer"]
+description = "Git"
+
+[[tools]]
+kind = "brew"
+name = "gh"
+owner = "core"
+profiles = ["core", "workstation", "devcontainer"]
+description = "GitHub CLI"
+
+[[tools]]
+kind = "brew"
+name = "neovim"
+owner = "core"
+profiles = ["core", "workstation", "devcontainer", "quality"]
+description = "Neovim"
+
+[[tools]]
+kind = "brew"
+name = "tree-sitter-cli"
+owner = "core"
+profiles = ["core", "workstation", "devcontainer", "quality"]
+description = "Tree-sitter 解析器工具链"
+
+[[tools]]
+kind = "brew"
+name = "zsh"
+owner = "devcontainer"
+profiles = ["workstation", "devcontainer", "quality"]
+conditions = { workstation = "linux" }
+description = "Linux 工作站与 Dev Container Shell；不修改登录 Shell"
+
+[[tools]]
+kind = "brew"
+name = "wget"
+owner = "devcontainer"
+profiles = ["workstation", "devcontainer", "quality"]
+description = "Mason/CI 下载器与 curl 故障回退"
+
+[[tools]]
+kind = "brew"
+name = "starship"
+owner = "workstation"
+profiles = ["workstation", "devcontainer", "quality"]
+description = "Quiet Ops Prompt"
+
+[[tools]]
+kind = "brew"
+name = "direnv"
+owner = "workstation"
+profiles = ["workstation", "devcontainer"]
+description = "目录环境切换"
+
+[[tools]]
+kind = "brew"
+name = "atuin"
+owner = "workstation"
+profiles = ["workstation", "devcontainer", "quality"]
+description = "Shell 历史"
+
+[[tools]]
+kind = "brew"
+name = "carapace"
+owner = "workstation"
+profiles = ["workstation", "devcontainer"]
+description = "跨 CLI 补全"
+
+[[tools]]
+kind = "brew"
+name = "zsh-autosuggestions"
+owner = "workstation"
+profiles = ["workstation", "devcontainer", "quality"]
+description = "Zsh 自动建议"
+
+[[tools]]
+kind = "brew"
+name = "zsh-syntax-highlighting"
+owner = "workstation"
+profiles = ["workstation", "devcontainer", "quality"]
+description = "Zsh 语法高亮"
+
+[[tools]]
+kind = "brew"
+name = "zoxide"
+owner = "workstation"
+profiles = ["workstation", "devcontainer"]
+description = "智能目录跳转"
+
+[[tools]]
+kind = "brew"
+name = "eza"
+owner = "workstation"
+profiles = ["workstation", "devcontainer", "quality"]
+description = "现代 ls"
+
+[[tools]]
+kind = "brew"
+name = "bat"
+owner = "workstation"
+profiles = ["workstation", "devcontainer"]
+description = "现代 cat"
+
+[[tools]]
+kind = "brew"
+name = "fd"
+owner = "workstation"
+profiles = ["workstation", "devcontainer", "quality"]
+description = "文件搜索"
+
+[[tools]]
+kind = "brew"
+name = "ripgrep"
+owner = "workstation"
+profiles = ["workstation", "devcontainer", "quality"]
+description = "文本搜索"
+
+[[tools]]
+kind = "brew"
+name = "fzf"
+owner = "workstation"
+profiles = ["workstation", "devcontainer", "quality"]
+description = "模糊搜索"
+
+[[tools]]
+kind = "brew"
+name = "jq"
+owner = "workstation"
+profiles = ["workstation", "devcontainer"]
+description = "JSON 处理"
+
+[[tools]]
+kind = "brew"
+name = "yq"
+owner = "workstation"
+profiles = ["workstation", "devcontainer"]
+description = "YAML 处理"
+
+[[tools]]
+kind = "brew"
+name = "btop"
+owner = "workstation"
+profiles = ["workstation", "devcontainer"]
+description = "资源监控"
+
+[[tools]]
+kind = "brew"
+name = "duf"
+owner = "workstation"
+profiles = ["workstation", "devcontainer"]
+description = "磁盘概览"
+
+[[tools]]
+kind = "brew"
+name = "dust"
+owner = "workstation"
+profiles = ["workstation", "devcontainer"]
+description = "目录空间分析"
+
+[[tools]]
+kind = "brew"
+name = "sd"
+owner = "workstation"
+profiles = ["workstation", "devcontainer"]
+description = "文本替换"
+
+[[tools]]
+kind = "brew"
+name = "xh"
+owner = "workstation"
+profiles = ["workstation", "devcontainer"]
+description = "HTTP 客户端"
+
+[[tools]]
+kind = "brew"
+name = "git-delta"
+owner = "workstation"
+profiles = ["workstation", "devcontainer"]
+description = "Git Pager"
+
+[[tools]]
+kind = "brew"
+name = "lazygit"
+owner = "workstation"
+profiles = ["workstation", "devcontainer", "quality"]
+description = "Git TUI"
+
+[[tools]]
+kind = "brew"
+name = "zellij"
+owner = "workstation"
+profiles = ["workstation", "devcontainer", "quality"]
+description = "终端工作区复用器"
+
+[[tools]]
+kind = "brew"
+name = "yazi"
+owner = "workstation"
+profiles = ["workstation", "devcontainer", "quality"]
+description = "文件管理器"
+
+[[tools]]
+kind = "brew"
+name = "imagemagick"
+owner = "workstation"
+profiles = ["workstation", "devcontainer"]
+description = "图片与文档转换"
+
+[[tools]]
+kind = "brew"
+name = "mermaid-cli"
+owner = "workstation"
+profiles = ["workstation", "devcontainer"]
+description = "Mermaid 渲染"
+
+[[tools]]
+kind = "brew"
+name = "typst"
+owner = "workstation"
+profiles = ["workstation", "devcontainer"]
+description = "文档与数学公式渲染"
+
+[[tools]]
+kind = "brew"
+name = "hyperfine"
+owner = "workstation"
+profiles = ["workstation", "devcontainer"]
+description = "性能基准"
+
+[[tools]]
+kind = "brew"
+name = "watchexec"
+owner = "workstation"
+profiles = ["workstation", "devcontainer"]
+description = "文件变化任务执行"
+
+[[tools]]
+kind = "brew"
+name = "gitleaks"
+owner = "quality"
+profiles = ["workstation", "devcontainer", "quality"]
+description = "凭据泄漏扫描"
+
+[[tools]]
+kind = "brew"
+name = "shellcheck"
+owner = "quality"
+profiles = ["workstation", "devcontainer", "quality"]
+description = "Shell 静态分析"
+
+[[tools]]
+kind = "brew"
+name = "shfmt"
+owner = "quality"
+profiles = ["workstation", "devcontainer", "quality"]
+description = "Shell 格式化"
+
+[[tools]]
+kind = "brew"
+name = "stylua"
+owner = "quality"
+profiles = ["workstation", "devcontainer", "quality"]
+description = "Lua 格式化"
+
+[[tools]]
+kind = "brew"
+name = "actionlint"
+owner = "quality"
+profiles = ["workstation", "devcontainer", "quality"]
+description = "GitHub Actions 校验"
+
+[[tools]]
+kind = "brew"
+name = "taplo"
+owner = "quality"
+profiles = ["workstation", "devcontainer", "quality"]
+description = "TOML 校验与格式化"
+
+[[tools]]
+kind = "brew"
+name = "hadolint"
+owner = "quality"
+profiles = ["workstation", "devcontainer", "quality"]
+description = "Dockerfile 静态分析"
+
+[[tools]]
+kind = "brew"
+name = "zizmor"
+owner = "quality"
+profiles = ["workstation", "devcontainer", "quality"]
+description = "GitHub Actions 安全审计"
+
+[[tools]]
+kind = "brew"
+name = "devcontainer"
+owner = "quality"
+profiles = ["quality"]
+description = "CI Dev Container lifecycle 客户端"
+
+[[tools]]
+kind = "cask"
+name = "1password-cli"
+owner = "workstation"
+profiles = ["workstation"]
+conditions = { workstation = "mac" }
+description = "1Password CLI"
+
+[[tools]]
+kind = "cask"
+name = "ghostty"
+owner = "workstation"
+profiles = ["workstation", "quality"]
+conditions = { workstation = "mac", quality = "mac" }
+description = "macOS 终端与配置验证"
+
+[[tools]]
+kind = "cask"
+name = "1password"
+owner = "workstation"
+profiles = ["workstation"]
+conditions = { workstation = "mac" }
+description = "密码管理器与 SSH Agent"
+
+[[tools]]
+kind = "cask"
+name = "orbstack"
+owner = "workstation"
+profiles = ["workstation"]
+conditions = { workstation = "mac" }
+description = "macOS 容器与 Linux 虚拟机运行时"
+
+[[tools]]
+kind = "cask"
+name = "font-maple-mono-nf-cn"
+owner = "workstation"
+profiles = ["workstation", "quality"]
+conditions = { workstation = "mac", quality = "mac" }
+description = "Nerd 图标与 CJK fallback"
+
+[[tools]]
+kind = "cask"
+name = "font-jetbrains-mono-nerd-font"
+owner = "workstation"
+profiles = ["workstation"]
+conditions = { workstation = "mac" }
+description = "备用 Nerd Font"
+
+[[tools]]
+kind = "cask"
+name = "font-symbols-only-nerd-font"
+owner = "workstation"
+profiles = ["workstation", "quality"]
+conditions = { workstation = "mac", quality = "mac" }
+description = "末级 Nerd Symbols fallback"
+
+[[tools]]
+kind = "cask"
+name = "font-inter"
+owner = "workstation"
+profiles = ["workstation"]
+conditions = { workstation = "mac" }
+description = "Ghostty 标题栏 UI 字体"

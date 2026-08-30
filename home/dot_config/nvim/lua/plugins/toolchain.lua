@@ -3,6 +3,9 @@ local mason_tools = {
   -- rolling Homebrew LLVM toolchain as the compiler.
   "codelldb",
   "gersemi",
+  -- Markdown linting/formatting is editor-only and intentionally owned by
+  -- Mason rather than the global Homebrew profiles.
+  "markdownlint-cli2",
   -- Python
   "debugpy",
   "pyright",

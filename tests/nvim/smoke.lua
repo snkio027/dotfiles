@@ -84,6 +84,7 @@ assert(codelldb_count == 1, ("Expected codelldb exactly once, got %d"):format(co
 for _, tool in ipairs({
 	"codelldb",
 	"gersemi",
+	"markdownlint-cli2",
 	"debugpy",
 	"pyright",
 	"ruff",
@@ -104,6 +105,7 @@ require("lazy").load({ plugins = { "mason.nvim" } })
 for _, executable in ipairs({
 	"codelldb",
 	"gersemi",
+	"markdownlint-cli2",
 	"debugpy",
 	"pyright",
 	"ruff",

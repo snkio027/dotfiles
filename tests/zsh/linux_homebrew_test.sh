@@ -59,7 +59,8 @@ if grep -Fq '/home/linuxbrew/.linuxbrew' "$LINUX_EXPORTS"; then
     echo "exports.zsh must not duplicate the managed PATH owner" >&2
     exit 1
 fi
-grep -Eq '^brew "zsh" if OS\.linux\?' "$REPO_ROOT/Brewfile"
+grep -Eq '^brew "zsh" if OS\.linux\?' "$REPO_ROOT/brew/profiles/workstation.Brewfile"
+grep -Eq '^brew "zsh"([[:space:]]|$)' "$REPO_ROOT/brew/profiles/devcontainer.Brewfile"
 if grep -R -Eq '(^|[^[:alnum:]_])chsh([[:space:]]|$)' \
     "$REPO_ROOT/home/.chezmoiscripts" "$REPO_ROOT/home/dot_zshenv.tmpl" \
     "$REPO_ROOT/home/dot_zprofile.tmpl" "$REPO_ROOT/home/dot_zshrc.tmpl" \
@@ -117,9 +118,14 @@ fail() {
 
 [[ "$HOMEBREW_PREFIX" == "$EXPECTED_HOMEBREW_PREFIX" ]] || fail "wrong HOMEBREW_PREFIX: $HOMEBREW_PREFIX"
 [[ "$commands[brew]" == "$EXPECTED_HOMEBREW_PREFIX/bin/brew" ]] || fail "brew resolved outside Linuxbrew: $commands[brew]"
-[[ "$path[1]" == "$EXPECTED_HOMEBREW_PREFIX/opt/llvm/bin" ]] || fail "Homebrew LLVM does not have first PATH priority"
-[[ "$path[2]" == "$EXPECTED_HOMEBREW_PREFIX/bin" ]] || fail "Linuxbrew bin does not have second PATH priority"
-[[ "$path[3]" == "$EXPECTED_HOMEBREW_PREFIX/sbin" ]] || fail "Linuxbrew sbin does not have third PATH priority"
+# Context hooks such as Carapace may prepend a command shim directory. Keep the
+# managed Linuxbrew group present, contiguous, and internally ordered.
+llvm_path_index="${path[(I)${EXPECTED_HOMEBREW_PREFIX}/opt/llvm/bin]}"
+brew_bin_index="${path[(I)${EXPECTED_HOMEBREW_PREFIX}/bin]}"
+brew_sbin_index="${path[(I)${EXPECTED_HOMEBREW_PREFIX}/sbin]}"
+(( llvm_path_index > 0 &&
+    brew_bin_index == llvm_path_index + 1 &&
+    brew_sbin_index == brew_bin_index + 1 )) || fail "Linuxbrew PATH group is missing, split, or out of order: ${(j/:/)path}"
 [[ "$fpath[(I)$EXPECTED_HOMEBREW_PREFIX/share/zsh/site-functions]" -gt 0 ]] || fail "Linuxbrew completion path missing"
 (( ${+functions[_brew]} )) || fail "Homebrew completion was not registered"
 (( ${+functions[_zsh_autosuggest_start]} )) || fail "zsh-autosuggestions was not loaded"

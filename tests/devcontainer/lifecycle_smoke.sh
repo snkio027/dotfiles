@@ -10,7 +10,9 @@ fail() {
 assert_container_state() {
     local workspace_folder="${1:?container workspace folder is required}"
     local pass_name="${2:-unknown}"
-    local user_name passwd_shell source_path status_output nvim_log mason_log
+    local user_name passwd_shell source_path status_output nvim_log
+    local mason_manifest mason_data_root mason_tool unique_count
+    local -a mason_tools
 
     user_name="$(id -un)"
     [[ "$user_name" == "vscode" ]] || fail "Dev Container user is $user_name, expected vscode"
@@ -29,11 +31,9 @@ assert_container_state() {
     [[ "$(chezmoi data --format=json | jq -r '.machine_profile')" == "devcontainer" ]] || fail "chezmoi profile data is wrong"
 
     status_output="$(chezmoi status)"
-    [[ -z "$status_output" ]] || fail "chezmoi status is not clean before apply: $status_output"
-    chezmoi apply
     chezmoi verify
     status_output="$(chezmoi status)"
-    [[ -z "$status_output" ]] || fail "chezmoi status is not clean after apply: $status_output"
+    [[ -z "$status_output" ]] || fail "chezmoi status is not clean: $status_output"
 
     [[ -z "${SSH_AUTH_SOCK:-}" ]] || fail "SSH_AUTH_SOCK leaked into the Dev Container"
     [[ -z "${OP_SSH_AUTH_SOCK:-}" ]] || fail "OP_SSH_AUTH_SOCK leaked into the Dev Container"
@@ -58,12 +58,18 @@ assert_container_state() {
 
     cmp "$HOME/.config/nvim/lazy-lock.json" "$workspace_folder/home/dot_config/nvim/lazy-lock.json"
 
-    mason_log="$(mktemp)"
-    nvim --headless "+MasonToolsInstallSync" +qa >"$mason_log" 2>&1
-    if grep -Eqi 'Package is already installing|^Installing tools:|^Updating tools:|MasonToolsUpdate' "$mason_log"; then
-        cat "$mason_log" >&2
-        fail "Mason no-op verification attempted an install or update"
-    fi
+    mason_manifest="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/mason-tools.txt"
+    mason_data_root="${XDG_DATA_HOME:-$HOME/.local/share}/nvim/mason/packages"
+    [[ -s "$mason_manifest" ]] || fail "Mason provisioning manifest is missing"
+    mapfile -t mason_tools <"$mason_manifest"
+    [[ "${#mason_tools[@]}" -eq 21 ]] || fail "Mason provisioning manifest is not 21/21"
+    unique_count="$(sort -u "$mason_manifest" | wc -l | tr -d ' ')"
+    [[ "$unique_count" -eq "${#mason_tools[@]}" ]] || fail "Mason provisioning manifest contains duplicates"
+    for mason_tool in "${mason_tools[@]}"; do
+        [[ "$mason_tool" =~ ^[a-z0-9][a-z0-9._-]*$ ]] || fail "Invalid Mason tool in manifest: $mason_tool"
+        [[ -f "$mason_data_root/$mason_tool/mason-receipt.json" ]] || fail "Mason receipt is missing: $mason_tool"
+    done
+    printf 'Mason receipt observation %d/%d (%s)\n' "${#mason_tools[@]}" "${#mason_tools[@]}" "$pass_name"
 
     nvim_log="$(mktemp)"
     (
@@ -78,11 +84,15 @@ assert_container_state() {
         cat "$nvim_log" >&2
         fail "Neovim warm smoke did not complete"
     }
+    if grep -Eqi 'Package is already installing|^Installing tools:|^Updating tools:|MasonToolsUpdate' "$nvim_log"; then
+        cat "$nvim_log" >&2
+        fail "Neovim observation attempted a Mason install or update"
+    fi
 
     status_output="$(chezmoi status)"
     [[ -z "$status_output" ]] || fail "Neovim changed chezmoi-managed state: $status_output"
 
-    rm -f -- "$mason_log" "$nvim_log"
+    rm -f -- "$nvim_log"
     printf 'Dev Container state verification passed (%s)\n' "$pass_name"
 }
 
@@ -137,7 +147,25 @@ extract_result() {
     ' "$1"
 }
 
+log_line() {
+    local log_file="${1:?log file is required}"
+    local marker="${2:?log marker is required}"
+    grep -nF "$marker" "$log_file" | tail -n 1 | cut -d: -f1
+}
+
 run_devcontainer up --workspace-folder "$WORKSPACE" 2>&1 | tee "$FIRST_LOG"
+START_LINE="$(log_line "$FIRST_LOG" 'Dev Container post-create start')"
+ATTEMPT_LINE="$(log_line "$FIRST_LOG" 'post-create Neovim provisioning attempt')"
+TOOLS_LINE="$(log_line "$FIRST_LOG" 'required tools complete: 21/21')"
+PROVISION_LINE="$(log_line "$FIRST_LOG" 'post-create Neovim provisioning complete')"
+POST_CREATE_LINE="$(log_line "$FIRST_LOG" 'Dev Container post-create complete')"
+OUTCOME_LINE="$(log_line "$FIRST_LOG" '"outcome":"success"')"
+if ! ((START_LINE < ATTEMPT_LINE && ATTEMPT_LINE < TOOLS_LINE && TOOLS_LINE < PROVISION_LINE && PROVISION_LINE < POST_CREATE_LINE && POST_CREATE_LINE < OUTCOME_LINE)); then
+    fail "Dev Container provisioning ownership markers are out of order"
+fi
+if grep -Fq 'Mason receipt observation' "$FIRST_LOG"; then
+    fail "Observation ran before devcontainer up completed"
+fi
 FIRST_RESULT="$(extract_result "$FIRST_LOG")"
 FIRST_CONTAINER_ID="$(printf '%s' "$FIRST_RESULT" | jq -er '.containerId')"
 [[ "$(printf '%s' "$FIRST_RESULT" | jq -r '.remoteUser')" == "vscode" ]] || fail "CLI did not select remoteUser vscode"
