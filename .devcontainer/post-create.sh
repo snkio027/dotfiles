@@ -14,6 +14,8 @@ if [[ ! -f "$WORKSPACE_FOLDER/.chezmoiroot" ]]; then
     exit 1
 fi
 
+printf 'Dev Container post-create start\n'
+
 # Keep the fixed Linuxbrew location visible before the first apply. The
 # bootstrap script may create this prefix, and every later chezmoi script then
 # discovers the newly installed brew binary in the same parent environment.
@@ -39,10 +41,7 @@ for attempt in 1 2 3; do
 done
 
 # Restore the committed plugin graph and provision only missing Mason tools.
-# Updates remain explicit through devup and rolling-latest CI.
-export DOTFILES_LAZY_LOCK_SNAPSHOT="$WORKSPACE_FOLDER/home/dot_config/nvim/lazy-lock.json"
-nvim --headless \
-    "+luafile $WORKSPACE_FOLDER/tests/nvim/restore_lock.lua" \
-    "+Lazy! restore" \
-    "+MasonToolsInstallSync" +qa
-cmp "$HOME/.config/nvim/lazy-lock.json" "$DOTFILES_LAZY_LOCK_SNAPSHOT"
+# The helper owns bounded retries and refuses to report success without a
+# complete Mason receipt set and an unchanged plugin lock snapshot.
+"$WORKSPACE_FOLDER/.devcontainer/provision-nvim.sh" "$WORKSPACE_FOLDER"
+printf 'Dev Container post-create complete\n'

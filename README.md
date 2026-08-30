@@ -14,7 +14,7 @@ Security    │ age · SOPS · SSH signing · gitleaks · Zizmor
 Validation  │ actionlint · ShellCheck · shfmt · Taplo · Hadolint · StyLua
 ```
 
-Homebrew 负责全局 CLI 与语言 Runtime；uv 负责项目 Python、虚拟环境、依赖，以及 Python 原生全局 CLI 的隔离工具环境（当前为 cxx-init）；Lazy 与 Mason 只管理 Neovim 内部插件和编辑器工具。Brewfile 与 uv tool 都不固定工具版本，更新时选择当前最新稳定版。Mason 每 24 小时检查并更新编辑器工具；Lazy 每天提示插件更新。不使用 mise、asdf、nvm、pyenv；项目仍应提交自身的版本声明与依赖锁文件。
+Homebrew 负责全局 CLI 与语言 Runtime；`brew/ownership.toml` 是工具所有权的唯一来源，并生成 `core / workstation / devcontainer / quality` 四个可安装 profile。uv 负责项目 Python、虚拟环境、依赖，以及 Python 原生全局 CLI 的隔离工具环境（当前为 cxx-init）；Lazy 与 Mason 只管理 Neovim 插件和编辑器专用工具。Brewfile 与 uv tool 都不固定工具版本，更新时选择当前最新稳定版。Neovim 启动与普通 apply 只恢复已提交插件图并安装缺失 Mason 工具；插件和 Mason 更新仅由 `devup` 或 Rolling-Latest CI 显式触发。不使用 mise、asdf、nvm、pyenv；项目仍应提交自身的版本声明与依赖锁文件。
 
 ## 平台支持边界
 
@@ -40,7 +40,7 @@ Homebrew 负责全局 CLI 与语言 Runtime；uv 负责项目 Python、虚拟环
 - Neovim/LazyVim、LazyGit、Yazi 与全部颜色配置均由 chezmoi 纳管。
 - `icons/contract.toml` 是 Neovim `mini.icons` 与 eza 的版本化图标契约；87 项显式映射使用“精确文件名 > 扩展名 > 消费者默认值”的优先级，glyph 和 Catppuccin 语义 RGB 由同一份数据生成，不跟随任一工具的实时内置表漂移。
 - Markdown 在普通模式渲染标题、任务、表格与代码块，插入模式自动显示原文；Ghostty 直连及其承载的 Zellij 0.45+ 会话均支持文档内图片、数学公式与 Mermaid 预览。
-- markdownlint 全局保留结构与语义检查，仅关闭对表格、URL 和 CJK 文档噪音较大的 `MD013` 行宽规则。
+- markdownlint-cli2 明确归 Mason 所有，仅供 Neovim lint/format 使用；XDG 配置保留结构与语义检查，只关闭对表格、URL 和 CJK 文档噪音较大的 `MD013` 行宽规则。Shell 不声明全局 markdownlint 命令。
 - `CMakeLists.txt` 是 CMake 源文件而非 Markdown；neocmake 负责语义和 100 列诊断，gersemi 按同一宽度统一格式。
 - `cxx init <name>` 从离线内置模板创建 C++23/CMake/Ninja 项目，生成后直接使用标准工具链，不依赖 cxx-init 运行。
 - uv 项目中存在 `uv.lock` 和 `.venv` 时，Neovim 会自动将 Pyright、Ruff、DAP、Neotest 与内置终端统一到项目 Python。
@@ -53,9 +53,12 @@ dotfiles/
 ├── .chezmoiroot                    # 将 chezmoi source state 指向 home/
 ├── .devcontainer/                  # Ubuntu 26.04 + Linuxbrew 开发环境
 ├── .github/
-│   ├── Brewfile                    # CI 最新稳定版校验工具
-│   └── workflows/ci.yml            # 模板、配置、安全与供应链校验
-├── Brewfile                        # Runtime、CLI、应用与字体
+│   └── workflows/ci.yml            # 模板、配置、安全与 profile 安装校验
+├── brew/
+│   ├── ownership.toml              # 工具 owner、profile 成员关系与验证边界
+│   ├── generate.py                 # 生成并检查四个 Brewfile profile
+│   └── profiles/                   # core/workstation/devcontainer/quality
+├── Brewfile                        # 生成的 workstation 兼容入口
 ├── fonts/                          # 授权字体的公开特性清单（不包含字体文件）
 ├── icons/                           # 跨 Neovim/eza 的声明式 Icon Contract 与生成器
 ├── tests/fonts/                    # MonoLisa 清单与授权字体构建验证
@@ -74,7 +77,7 @@ dotfiles/
         ├── ghostty/                # macOS Ghostty 外观与宿主快捷键
         ├── git/                    # Git 全局配置与 ignore
         ├── lazygit/                # Git TUI 与 Catppuccin 主题
-        ├── markdownlint-cli2/      # Markdown 全局规则
+        ├── markdownlint-cli2/      # Neovim/Mason 的 Markdown 规则
         ├── nvim/                   # LazyVim 16 与插件锁
         ├── starship.toml
         ├── yazi/yazi.toml
@@ -100,11 +103,11 @@ dotfiles/
 chezmoi init --apply https://github.com/snkio027/dotfiles
 ```
 
-初始化会询问 Git 姓名和邮箱，安装 Homebrew/Linuxbrew，按现有元数据安装 Brewfile 缺失依赖，配置 SSH 签名与 gitleaks hook，并在 macOS 上安装 Ghostty 及应用键盘、Finder、Dock 和截图偏好。日常 `chezmoi apply` 不更新 Homebrew 元数据、不主动批量升级已安装工具，也不会因 Ghostty 配置变化而重新应用 macOS defaults；安装新依赖所必需的依赖链升级仍由 Homebrew 决定，全量更新由 `brewup` 或 `devup` 显式触发。Linux 使用现有终端模拟器，只部署跨平台的 Shell、TUI 与 Neovim 配置。本地新建的长期 SSH key 必须由用户设置口令；启用 1Password Agent 时不会生成磁盘私钥。
+初始化会询问 Git 姓名和邮箱，安装 Homebrew/Linuxbrew，并按机器类型安装 `workstation` 或 `devcontainer` profile 的缺失依赖，配置 SSH 签名与 gitleaks hook；macOS workstation 还会安装 Ghostty 并应用键盘、Finder、Dock 和截图偏好。日常 `chezmoi apply` 不更新 Homebrew 元数据、不主动批量升级已安装工具，也不会因 Ghostty 配置变化而重新应用 macOS defaults；安装新依赖所必需的依赖链升级仍由 Homebrew 决定，全量更新由 `brewup` 或 `devup` 显式触发。Linux 使用现有终端模拟器，只部署跨平台的 Shell、TUI 与 Neovim 配置。本地新建的长期 SSH key 必须由用户设置口令；启用 1Password Agent 时不会生成磁盘私钥。
 
 Linux 工作站由 Brewfile 显式安装 `/home/linuxbrew/.linuxbrew/bin/zsh`，新建的非登录交互 Shell 也会直接获得 Linuxbrew PATH、FPATH、插件与补全，不依赖 `.zprofile`。安装 Zsh 与选择登录 Shell 是两个独立行为：本仓库不会执行 `chsh` 或修改 `/etc/shells`。需要切换时，应先确认该路径存在，再由用户按发行版要求将它加入 `/etc/shells` 并显式运行 `chsh -s /home/linuxbrew/.linuxbrew/bin/zsh`。
 
-Dev Container 使用 `CHEZMOI_PROFILE=devcontainer`，通过 Linuxbrew 获得同样的最新工具链，但不会生成宿主密钥、修改宿主 Git hooks 或应用 macOS 偏好。可用 `GIT_AUTHOR_NAME` 与 `GIT_AUTHOR_EMAIL` 覆盖缺省身份。
+Dev Container 使用 `CHEZMOI_PROFILE=devcontainer` 和独立的 `devcontainer.Brewfile`，通过 Linuxbrew 获得与 Linux workstation 相同的 60 个公式声明，但不会生成宿主密钥、修改宿主 Git hooks 或应用 macOS 偏好。post-create 是缺失 Neovim/Mason 工具的唯一 provisioning owner：瞬时失败最多重试三次，只有插件锁未漂移且 21 项 Mason receipt 完整时才返回成功；后续 lifecycle 只观察状态，不补装工具或重新 apply。CI 使用 Dev Container CLI 真实执行 post-create、非 root Shell、chezmoi、Neovim warm smoke 和二次 `up` 幂等验证。可用 `GIT_AUTHOR_NAME` 与 `GIT_AUTHOR_EMAIL` 覆盖缺省身份。
 
 ## 日常维护
 
@@ -113,18 +116,22 @@ devdoctor                         # 只读环境与工具来源诊断
 scan-secrets                      # 扫描暂存内容中的凭据泄漏
 chezmoi diff                      # 审核目标状态差异
 chezmoi apply                     # 应用配置、安装缺失依赖；不主动全局升级
-HOMEBREW_NO_AUTO_UPDATE=1 brew bundle install --no-upgrade --file="$(chezmoi source-path)/../Brewfile"
+HOMEBREW_NO_AUTO_UPDATE=1 brew bundle install --no-upgrade --file="$(chezmoi source-path)/../brew/profiles/workstation.Brewfile"
 brewup                            # update + upgrade + cleanup
 devup                             # 更新 Homebrew、cxx-init、Lazy lock 与 Mason 工具
+python3 brew/generate.py --write # 修改 ownership 后重建四个 Brewfile profile
+python3 brew/generate.py --check # 验证 profile 与根 Brewfile 入口未漂移
 python3 icons/generate.py --write # 修改契约后重建 Neovim、eza 与测试制品
 python3 icons/generate.py --check # 验证生成制品未漂移
 ```
 
 `devdoctor` 检查 Homebrew、chezmoi、age、SSH、gitleaks、语言 Runtime、LLVM/CMake/Ninja、cxx-init、IaC/Kubernetes CLI 和终端工具，并确认 Runtime 的实际路径来自 Homebrew；它不会自动修改系统。
 
+工具 owner 与安装目标是两个维度：每个工具在 `ownership.toml` 中只有一个 owner，但可以进入多个 profile。`core`、`quality` 和 `devcontainer` 均由 Ubuntu CI 真实安装并执行命令探针；macOS CI 还真实安装并验证 Ghostty 与公开字体。完整 `workstation` 中的 1Password、OrbStack、GUI、字体和手工安装的授权 MonoLisa 保留真实主机验证边界，不在无交互 runner 上伪装成已验证。
+
 Icon Contract 固定采用“精确文件名 > 扩展名 > 消费者默认值”的解析顺序。生成器拒绝重复键、非法码点、缺失颜色角色和非单字符宽度 glyph；CI 验证 `72/72` 审计范围、`87/87` 显式消费者映射、`47/72` 真实项目观察与 `45/45` 唯一 glyph 字体覆盖，并解析 Neovim 最终 highlight RGB。eza 的未知无扩展名文件、空目录、`.github` 与 `build` 专用图标，以及 `mini.icons` 的对应默认值，明确属于消费者上游观察，不进入 87 项共享映射；两者无法表达的空目录差异不会被假装成已统一。其余 25 类合成 fixture 不表述为真实项目样本；升级 eza 或 `mini.icons` 时只报告上游差异，不自动改写本仓库拥有的契约。
 
-GitHub Actions 会在每次提交验证模板、Shell 行为、安全策略、macOS 配置、cxx-init 最新发布版的完整生成/构建/测试流程和 Dev Container 构建；每周一还会从空缓存同步上游最新 Neovim 插件与 Mason 工具，运行语义冒烟测试，并在插件锁落后时提示执行 `devup`。Dependabot 每周更新 GitHub Actions、Dev Container 与 Docker 基础镜像引用。
+GitHub Actions 会在每次提交验证 Brew ownership/profile 生成结果，真实安装并使用安全可自动化的 `core`、`quality` 与 `devcontainer` profile，同时验证模板、Shell、安全策略、macOS 配置、cxx-init、Dev Container 镜像与完整 lifecycle。macOS GUI/字体只声明真实可覆盖的边界；1Password、OrbStack 与授权 MonoLisa 不做虚假 CI 安装声明。每周一还会从空缓存同步上游最新 Neovim 插件与 Mason 工具，运行语义冒烟测试，并在插件锁落后时提示执行 `devup`。Dependabot 每周更新 GitHub Actions、Dev Container 与 Docker 基础镜像引用。
 
 ## 功能与快捷键速查
 

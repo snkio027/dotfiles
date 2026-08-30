@@ -48,11 +48,6 @@ if command -v nvim &>/dev/null; then
     alias vim="nvim"
 fi
 
-if command -v markdownlint-cli2 &>/dev/null; then
-    # --config 作为基础配置；仓库内更近的配置仍会按 markdownlint-cli2 规则覆盖。
-    alias markdownlint-cli2='markdownlint-cli2 --config "${XDG_CONFIG_HOME:-$HOME/.config}/markdownlint-cli2/config.yaml"'
-fi
-
 # --- 3. zoxide 智能目录跳转 ---
 if command -v zoxide &>/dev/null; then
     alias cdi="zi"

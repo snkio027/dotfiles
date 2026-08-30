@@ -1,6 +1,6 @@
 # ------------------------------------------------------------------------------
-# Generated Brewfile profile: workstation
-# 完整个人工作站；包含 core、交互式 CLI、质量工具及 macOS GUI/字体
+# Generated Brewfile profile: devcontainer
+# 完整非 root Dev Container；保持 Linux 工作站 CLI 与语言工具集合
 # Source of truth: brew/ownership.toml (run: python3 brew/generate.py --write)
 # ------------------------------------------------------------------------------
 
@@ -58,18 +58,10 @@ brew "zellij"  # 终端工作区复用器
 brew "zoxide"  # 智能目录跳转
 brew "zsh-autosuggestions"  # Zsh 自动建议
 brew "zsh-syntax-highlighting"  # Zsh 语法高亮
-cask "1password" if OS.mac?  # 密码管理器与 SSH Agent
-cask "1password-cli" if OS.mac?  # 1Password CLI
-cask "font-inter" if OS.mac?  # Ghostty 标题栏 UI 字体
-cask "font-jetbrains-mono-nerd-font" if OS.mac?  # 备用 Nerd Font
-cask "font-maple-mono-nf-cn" if OS.mac?  # Nerd 图标与 CJK fallback
-cask "font-symbols-only-nerd-font" if OS.mac?  # 末级 Nerd Symbols fallback
-cask "ghostty" if OS.mac?  # macOS 终端与配置验证
-cask "orbstack" if OS.mac?  # macOS 容器与 Linux 虚拟机运行时
 
 # --- owner: devcontainer ---
 brew "wget"  # Mason/CI 下载器与 curl 故障回退
-brew "zsh" if OS.linux?  # Linux 工作站与 Dev Container Shell；不修改登录 Shell
+brew "zsh"  # Linux 工作站与 Dev Container Shell；不修改登录 Shell
 
 # --- owner: quality ---
 brew "actionlint"  # GitHub Actions 校验
