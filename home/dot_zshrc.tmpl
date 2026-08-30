@@ -7,6 +7,8 @@
 ZSH_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/zsh"
 
 if [ -d "$ZSH_CONFIG_DIR" ]; then
+    # 非登录交互 Shell（终端新标签、Zellij Pane）不会读取 .zprofile。
+    [ -f "$ZSH_CONFIG_DIR/homebrew.zsh" ] && source "$ZSH_CONFIG_DIR/homebrew.zsh"
     [ -f "$ZSH_CONFIG_DIR/exports.zsh" ] && source "$ZSH_CONFIG_DIR/exports.zsh"
     [ -f "$ZSH_CONFIG_DIR/aliases.zsh" ] && source "$ZSH_CONFIG_DIR/aliases.zsh"
     [ -f "$ZSH_CONFIG_DIR/plugins.zsh" ] && source "$ZSH_CONFIG_DIR/plugins.zsh"
@@ -45,13 +47,13 @@ fi
 {{- end }}
 
 # zsh-autosuggestions 自动补全建议插件
-if [ -f "${HOMEBREW_PREFIX:-/opt/homebrew}/share/zsh-autosuggestions/zsh-autosuggestions.zsh" ]; then
-    source "${HOMEBREW_PREFIX:-/opt/homebrew}/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
+if [[ -n "${HOMEBREW_PREFIX:-}" && -f "$HOMEBREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh" ]]; then
+    source "$HOMEBREW_PREFIX/share/zsh-autosuggestions/zsh-autosuggestions.zsh"
 fi
 
 # zsh-syntax-highlighting 命令行语法高亮插件 (须在末尾挂载)
-if [ -f "${HOMEBREW_PREFIX:-/opt/homebrew}/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]; then
-    source "${HOMEBREW_PREFIX:-/opt/homebrew}/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
+if [[ -n "${HOMEBREW_PREFIX:-}" && -f "$HOMEBREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]]; then
+    source "$HOMEBREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
 fi
 
 unset -f _zsh_cached_init 2>/dev/null || true

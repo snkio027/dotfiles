@@ -30,7 +30,7 @@ Homebrew 负责全局 CLI 与语言 Runtime；uv 负责项目 Python、虚拟环
 
 ## 体验设计
 
-- `.zshenv` 只定义 XDG Base Directory；`.zprofile` 只初始化登录环境；`.zshrc` 只处理交互功能。
+- `.zshenv` 只定义 XDG Base Directory；`~/.config/zsh/homebrew.zsh` 是 Homebrew PATH/FPATH 的唯一所有者，由 `.zprofile` 与 `.zshrc` 共同加载且不执行启动期子进程；`.zshrc` 其余部分只处理交互功能。
 - Starship、Atuin、fzf、direnv、zoxide 与 Carapace 的生成脚本按二进制修改时间缓存，升级后自动刷新。
 - Starship 使用 Quiet Ops Prompt：默认只显示目录、Git 状态和低频高价值反馈；语言、构建工具、包版本、Python 环境、容器、Docker context 与 Kubernetes 保持静默。非零退出只将输入箭头变红，后台任务数与超过 2 秒的命令耗时显示在第二行右侧。
 - Ghostty 固定使用 Catppuccin Mocha 暗色主题；MonoLisa customizer 输出的 `MonoLisaCode Variable-cv04-cv08-ss03-ss07-ss11` 变量字体负责拉丁文字与真实字重/斜体，PingFang SC 负责中文，Maple Mono NF CN 是 Nerd Font 图标的首选 fallback，`Symbols Nerd Font Mono` 保留为单字符宽度末级兜底，并提供 GPU 渲染和原生分屏。
@@ -79,7 +79,7 @@ dotfiles/
         ├── starship.toml
         ├── yazi/yazi.toml
         ├── zellij/config.kdl
-        └── zsh/                    # Shell 模块、缓存逻辑与诊断脚本
+        └── zsh/                    # Homebrew 环境、Shell 模块、缓存逻辑与诊断脚本
 ```
 
 ## XDG 目录策略
@@ -101,6 +101,8 @@ chezmoi init --apply https://github.com/snkio027/dotfiles
 ```
 
 初始化会询问 Git 姓名和邮箱，安装 Homebrew/Linuxbrew，按现有元数据安装 Brewfile 缺失依赖，配置 SSH 签名与 gitleaks hook，并在 macOS 上安装 Ghostty 及应用键盘、Finder、Dock 和截图偏好。日常 `chezmoi apply` 不更新 Homebrew 元数据、不主动批量升级已安装工具，也不会因 Ghostty 配置变化而重新应用 macOS defaults；安装新依赖所必需的依赖链升级仍由 Homebrew 决定，全量更新由 `brewup` 或 `devup` 显式触发。Linux 使用现有终端模拟器，只部署跨平台的 Shell、TUI 与 Neovim 配置。本地新建的长期 SSH key 必须由用户设置口令；启用 1Password Agent 时不会生成磁盘私钥。
+
+Linux 工作站由 Brewfile 显式安装 `/home/linuxbrew/.linuxbrew/bin/zsh`，新建的非登录交互 Shell 也会直接获得 Linuxbrew PATH、FPATH、插件与补全，不依赖 `.zprofile`。安装 Zsh 与选择登录 Shell 是两个独立行为：本仓库不会执行 `chsh` 或修改 `/etc/shells`。需要切换时，应先确认该路径存在，再由用户按发行版要求将它加入 `/etc/shells` 并显式运行 `chsh -s /home/linuxbrew/.linuxbrew/bin/zsh`。
 
 Dev Container 使用 `CHEZMOI_PROFILE=devcontainer`，通过 Linuxbrew 获得同样的最新工具链，但不会生成宿主密钥、修改宿主 Git hooks 或应用 macOS 偏好。可用 `GIT_AUTHOR_NAME` 与 `GIT_AUTHOR_EMAIL` 覆盖缺省身份。
 

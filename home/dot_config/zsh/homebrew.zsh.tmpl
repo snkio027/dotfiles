@@ -1,0 +1,55 @@
+# ------------------------------------------------------------------------------
+# Homebrew / Linuxbrew environment owner
+# Fixed platform paths keep Shell startup deterministic and avoid `brew` subprocesses.
+# This file is safe to source from both .zprofile and .zshrc.
+# ------------------------------------------------------------------------------
+
+{{- if .is_mac }}
+{{- if .is_arm64 }}
+typeset -gx HOMEBREW_PREFIX="/opt/homebrew"
+{{- else }}
+typeset -gx HOMEBREW_PREFIX="/usr/local"
+{{- end }}
+{{- else if .is_linux }}
+typeset -gx HOMEBREW_PREFIX="/home/linuxbrew/.linuxbrew"
+{{- end }}
+typeset -gx HOMEBREW_CELLAR="$HOMEBREW_PREFIX/Cellar"
+typeset -gx HOMEBREW_REPOSITORY="$HOMEBREW_PREFIX"
+
+# Zsh's tied arrays update PATH and FPATH without string splitting. This is the
+# only managed PATH owner; the unique attribute makes repeated sourcing
+# idempotent while preserving first priority.
+typeset -gU path fpath
+
+# 清理从长生命周期终端进程继承的 Runtime 管理器路径与环境覆盖。
+path=("${(@)path:#${HOME}/.local/share/mise/*}")
+unset GOROOT RUSTUP_TOOLCHAIN
+unset ${(M)${(k)parameters}:#(MISE_*|__MISE_*)} 2>/dev/null
+
+{{- if .is_linux }}
+# A Linux shell inherited from a long-lived cross-platform host must never
+# retain Apple Silicon Homebrew locations.
+path=("${(@)path:#/opt/homebrew}")
+path=("${(@)path:#/opt/homebrew/*}")
+fpath=("${(@)fpath:#/opt/homebrew}")
+fpath=("${(@)fpath:#/opt/homebrew/*}")
+{{- end }}
+path=(
+    "$HOMEBREW_PREFIX/opt/llvm/bin"
+    "$HOMEBREW_PREFIX/bin"
+    "$HOMEBREW_PREFIX/sbin"
+    "$HOME/.cargo/bin"
+    "$HOME/.local/bin"
+    "$HOME/go/bin"
+    $path
+)
+fpath=("$HOMEBREW_PREFIX/share/zsh/site-functions" $fpath)
+export PATH FPATH
+
+typeset -gaU _dotfiles_homebrew_infopath
+_dotfiles_homebrew_infopath=(
+    "$HOMEBREW_PREFIX/share/info"
+    ${(@s/:/)${INFOPATH:-}}
+)
+typeset -gx INFOPATH="${(j/:/)_dotfiles_homebrew_infopath}"
+unset _dotfiles_homebrew_infopath

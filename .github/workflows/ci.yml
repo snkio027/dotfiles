@@ -64,7 +64,7 @@ jobs:
           tmp_dir="$(mktemp -d)"
           trap 'rm -rf "$tmp_dir"' EXIT
 
-          for template in home/dot_zshenv.tmpl home/dot_zprofile.tmpl home/dot_zshrc.tmpl home/dot_config/zsh/exports.zsh.tmpl; do
+          for template in home/dot_zshenv.tmpl home/dot_zprofile.tmpl home/dot_zshrc.tmpl home/dot_config/zsh/homebrew.zsh.tmpl home/dot_config/zsh/exports.zsh.tmpl; do
             rendered="$tmp_dir/$(basename "${template%.tmpl}")"
             chezmoi execute-template --source=. < "$template" > "$rendered"
             zsh -n "$rendered"
@@ -100,11 +100,14 @@ jobs:
 
           shellcheck -S warning -s bash tests/nvim/cold_start.sh
           shfmt -d -i 4 -ci tests/nvim/cold_start.sh
+          shellcheck -S warning -s bash tests/zsh/linux_homebrew_test.sh
+          shfmt -d -i 4 -ci tests/zsh/linux_homebrew_test.sh
 
       - name: Test Shell and apply behavior
         run: |
           zsh -f tests/zsh/aliases_test.zsh
           zsh -f tests/zsh/history_test.zsh
+          bash tests/zsh/linux_homebrew_test.sh
           bash tests/chezmoi/apply_contract_test.sh
 
       - name: Run chezmoi doctor
@@ -117,6 +120,7 @@ jobs:
           chezmoi execute-template --source=. < home/dot_zshenv.tmpl > /dev/null
           chezmoi execute-template --source=. < home/dot_zprofile.tmpl > /dev/null
           chezmoi execute-template --source=. < home/dot_zshrc.tmpl > /dev/null
+          chezmoi execute-template --source=. < home/dot_config/zsh/homebrew.zsh.tmpl > /dev/null
           chezmoi execute-template --source=. < home/private_dot_ssh/private_config.tmpl > /dev/null
           chezmoi execute-template --source=. < home/private_dot_ssh/private_allowed_signers.tmpl > /dev/null
           chezmoi execute-template --source=. < home/dot_config/zsh/exports.zsh.tmpl > /dev/null

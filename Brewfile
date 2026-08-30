@@ -30,6 +30,7 @@ brew "kubernetes-cli"            # 最新稳定版 kubectl
 brew "helm"                      # 最新稳定版 Helm
 
 # --- Shell 交互与提示符增强 ---
+brew "zsh" if OS.linux? # Linux 工作站显式安装 Zsh；登录 Shell 仍由用户决定
 brew "starship"         # 极速响应式跨 Shell 提示符
 brew "direnv"           # 基于目录的环境变量自动切换器
 brew "atuin"            # 端到端加密 Shell 历史数据库
