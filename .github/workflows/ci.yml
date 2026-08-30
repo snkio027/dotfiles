@@ -98,6 +98,9 @@ jobs:
             shfmt -d -i 4 -ci "$rendered"
           done
 
+          shellcheck -S warning -s bash tests/nvim/cold_start.sh
+          shfmt -d -i 4 -ci tests/nvim/cold_start.sh
+
       - name: Test Shell and apply behavior
         run: |
           zsh -f tests/zsh/aliases_test.zsh
@@ -202,6 +205,28 @@ jobs:
       - name: Build image
         run: docker build --file=.devcontainer/Dockerfile --tag=dotfiles-devcontainer:ci .
 
+  neovim-locked-cold-start:
+    name: Validate Locked Neovim Cold Start
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@962acc985cf741e4f7a112a3cfa6194386b63edf # main 2026-08-12
+
+      - name: Install validation toolchain
+        run: |
+          brew update
+          brew bundle --file=.github/Brewfile
+
+      - name: Restore locked plugins and provision missing Mason tools
+        run: bash tests/nvim/cold_start.sh
+
   neovim-cold-start:
     name: Validate Rolling-Latest Neovim Environment
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
@@ -228,9 +253,16 @@ jobs:
           XDG_STATE_HOME: ${{ runner.temp }}/xdg-state
           XDG_CACHE_HOME: ${{ runner.temp }}/xdg-cache
         run: |
-          nvim --headless "+Lazy! sync" +qa
-          nvim --headless "+MasonToolsUpdateSync" +qa
-          nvim --headless "+luafile tests/nvim/smoke.lua" +qa
+          rolling_log="$RUNNER_TEMP/neovim-rolling.log"
+          {
+            nvim --headless "+Lazy! sync" "+luafile tests/nvim/provision.lua" +qa
+            nvim --headless "+MasonToolsUpdateSync" +qa
+            nvim --headless "+luafile tests/nvim/smoke.lua" +qa
+          } 2>&1 | tee "$rolling_log"
+          if grep -Fqi 'Package is already installing' "$rolling_log"; then
+            echo "::error::Concurrent Mason installation detected."
+            exit 1
+          fi
           python3 tests/icons/test_icon_contract.py --drift
           nvim --headless "+luafile tests/nvim/icon_drift.lua" +qa
           if ! git diff --exit-code -- home/dot_config/nvim/lazy-lock.json; then
