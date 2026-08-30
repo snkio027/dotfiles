@@ -2,6 +2,7 @@
 # stable Homebrew formulae available after `brew update`.
 brew "actionlint"
 brew "chezmoi"
+brew "devcontainer"
 brew "gitleaks"
 brew "hadolint"
 brew "fd"

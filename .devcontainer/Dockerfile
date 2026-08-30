@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   unzip \
   xz-utils \
   zsh \
+  && usermod --shell /bin/zsh vscode \
   && rm -rf /var/lib/apt/lists/*
 
 # Install user-scoped tooling without granting the interactive user root access
