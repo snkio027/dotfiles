@@ -5,6 +5,11 @@ end
 assert(vim.fn.exists(":OverseerRun") == 2, "Overseer command is unavailable")
 assert(vim.fn.exists(":MasonToolsInstallSync") == 2, "Mason tool installer command is unavailable")
 
+local installer_opts = LazyVim.opts("mason-tool-installer.nvim")
+assert(installer_opts.auto_update == false, "Mason tools must not update automatically")
+assert(installer_opts.run_on_start == false, "mason-tool-installer must not run on startup")
+assert(not package.loaded["mason-tool-installer"], "mason-tool-installer loaded without an explicit command")
+
 require("lazy").load({ plugins = { "mini.icons" } })
 local icon_cases_path = vim.fn.getcwd() .. "/tests/icons/generated_cases.json"
 local icon_payload = vim.json.decode(table.concat(vim.fn.readfile(icon_cases_path), "\n"))
@@ -65,6 +70,17 @@ print(
 )
 
 local mason = LazyVim.opts("mason.nvim")
+local mason_names = {}
+local codelldb_count = 0
+for _, tool in ipairs(mason.ensure_installed or {}) do
+	local name = require("config.mason").tool_name(tool)
+	assert(not mason_names[name], ("Duplicate Mason tool: %s"):format(name))
+	mason_names[name] = true
+	if name == "codelldb" then
+		codelldb_count = codelldb_count + 1
+	end
+end
+assert(codelldb_count == 1, ("Expected codelldb exactly once, got %d"):format(codelldb_count))
 for _, tool in ipairs({
 	"codelldb",
 	"gersemi",

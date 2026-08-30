@@ -18,6 +18,8 @@ local mason_tools = {
   "gopls",
 }
 
+local mason_policy = require("config.mason")
+
 local function homebrew_llvm_tool(name)
   for _, bindir in ipairs({
     "/opt/homebrew/opt/llvm/bin",
@@ -40,19 +42,6 @@ local function extend_unique(target, values)
   end
 end
 
-local function unique_tools(tools)
-  local result = {}
-  local seen = {}
-  for _, tool in ipairs(tools) do
-    local name = type(tool) == "table" and tool[1] or tool
-    if not seen[name] then
-      seen[name] = true
-      result[#result + 1] = tool
-    end
-  end
-  return result
-end
-
 local function project_executable(subdir)
   local root = LazyVim.root()
   return vim.fn.input("Path to executable: ", vim.fs.joinpath(root, subdir), "file")
@@ -70,6 +59,7 @@ return {
         return tool ~= "cmakelang" and tool ~= "cmakelint"
       end, opts.ensure_installed or {})
       extend_unique(opts.ensure_installed, mason_tools)
+      opts.ensure_installed = mason_policy.unique(opts.ensure_installed)
     end,
   },
 
@@ -150,13 +140,12 @@ return {
     end,
   },
 
-  -- Keep the complete Mason tool set current once per day. Unlike plugins,
-  -- Mason packages have no lockfile, matching this workstation's rolling
-  -- latest policy. The synchronous commands are also available for CI/devup.
+  -- Mason packages have no lockfile. LazyVim's mason.nvim config is the sole
+  -- startup owner and only installs missing tools; updates remain explicit via
+  -- devup or the rolling-latest CI job.
   {
     "WhoIsSethDaniel/mason-tool-installer.nvim",
     dependencies = { "mason-org/mason.nvim" },
-    event = "VeryLazy",
     cmd = {
       "MasonToolsInstall",
       "MasonToolsInstallSync",
@@ -165,14 +154,31 @@ return {
       "MasonToolsClean",
     },
     opts = {
-      auto_update = true,
-      run_on_start = true,
-      start_delay = 3000,
-      debounce_hours = 24,
+      auto_update = false,
+      run_on_start = false,
     },
     config = function(_, opts)
-      opts.ensure_installed = unique_tools(vim.deepcopy(LazyVim.opts("mason.nvim").ensure_installed or {}))
-      require("mason-tool-installer").setup(opts)
+      opts.ensure_installed = mason_policy.unique(vim.deepcopy(LazyVim.opts("mason.nvim").ensure_installed or {}))
+      local installer = require("mason-tool-installer")
+      installer.setup(opts)
+
+      local function run_after_missing_tools(force_update, sync)
+        mason_policy.wait_for_installed(opts.ensure_installed)
+        installer.check_install(force_update, sync)
+      end
+
+      vim.api.nvim_create_user_command("MasonToolsInstall", function()
+        run_after_missing_tools(false, false)
+      end, { force = true })
+      vim.api.nvim_create_user_command("MasonToolsInstallSync", function()
+        run_after_missing_tools(false, true)
+      end, { force = true })
+      vim.api.nvim_create_user_command("MasonToolsUpdate", function()
+        run_after_missing_tools(true, false)
+      end, { force = true })
+      vim.api.nvim_create_user_command("MasonToolsUpdateSync", function()
+        run_after_missing_tools(true, true)
+      end, { force = true })
     end,
   },
 
