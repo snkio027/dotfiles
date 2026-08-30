@@ -102,6 +102,8 @@ jobs:
           shfmt -d -i 4 -ci tests/nvim/cold_start.sh
           shellcheck -S warning -s bash tests/zsh/linux_homebrew_test.sh
           shfmt -d -i 4 -ci tests/zsh/linux_homebrew_test.sh
+          shellcheck -S warning -s bash .devcontainer/post-create.sh tests/devcontainer/lifecycle_smoke.sh
+          shfmt -d -i 4 -ci .devcontainer/post-create.sh tests/devcontainer/lifecycle_smoke.sh
 
       - name: Test Shell and apply behavior
         run: |
@@ -208,6 +210,29 @@ jobs:
 
       - name: Build image
         run: docker build --file=.devcontainer/Dockerfile --tag=dotfiles-devcontainer:ci .
+
+  devcontainer-lifecycle:
+    name: Validate Dev Container Lifecycle
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@962acc985cf741e4f7a112a3cfa6194386b63edf # main 2026-08-12
+
+      - name: Install lifecycle validation toolchain
+        run: |
+          brew update
+          brew bundle --file=.github/Brewfile
+          devcontainer --version
+
+      - name: Run full lifecycle twice
+        run: bash tests/devcontainer/lifecycle_smoke.sh
 
   neovim-locked-cold-start:
     name: Validate Locked Neovim Cold Start

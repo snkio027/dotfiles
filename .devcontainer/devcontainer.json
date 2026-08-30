@@ -12,5 +12,5 @@
     "--security-opt=seccomp=unconfined"
   ],
   "remoteUser": "vscode",
-  "postCreateCommand": "GIT_AUTHOR_NAME=\"${GIT_AUTHOR_NAME:-Dev Container}\" GIT_AUTHOR_EMAIL=\"${GIT_AUTHOR_EMAIL:-devcontainer@localhost}\" chezmoi init --apply --source=\"/workspaces/${localWorkspaceFolderBasename}\""
+  "postCreateCommand": "/bin/bash \"/workspaces/${localWorkspaceFolderBasename}/.devcontainer/post-create.sh\" \"/workspaces/${localWorkspaceFolderBasename}\""
 }
