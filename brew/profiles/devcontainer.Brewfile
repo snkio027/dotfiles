@@ -5,7 +5,7 @@
 # ------------------------------------------------------------------------------
 
 # --- owner: core ---
-tap "hashicorp/tap"  # Terraform 官方 Homebrew tap
+tap "hashicorp/tap", trusted: { formulae: ["terraform"] }  # Terraform 官方 Homebrew tap
 brew "age"  # 现代文件加密工具
 brew "ccache"  # C/C++ 增量编译缓存
 brew "chezmoi"  # Dotfiles 配置管理引擎

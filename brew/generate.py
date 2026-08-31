@@ -17,6 +17,7 @@ PROFILE_DIR = ROOT / "brew" / "profiles"
 OWNER_ORDER = ("core", "workstation", "devcontainer", "quality")
 KIND_ORDER = {"tap": 0, "brew": 1, "cask": 2}
 VALID_CONDITIONS = {"all", "mac", "linux"}
+TRUSTED_ITEM_KEYS = ("formulae", "casks", "commands")
 
 
 def load_contract() -> dict:
@@ -56,6 +57,18 @@ def load_contract() -> dict:
         if set(conditions.values()) - VALID_CONDITIONS:
             raise ValueError(f"invalid platform condition for {key}")
 
+        trusted = tool.get("trusted", {})
+        if trusted:
+            if key[0] != "tap":
+                raise ValueError(f"object-scoped trust must be declared on a tap: {key}")
+            if set(trusted) - set(TRUSTED_ITEM_KEYS):
+                raise ValueError(f"invalid trusted item type for {key}: {trusted}")
+            for item_type, items in trusted.items():
+                if not items or len(items) != len(set(items)):
+                    raise ValueError(f"invalid trusted {item_type} for {key}: {items}")
+                if any(not isinstance(item, str) or not item for item in items):
+                    raise ValueError(f"invalid trusted item for {key}: {items}")
+
     if any(count == 0 for count in owner_counts.values()):
         raise ValueError(f"every owner must own at least one tool: {owner_counts}")
     return contract
@@ -82,6 +95,18 @@ def render_profile(contract: dict, profile: str) -> str:
             owned, key=lambda item: (KIND_ORDER[item["kind"]], item["name"])
         ):
             statement = f"{tool['kind']} {json.dumps(tool['name'], ensure_ascii=False)}"
+            trusted = tool.get("trusted", {})
+            if trusted:
+                trusted_items = []
+                for item_type in TRUSTED_ITEM_KEYS:
+                    if item_type not in trusted:
+                        continue
+                    values = ", ".join(
+                        json.dumps(item, ensure_ascii=False)
+                        for item in trusted[item_type]
+                    )
+                    trusted_items.append(f"{item_type}: [{values}]")
+                statement += f", trusted: {{ {', '.join(trusted_items)} }}"
             condition = tool.get("conditions", {}).get(profile, "all")
             if condition == "mac":
                 statement += " if OS.mac?"

@@ -179,6 +179,16 @@ if names(contract, "devcontainer", "tap") != {"hashicorp/tap"}:
 if names(contract, "core", "tap") or names(contract, "core", "cask"):
     fail("core must remain safe for unattended official-formula CI installation")
 
+trusted_tools = {
+    (tool["kind"], tool["name"]): tool["trusted"]
+    for tool in contract["tools"]
+    if tool.get("trusted")
+}
+if trusted_tools != {
+    ("tap", "hashicorp/tap"): {"formulae": ["terraform"]},
+}:
+    fail("Homebrew trust must remain scoped to HashiCorp Terraform only")
+
 zsh = next(tool for tool in contract["tools"] if tool["name"] == "zsh")
 if zsh.get("conditions", {}).get("workstation") != "linux":
     fail("workstation Zsh must remain Linux-only")

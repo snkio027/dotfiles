@@ -61,8 +61,11 @@ dotfiles/
 ├── Brewfile                        # 生成的 workstation 兼容入口
 ├── fonts/                          # 授权字体的公开特性清单（不包含字体文件）
 ├── icons/                           # 跨 Neovim/eza 的声明式 Icon Contract 与生成器
+├── scripts/supply-chain/            # 镜像、bootstrap 签名与漏洞状态门禁
+├── supply-chain/                    # chezmoi 上游签名公钥等信任根
 ├── tests/fonts/                    # MonoLisa 清单与授权字体构建验证
 ├── tests/icons/                     # 72 类审计、87 项显式映射、字体与宽度验证
+├── tests/supply-chain/              # 不可变输入与 fail-closed 故障注入
 └── home/                           # 唯一会映射到 $HOME 的 source state
     ├── .chezmoi.toml.tmpl          # 本机数据与仓库 sourceDir
     ├── .chezmoidata.yaml           # Git 默认值与功能开关
@@ -107,7 +110,7 @@ chezmoi init --apply https://github.com/snkio027/dotfiles
 
 Linux 工作站由 Brewfile 显式安装 `/home/linuxbrew/.linuxbrew/bin/zsh`，新建的非登录交互 Shell 也会直接获得 Linuxbrew PATH、FPATH、插件与补全，不依赖 `.zprofile`。安装 Zsh 与选择登录 Shell 是两个独立行为：本仓库不会执行 `chsh` 或修改 `/etc/shells`。需要切换时，应先确认该路径存在，再由用户按发行版要求将它加入 `/etc/shells` 并显式运行 `chsh -s /home/linuxbrew/.linuxbrew/bin/zsh`。
 
-Dev Container 使用 `CHEZMOI_PROFILE=devcontainer` 和独立的 `devcontainer.Brewfile`，通过 Linuxbrew 获得与 Linux workstation 相同的 60 个公式声明，但不会生成宿主密钥、修改宿主 Git hooks 或应用 macOS 偏好。post-create 是缺失 Neovim/Mason 工具的唯一 provisioning owner：瞬时失败最多重试三次，只有插件锁未漂移且 21 项 Mason receipt 完整时才返回成功；后续 lifecycle 只观察状态，不补装工具或重新 apply。CI 使用 Dev Container CLI 真实执行 post-create、非 root Shell、chezmoi、Neovim warm smoke 和二次 `up` 幂等验证。可用 `GIT_AUTHOR_NAME` 与 `GIT_AUTHOR_EMAIL` 覆盖缺省身份。
+Dev Container 使用 `CHEZMOI_PROFILE=devcontainer` 和独立的 `devcontainer.Brewfile`，通过 Linuxbrew 获得与 Linux workstation 相同的 60 个公式声明，但不会生成宿主密钥、修改宿主 Git hooks 或应用 macOS 偏好。基础镜像保留 `resolute` tag 便于 Dependabot 识别，同时固定其覆盖 Linux amd64/arm64 的 OCI manifest digest；镜像内的 chezmoi bootstrap 固定到 `2.72.1` 双架构制品，下载后先比对由上游 Sigstore 签名 checksum 得出的 SHA-256，再检查二进制自身版本，失败时不会留下可执行文件或成功 receipt。该固定制品只负责无 Homebrew 时的首次引导，稳态命令仍由 core profile 的 Homebrew owner 提供。post-create 是缺失 Neovim/Mason 工具的唯一 provisioning owner：瞬时失败最多重试三次，只有插件锁未漂移且 21 项 Mason receipt 完整时才返回成功；后续 lifecycle 只观察状态，不补装工具或重新 apply。CI 使用 Dev Container CLI 真实执行 post-create、非 root Shell、chezmoi、Neovim warm smoke 和二次 `up` 幂等验证。可用 `GIT_AUTHOR_NAME` 与 `GIT_AUTHOR_EMAIL` 覆盖缺省身份。
 
 ## 日常维护
 
@@ -129,9 +132,11 @@ python3 icons/generate.py --check # 验证生成制品未漂移
 
 工具 owner 与安装目标是两个维度：每个工具在 `ownership.toml` 中只有一个 owner，但可以进入多个 profile。`core`、`quality` 和 `devcontainer` 均由 Ubuntu CI 真实安装并执行命令探针；macOS CI 还真实安装并验证 Ghostty 与公开字体。完整 `workstation` 中的 1Password、OrbStack、GUI、字体和手工安装的授权 MonoLisa 保留真实主机验证边界，不在无交互 runner 上伪装成已验证。
 
+Homebrew 的非官方来源审计目前只有 `hashicorp/tap/terraform`；Brewfile 只信任这个公式，不信任整个 tap、其他 formula、cask 或 command。`brew bundle cleanup` 会把全局 trust store 重置为当前 Brewfile 声明，因此普通 apply 与 CI 均不执行它；维护命令中的显式 cleanup 仍属于用户主动升级边界。PR/push 只用故障注入验证 `brew vulns` 的状态判定、有限重试与 fail-closed 逻辑；schedule/manual 维护任务才真实查询 `quality` 与 `devcontainer` profile，后者包含 `core` 并与 workstation 的 formula 集合一致。检查使用 Homebrew 的 OSV formula 数据，cask 与被上游标记为 skipped 的 formula 不在覆盖范围；结果严格区分 `PASS`、`VULNERABLE`、`UNAVAILABLE`，高危发现、无效响应或三次查询仍不可用都会让维护任务告警，但不会因一次外部网络故障阻塞普通 PR。
+
 Icon Contract 固定采用“精确文件名 > 扩展名 > 消费者默认值”的解析顺序。生成器拒绝重复键、非法码点、缺失颜色角色和非单字符宽度 glyph；CI 验证 `72/72` 审计范围、`87/87` 显式消费者映射、`47/72` 真实项目观察与 `45/45` 唯一 glyph 字体覆盖，并解析 Neovim 最终 highlight RGB。eza 的未知无扩展名文件、空目录、`.github` 与 `build` 专用图标，以及 `mini.icons` 的对应默认值，明确属于消费者上游观察，不进入 87 项共享映射；两者无法表达的空目录差异不会被假装成已统一。其余 25 类合成 fixture 不表述为真实项目样本；升级 eza 或 `mini.icons` 时只报告上游差异，不自动改写本仓库拥有的契约。
 
-GitHub Actions 会在每次提交验证 Brew ownership/profile 生成结果，真实安装并使用安全可自动化的 `core`、`quality` 与 `devcontainer` profile，同时验证模板、Shell、安全策略、macOS 配置、cxx-init、Dev Container 镜像与完整 lifecycle。macOS GUI/字体只声明真实可覆盖的边界；1Password、OrbStack 与授权 MonoLisa 不做虚假 CI 安装声明。每周一还会从空缓存同步上游最新 Neovim 插件与 Mason 工具，运行语义冒烟测试，并在插件锁落后时提示执行 `devup`。Dependabot 每周更新 GitHub Actions、Dev Container 与 Docker 基础镜像引用。
+GitHub Actions 会在每次提交验证 Brew ownership/profile 生成结果，真实安装并使用安全可自动化的 `core`、`quality` 与 `devcontainer` profile，同时验证模板、Shell、安全策略、macOS 配置、cxx-init、Dev Container 镜像与完整 lifecycle。常规 bootstrap 只验证仓库固定的 SHA-256，不下载公钥或签名验证器；schedule/manual 维护任务才使用提交 SHA 固定的临时 Cosign Action 复验上游 chezmoi checksum bundle，Cosign 不进入运行时镜像。基础镜像仍会连续解析两次并确认得到同一个多平台对象。macOS GUI/字体只声明真实可覆盖的边界；1Password、OrbStack 与授权 MonoLisa 不做虚假 CI 安装声明。每周一还会从空缓存同步上游最新 Neovim 插件与 Mason 工具，运行语义冒烟测试，并在插件锁落后时提示执行 `devup`。Dependabot 每周更新 GitHub Actions 与 `.devcontainer/Dockerfile` 中的 Docker 镜像；当前没有 Dev Container Features，因此不配置 Feature 专用 updater。
 
 ## 功能与快捷键速查
 

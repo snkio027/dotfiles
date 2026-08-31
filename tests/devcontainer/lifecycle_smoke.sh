@@ -10,7 +10,7 @@ fail() {
 assert_container_state() {
     local workspace_folder="${1:?container workspace folder is required}"
     local pass_name="${2:-unknown}"
-    local user_name passwd_shell source_path status_output nvim_log
+    local user_name passwd_shell source_path status_output nvim_log bootstrap_binary bootstrap_receipt
     local mason_manifest mason_data_root mason_tool unique_count
     local -a mason_tools
 
@@ -25,6 +25,12 @@ assert_container_state() {
 
     [[ "$(command -v brew)" == "/home/linuxbrew/.linuxbrew/bin/brew" ]] || fail "brew is not from Linuxbrew"
     [[ "${HOMEBREW_PREFIX:-}" == "/home/linuxbrew/.linuxbrew" ]] || fail "HOMEBREW_PREFIX is not Linuxbrew"
+    bootstrap_binary="$HOME/.local/bin/chezmoi"
+    bootstrap_receipt="$HOME/.local/bin/.chezmoi-provenance"
+    [[ -x "$bootstrap_binary" && -f "$bootstrap_receipt" ]] || fail "verified chezmoi bootstrap artifacts are missing"
+    grep -Fqx 'version=2.72.1' "$bootstrap_receipt" || fail "chezmoi bootstrap version receipt drifted"
+    grep -Eq '^platform=linux/(amd64|arm64)$' "$bootstrap_receipt" || fail "chezmoi bootstrap platform receipt is invalid"
+    [[ "$("$bootstrap_binary" --version)" == "chezmoi version v2.72.1,"* ]] || fail "chezmoi bootstrap binary version drifted"
 
     source_path="$(chezmoi source-path)"
     [[ "$source_path" == "$workspace_folder/home" ]] || fail "chezmoi source is $source_path"

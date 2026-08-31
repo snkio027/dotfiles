@@ -13,18 +13,10 @@ updates:
         patterns:
           - "*"
 
-  - package-ecosystem: devcontainers
-    directory: /
-    schedule:
-      interval: weekly
-      day: monday
-      time: "01:15"
-      timezone: Asia/Shanghai
-
   - package-ecosystem: docker
     directory: /.devcontainer
     schedule:
       interval: weekly
       day: monday
-      time: "01:30"
+      time: "01:15"
       timezone: Asia/Shanghai

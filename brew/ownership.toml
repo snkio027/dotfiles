@@ -46,6 +46,7 @@ kind = "tap"
 name = "hashicorp/tap"
 owner = "core"
 profiles = ["workstation", "devcontainer"]
+trusted = { formulae = ["terraform"] }
 description = "Terraform 官方 Homebrew tap"
 
 [[tools]]

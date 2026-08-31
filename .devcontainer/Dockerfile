@@ -2,7 +2,7 @@
 # DevContainer Workstation Dockerfile — Disposable Platform Image
 # DevSecOps Grade Platform Engineering Standard
 # ------------------------------------------------------------------------------
-FROM mcr.microsoft.com/devcontainers/base:resolute
+FROM mcr.microsoft.com/devcontainers/base:resolute@sha256:00e84e24112159d45c0262f07cb013cb58cb6a415f3e1c743d4a3115ac5d76c6
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -28,14 +28,15 @@ ENV USER=vscode
 ENV HOME=/home/vscode
 ENV PATH="/home/vscode/.local/bin:${PATH}"
 
-# Install the latest chezmoi, retrying the complete installer because its
-# internal release-asset download does not retry transient network failures.
-RUN for attempt in 1 2 3 4 5; do \
-    sh -c "$(curl --retry 5 --retry-all-errors -fsLS https://get.chezmoi.io)" \
-      -- -b "$HOME/.local/bin" && break; \
-    if [ "$attempt" -eq 5 ]; then exit 1; fi; \
-    sleep "$((attempt * 2))"; \
-  done
+# Install one verified Linux release asset. The bootstrap writes its receipt
+# only after the archive checksum and embedded version both match the manifest.
+ARG TARGETARCH
+COPY --chown=vscode:vscode .devcontainer/install-chezmoi.sh \
+  .devcontainer/chezmoi-provenance.env /tmp/chezmoi-bootstrap/
+RUN CHEZMOI_ARCH="$TARGETARCH" \
+    CHEZMOI_INSTALL_DIR="$HOME/.local/bin" \
+    /tmp/chezmoi-bootstrap/install-chezmoi.sh \
+  && rm -rf /tmp/chezmoi-bootstrap
 
 # Set default shell to Zsh
 ENV SHELL=/bin/zsh
