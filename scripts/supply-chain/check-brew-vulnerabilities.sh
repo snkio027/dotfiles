@@ -21,6 +21,42 @@ command -v "$PYTHON_BIN" >/dev/null 2>&1 || fail "python3 is unavailable"
 
 temp_dir="$(mktemp -d "${TMPDIR:-/tmp}/brew-vulns.XXXXXX")"
 trap 'rm -rf -- "$temp_dir"' EXIT
+trust_config="$temp_dir/xdg-config"
+
+configure_ephemeral_trust() {
+    local trusted_formula trust_manifest
+
+    trust_manifest="$temp_dir/trusted-formulae"
+    "$PYTHON_BIN" - "$@" >"$trust_manifest" <<'PY'
+import json
+import re
+import sys
+
+pattern = re.compile(
+    r'^\s*tap\s+("(?:[^"\\]|\\.)*"),\s*trusted:\s*\{\s*'
+    r'formulae:\s*\[(.*?)\]\s*\}'
+)
+trusted = set()
+for brewfile in sys.argv[1:]:
+    with open(brewfile, encoding="utf-8") as handle:
+        for raw_line in handle:
+            match = pattern.match(raw_line)
+            if not match:
+                continue
+            tap = json.loads(match.group(1))
+            formulae = json.loads(f"[{match.group(2)}]")
+            for formula in formulae:
+                trusted.add(formula if "/" in formula else f"{tap}/{formula}")
+for formula in sorted(trusted):
+    print(formula)
+PY
+
+    while IFS= read -r trusted_formula; do
+        [[ -n "$trusted_formula" ]] || continue
+        XDG_CONFIG_HOME="$trust_config" \
+            "$BREW_BIN" trust --formula "$trusted_formula" >/dev/null
+    done <"$trust_manifest"
+}
 
 check_profile() {
     local brewfile="${1:?Brewfile is required}"
@@ -34,7 +70,8 @@ check_profile() {
     for ((attempt = 1; attempt <= MAX_ATTEMPTS; attempt++)); do
         : >"$output"
         : >"$error"
-        if "$BREW_BIN" vulns --brewfile="$brewfile" --severity high --json >"$output" 2>"$error"; then
+        if XDG_CONFIG_HOME="$trust_config" \
+            "$BREW_BIN" vulns --brewfile="$brewfile" --severity high --json >"$output" 2>"$error"; then
             if parse_result="$($PYTHON_BIN -c '
 import json
 import sys
@@ -75,6 +112,8 @@ print(f"{len(findings)} {len(skipped)}")
         "$profile" "$MAX_ATTEMPTS"
     return 3
 }
+
+configure_ephemeral_trust "$@"
 
 for brewfile in "$@"; do
     check_profile "$brewfile"
