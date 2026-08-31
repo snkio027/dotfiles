@@ -19,3 +19,11 @@ vim.api.nvim_create_autocmd("FileType", {
     vim.opt_local.spelllang = { "en_us", "cjk" }
   end,
 })
+
+vim.api.nvim_create_autocmd("FileType", {
+  group = group,
+  pattern = { "c", "cpp", "objc", "objcpp", "cuda" },
+  callback = function(event)
+    require("config.cpp").setup_buffer(event.buf)
+  end,
+})
