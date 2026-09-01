@@ -10,6 +10,82 @@ assert(installer_opts.auto_update == false, "Mason tools must not update automat
 assert(installer_opts.run_on_start == false, "mason-tool-installer must not run on startup")
 assert(not package.loaded["mason-tool-installer"], "mason-tool-installer loaded without an explicit command")
 
+local cpp = require("config.cpp")
+local cpp_buffer = vim.api.nvim_create_buf(false, true)
+cpp.configure_buffer(cpp_buffer)
+assert(vim.bo[cpp_buffer].expandtab, "C/C++ buffers must use spaces")
+assert(vim.bo[cpp_buffer].tabstop == 4, "C/C++ tabstop must match clang-format")
+assert(vim.bo[cpp_buffer].shiftwidth == 4, "C/C++ shiftwidth must match clang-format")
+assert(vim.bo[cpp_buffer].softtabstop == 4, "C/C++ softtabstop must match clang-format")
+vim.api.nvim_buf_delete(cpp_buffer, { force = true })
+
+local managed_fixture = vim.fn.tempname()
+local managed_source = vim.fs.joinpath(managed_fixture, "src", "main.cpp")
+vim.fn.mkdir(vim.fs.dirname(managed_source), "p")
+vim.fn.writefile({ "int main() {}" }, managed_source)
+vim.fn.writefile({ "schema_version = 1" }, vim.fs.joinpath(managed_fixture, ".cxx.toml"))
+local database = cpp.compile_database(managed_fixture)
+assert(database == vim.fs.joinpath(managed_fixture, "build", "dev", "compile_commands.json"))
+
+local warning_buffer = vim.api.nvim_create_buf(false, true)
+vim.api.nvim_buf_set_name(warning_buffer, managed_source)
+local original_notify = vim.notify
+local compile_database_warnings = {}
+vim.notify = function(message, level, opts)
+	compile_database_warnings[#compile_database_warnings + 1] = { message = message, level = level, opts = opts }
+end
+assert(cpp.warn_if_compile_database_missing(warning_buffer) == true)
+assert(cpp.warn_if_compile_database_missing(warning_buffer) == false)
+vim.fn.mkdir(vim.fs.dirname(database), "p")
+vim.fn.writefile({ "[]" }, database)
+assert(cpp.warn_if_compile_database_missing(warning_buffer) == false)
+vim.notify = original_notify
+assert(#compile_database_warnings == 1, "Managed C++ project warning must be emitted exactly once")
+assert(compile_database_warnings[1].message:find("build/dev/compile_commands.json", 1, true))
+assert(compile_database_warnings[1].message:find("cmake --workflow --preset dev", 1, true))
+assert(compile_database_warnings[1].message:find(":LspRestart", 1, true))
+assert(compile_database_warnings[1].level == vim.log.levels.WARN)
+vim.api.nvim_buf_delete(warning_buffer, { force = true })
+
+local editorconfig_fixture = vim.fn.tempname()
+local editorconfig_source = vim.fs.joinpath(editorconfig_fixture, "src", "main.cpp")
+vim.fn.mkdir(vim.fs.joinpath(editorconfig_fixture, "build", "dev"), "p")
+vim.fn.mkdir(vim.fs.dirname(editorconfig_source), "p")
+vim.fn.writefile({ "schema_version = 1" }, vim.fs.joinpath(editorconfig_fixture, ".cxx.toml"))
+vim.fn.writefile({ "[]" }, cpp.compile_database(editorconfig_fixture))
+vim.fn.writefile(
+	{ "root = true", "", "[*.cpp]", "indent_style = space", "indent_size = 2" },
+	vim.fs.joinpath(editorconfig_fixture, ".editorconfig")
+)
+vim.fn.writefile({ "int main() {}" }, editorconfig_source)
+vim.cmd.edit(vim.fn.fnameescape(editorconfig_source))
+assert(vim.bo.filetype == "cpp", "EditorConfig fixture did not load as C++")
+assert(vim.bo.expandtab, "EditorConfig indent_style did not override the C++ fallback")
+assert(vim.bo.tabstop == 2, "EditorConfig indent_size did not override C++ tabstop")
+assert(vim.bo.shiftwidth == 2, "EditorConfig indent_size did not override C++ shiftwidth")
+local effective_softtabstop = vim.bo.softtabstop < 0 and vim.bo.shiftwidth or vim.bo.softtabstop
+assert(effective_softtabstop == 2, "EditorConfig indent_size did not override C++ softtabstop")
+vim.api.nvim_buf_delete(0, { force = true })
+
+for _, database_mode in ipairs({ "Ancestors", "None" }) do
+	local unmanaged_fixture = vim.fn.tempname()
+	local unmanaged_source = vim.fs.joinpath(unmanaged_fixture, "src", "main.cpp")
+	vim.fn.mkdir(vim.fs.dirname(unmanaged_source), "p")
+	vim.fn.writefile({ "int main() {}" }, unmanaged_source)
+	vim.fn.writefile(
+		{ "CompileFlags:", "  CompilationDatabase: " .. database_mode },
+		vim.fs.joinpath(unmanaged_fixture, ".clangd")
+	)
+	local unmanaged_buffer = vim.api.nvim_create_buf(false, true)
+	vim.api.nvim_buf_set_name(unmanaged_buffer, unmanaged_source)
+	assert(cpp.warn_if_compile_database_missing(unmanaged_buffer) == nil, database_mode .. " caused a false warning")
+	vim.api.nvim_buf_delete(unmanaged_buffer, { force = true })
+	vim.fn.delete(unmanaged_fixture, "rf")
+end
+
+vim.fn.delete(managed_fixture, "rf")
+vim.fn.delete(editorconfig_fixture, "rf")
+
 require("lazy").load({ plugins = { "mini.icons" } })
 local icon_cases_path = vim.fn.getcwd() .. "/tests/icons/generated_cases.json"
 local icon_payload = vim.json.decode(table.concat(vim.fn.readfile(icon_cases_path), "\n"))

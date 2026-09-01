@@ -242,6 +242,8 @@ cmake --workflow --preset dev
 
 模板内置 C++23、CMake Presets、Ninja、clangd、clang-format、clang-tidy、CTest 与 Sanitizer 配置；创建过程不访问网络，生成项目也不依赖 `cxx` 命令。
 
+`cmake --workflow --preset dev` 不只是首次构建：它还会生成 clangd 所需的 `build/dev/compile_commands.json`。对于包含 `.cxx.toml` 的受管项目，若该固定位置的文件不存在，Neovim 会报告缺失事实并提示项目 flags 可能不完整；workflow 完成后执行 `:LspRestart` 即可重新载入精确的 C++23、SDK、include 与 warning 配置。其他项目的 `.clangd` 语义不由 dotfiles 解析或改写。C/C++ Buffer 默认使用 4 空格实时缩进，与 cxx 模板的 `.clang-format` 保持一致；项目自己的 EditorConfig 仍可覆盖该默认值，保存时由 clang-format 作最终格式化。
+
 ### Markdown 与 Python
 
 Markdown 在普通、命令和终端模式渲染标题、任务、表格、代码块、图片和数学公式，进入插入模式后显示原始文本，兼顾阅读与编辑。
