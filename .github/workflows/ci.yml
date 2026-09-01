@@ -150,7 +150,8 @@ jobs:
           stylua --check home/dot_config/nvim tests/nvim
           hadolint --failure-threshold error .devcontainer/Dockerfile
 
-          YAZI_CONFIG_HOME="$PWD/home/dot_config/yazi" yazi --help > /dev/null
+          yazi_version="$(yazi --version)"
+          [[ "$yazi_version" =~ ^Yazi([[:space:]]|$) ]]
           lazygit --use-config-file="$PWD/home/dot_config/lazygit/config.yml" --version
           STARSHIP_CONFIG="$PWD/home/dot_config/starship.toml" starship print-config > /dev/null
           zellij --config "$PWD/home/dot_config/zellij/config.kdl" setup --check
