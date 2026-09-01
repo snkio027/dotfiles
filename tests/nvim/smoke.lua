@@ -2,6 +2,21 @@ local function contains(values, expected)
 	return vim.tbl_contains(values or {}, expected)
 end
 
+local function wait_for_lsp_client(bufnr, name, excluded_id)
+	local client
+	local attached = vim.wait(15000, function()
+		for _, candidate in ipairs(vim.lsp.get_clients({ bufnr = bufnr })) do
+			if candidate.name == name and candidate.initialized and candidate.id ~= excluded_id then
+				client = candidate
+				return true
+			end
+		end
+		return false
+	end, 50)
+	assert(attached, ("%s did not attach to the smoke fixture"):format(name))
+	return client
+end
+
 assert(vim.fn.exists(":OverseerRun") == 2, "Overseer command is unavailable")
 assert(vim.fn.exists(":MasonToolsInstallSync") == 2, "Mason tool installer command is unavailable")
 
@@ -43,7 +58,7 @@ vim.notify = original_notify
 assert(#compile_database_warnings == 1, "Managed C++ project warning must be emitted exactly once")
 assert(compile_database_warnings[1].message:find("build/dev/compile_commands.json", 1, true))
 assert(compile_database_warnings[1].message:find("cmake --workflow --preset dev", 1, true))
-assert(compile_database_warnings[1].message:find(":LspRestart", 1, true))
+assert(compile_database_warnings[1].message:find(":lsp restart clangd", 1, true))
 assert(compile_database_warnings[1].level == vim.log.levels.WARN)
 vim.api.nvim_buf_delete(warning_buffer, { force = true })
 
@@ -54,10 +69,15 @@ vim.fn.mkdir(vim.fs.dirname(editorconfig_source), "p")
 vim.fn.writefile({ "schema_version = 1" }, vim.fs.joinpath(editorconfig_fixture, ".cxx.toml"))
 vim.fn.writefile({ "[]" }, cpp.compile_database(editorconfig_fixture))
 vim.fn.writefile(
+	{ "CompileFlags:", "  CompilationDatabase: build/dev" },
+	vim.fs.joinpath(editorconfig_fixture, ".clangd")
+)
+vim.fn.writefile(
 	{ "root = true", "", "[*.cpp]", "indent_style = space", "indent_size = 2" },
 	vim.fs.joinpath(editorconfig_fixture, ".editorconfig")
 )
 vim.fn.writefile({ "int main() {}" }, editorconfig_source)
+require("lazy").load({ plugins = { "nvim-lspconfig" } })
 vim.cmd.edit(vim.fn.fnameescape(editorconfig_source))
 assert(vim.bo.filetype == "cpp", "EditorConfig fixture did not load as C++")
 assert(vim.bo.expandtab, "EditorConfig indent_style did not override the C++ fallback")
@@ -65,7 +85,15 @@ assert(vim.bo.tabstop == 2, "EditorConfig indent_size did not override C++ tabst
 assert(vim.bo.shiftwidth == 2, "EditorConfig indent_size did not override C++ shiftwidth")
 local effective_softtabstop = vim.bo.softtabstop < 0 and vim.bo.shiftwidth or vim.bo.softtabstop
 assert(effective_softtabstop == 2, "EditorConfig indent_size did not override C++ softtabstop")
-vim.api.nvim_buf_delete(0, { force = true })
+local editorconfig_buffer = vim.api.nvim_get_current_buf()
+local original_clangd = wait_for_lsp_client(editorconfig_buffer, "clangd")
+assert(vim.fn.exists(":lsp") == 2, "native :lsp command is unavailable")
+local restart_ok, restart_error = pcall(vim.cmd, "lsp restart clangd")
+assert(restart_ok, ("native clangd restart command failed: %s"):format(restart_error))
+local restarted_clangd = wait_for_lsp_client(editorconfig_buffer, "clangd", original_clangd.id)
+assert(restarted_clangd.id ~= original_clangd.id, "native clangd restart reused the original client")
+print(("Native clangd restart passed: client %d -> %d"):format(original_clangd.id, restarted_clangd.id))
+vim.api.nvim_buf_delete(editorconfig_buffer, { force = true })
 
 for _, database_mode in ipairs({ "Ancestors", "None" }) do
 	local unmanaged_fixture = vim.fn.tempname()
