@@ -14,6 +14,17 @@ if [[ ! -f "$WORKSPACE_FOLDER/.chezmoiroot" ]]; then
     exit 1
 fi
 
+# Resolve command ownership once, before Linuxbrew changes PATH. Tests may
+# provide an absolute fake; production keeps the verified bootstrap binary.
+CHEZMOI_BIN="${DOTFILES_CHEZMOI_BIN:-}"
+if [[ -z "$CHEZMOI_BIN" ]]; then
+    CHEZMOI_BIN="$(command -v chezmoi || true)"
+fi
+if [[ "$CHEZMOI_BIN" != /* || ! -x "$CHEZMOI_BIN" ]]; then
+    echo "Dev Container chezmoi binary must be an executable absolute path: ${CHEZMOI_BIN:-<not found>}" >&2
+    exit 1
+fi
+
 printf 'Dev Container post-create start\n'
 
 # Keep the fixed Linuxbrew location visible before the first apply. The
@@ -29,7 +40,7 @@ export GIT_AUTHOR_NAME="${GIT_AUTHOR_NAME:-Dev Container}"
 export GIT_AUTHOR_EMAIL="${GIT_AUTHOR_EMAIL:-devcontainer@localhost}"
 
 for attempt in 1 2 3; do
-    if chezmoi init --apply --source="$WORKSPACE_FOLDER"; then
+    if "$CHEZMOI_BIN" init --apply --source="$WORKSPACE_FOLDER"; then
         break
     fi
     if [[ "$attempt" -eq 3 ]]; then
