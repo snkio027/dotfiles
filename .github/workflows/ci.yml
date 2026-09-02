@@ -62,7 +62,6 @@ jobs:
 
       - name: Install validation toolchain
         run: |
-          brew update
           brew bundle --file=brew/profiles/quality.Brewfile
           bash tests/brew/profile_smoke.sh quality
 
@@ -171,6 +170,7 @@ jobs:
 
       - name: Validate static configuration
         run: |
+          python3 tests/ci/test_install_cost_contract.py
           python3 tests/ci/test_pr_path_classifier.py
           python3 tests/fonts/test_monolisa_manifest.py
           python3 brew/generate.py --check
@@ -191,6 +191,7 @@ jobs:
           zellij --config "$PWD/home/dot_config/zellij/config.kdl" setup --check
 
       - name: Validate latest cxx-init release
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         run: |
           uv tool install --upgrade --no-config cxx-init
           cxx_bin="$(uv tool dir --bin)/cxx"
@@ -261,7 +262,6 @@ jobs:
 
       - name: Install validation toolchain
         run: |
-          brew update
           brew bundle --file=brew/profiles/quality.Brewfile
           bash tests/brew/profile_smoke.sh quality
 
@@ -333,7 +333,6 @@ jobs:
 
       - name: Install and exercise the core profile
         run: |
-          brew update
           brew bundle --file=brew/profiles/core.Brewfile
           brew bundle check --file=brew/profiles/core.Brewfile
           bash tests/brew/profile_smoke.sh core
@@ -362,8 +361,7 @@ jobs:
 
       - name: Install lifecycle validation toolchain
         run: |
-          brew update
-          brew bundle --file=brew/profiles/quality.Brewfile
+          brew install devcontainer
           devcontainer --version
 
       - name: Run full lifecycle twice
@@ -398,7 +396,6 @@ jobs:
 
       - name: Install validation toolchain
         run: |
-          brew update
           brew bundle --file=brew/profiles/quality.Brewfile
 
       - name: Restore locked plugins and provision missing Mason tools
@@ -421,7 +418,6 @@ jobs:
 
       - name: Install validation toolchain
         run: |
-          brew update
           brew bundle --file=brew/profiles/quality.Brewfile
 
       - name: Update plugins and tools from empty data directories
