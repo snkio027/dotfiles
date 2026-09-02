@@ -71,12 +71,16 @@ fi
 
 if command -v chezmoi &>/dev/null; then
     CZ_VER="$(chezmoi --version 2>/dev/null | sed -E 's/^chezmoi version ([^,]+).*/\1/' | head -n1 || echo "installed")"
-    RAW_STATUS="$(chezmoi status 2>/dev/null || true)"
-    if [ -z "$RAW_STATUS" ]; then
-        check_status "chezmoi State" "pass" "$CZ_VER (Synced / Clean)"
+    if RAW_STATUS="$(chezmoi status)"; then
+        if [ -z "$RAW_STATUS" ]; then
+            check_status "chezmoi State" "pass" "$CZ_VER (Synced / Clean)"
+        else
+            DIFF_COUNT="$(echo "$RAW_STATUS" | wc -l | tr -d ' ')"
+            check_status "chezmoi State" "warn" "$CZ_VER ($DIFF_COUNT pending diffs)"
+        fi
     else
-        DIFF_COUNT="$(echo "$RAW_STATUS" | wc -l | tr -d ' ')"
-        check_status "chezmoi State" "warn" "$CZ_VER ($DIFF_COUNT pending diffs)"
+        STATUS_EXIT=$?
+        check_status "chezmoi State" "fail" "$CZ_VER (status failed, exit $STATUS_EXIT)"
     fi
 else
     check_status "chezmoi State" "fail" "chezmoi binary missing"

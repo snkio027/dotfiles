@@ -296,8 +296,9 @@ git rebase origin/main
 | `git lg` / `git st` / `git dfs` | 图形日志 / 状态 / 已暂存 Diff |
 | `git amend` / `git undo` | 修改上次提交 / 撤销提交并保留文件 |
 | `git rescue` | 查看 Reflog |
+| `git sweep` / `git sweep-delete` / `git sweep-force` | 预览失去远端的分支 / 安全删除已合并分支 / 显式强制删除 |
 | `cz` / `cza` / `czd` | chezmoi 命令入口 / 应用目标状态 / 查看目标差异 |
-| `cze` / `czu` | 编辑受管文件 / 更新并应用仓库 |
+| `cze` / `czu` | 编辑受管文件 / 更新 source state 并显示差异（不应用） |
 | `brewup` / `devup` | 更新并清理 Homebrew / 更新 Homebrew、cxx-init、Neovim 插件锁与 Mason 工具 |
 | `devdoctor` | 只读检查配置、Runtime 来源、签名和关键工具 |
 | `scan-secrets` | 使用 gitleaks 扫描暂存内容 |
