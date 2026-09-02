@@ -4,7 +4,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # Required change validation must not cancel longer schedule/manual maintenance.
+  group: ${{ github.workflow }}-${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'maintenance' || 'change-validation' }}-${{ github.ref }}
   cancel-in-progress: true
 
 on:
@@ -20,6 +21,7 @@ jobs:
   validate:
     name: Validate Dotfiles, Templates & Platform Scripts
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout repository
@@ -209,6 +211,7 @@ jobs:
   macos-smoke:
     name: Validate macOS Rendering & Terminal Configuration
     runs-on: macos-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout repository
@@ -247,6 +250,7 @@ jobs:
   devcontainer-build:
     name: Build Dev Container
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout repository
@@ -263,6 +267,7 @@ jobs:
   brew-core-profile:
     name: Install & Exercise Core Brew Profile
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout repository
@@ -307,6 +312,7 @@ jobs:
     name: Validate Locked Neovim Cold Start
     if: github.event_name == 'push' || github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout repository
@@ -329,6 +335,7 @@ jobs:
     name: Validate Rolling-Latest Neovim Environment
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    timeout-minutes: 45
 
     steps:
       - name: Checkout repository
