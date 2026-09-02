@@ -39,3 +39,48 @@ if dotenv "$test_dir/link.env" 2>/dev/null; then
 fi
 
 print "dotenv behavior tests passed"
+
+fake_bin="$test_dir/bin"
+chezmoi_log="$test_dir/chezmoi.log"
+mkdir -p "$fake_bin"
+cat > "$fake_bin/chezmoi" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+{
+  printf 'argc=%d' "$#"
+  printf ' arg=%q' "$@"
+  printf '\n'
+} >> "$CHEZMOI_TEST_LOG"
+
+if [[ "${CHEZMOI_TEST_FAIL_UPDATE:-0}" == 1 && "${1:-}" == update ]]; then
+  exit 72
+fi
+EOF
+chmod +x "$fake_bin/chezmoi"
+
+export CHEZMOI_TEST_LOG="$chezmoi_log"
+PATH="$fake_bin:$PATH"
+
+czu
+[[ "$(sed -n '1p' "$chezmoi_log")" == 'argc=2 arg=update arg=--apply=false' ]]
+[[ "$(sed -n '2p' "$chezmoi_log")" == 'argc=1 arg=diff' ]]
+[[ "$(wc -l < "$chezmoi_log" | tr -d ' ')" == 2 ]]
+
+: > "$chezmoi_log"
+if CHEZMOI_TEST_FAIL_UPDATE=1 czu 2>/dev/null; then
+  print -u2 "czu ignored a failed source update"
+  exit 1
+fi
+[[ "$(cat "$chezmoi_log")" == 'argc=2 arg=update arg=--apply=false' ]]
+
+: > "$chezmoi_log"
+for rejected_arg in --apply --apply=true -a -va -na -ar -ra -av arbitrary; do
+  if czu "$rejected_arg" 2>/dev/null; then
+    print -u2 "czu accepted an argument: $rejected_arg"
+    exit 1
+  fi
+done
+[[ ! -s "$chezmoi_log" ]]
+
+print "czu argument rejection 9/9; failed update stops before diff"

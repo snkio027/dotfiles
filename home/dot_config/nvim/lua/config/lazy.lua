@@ -19,7 +19,7 @@ require("lazy").setup({
   },
   defaults = { lazy = false, version = false },
   install = { colorscheme = { "catppuccin", "habamax" } },
-  checker = { enabled = true, notify = true, frequency = 86400 },
+  checker = { enabled = false },
   change_detection = { notify = false },
   performance = {
     rtp = {

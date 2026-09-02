@@ -107,6 +107,8 @@ jobs:
           shfmt -d -i 4 -ci .devcontainer/install-chezmoi.sh .devcontainer/post-create.sh .devcontainer/provision-nvim.sh tests/devcontainer/lifecycle_smoke.sh tests/devcontainer/provisioning_contract_test.sh
           shellcheck -S warning -s bash tests/brew/profile_smoke.sh
           shfmt -d -i 4 -ci tests/brew/profile_smoke.sh
+          shellcheck -S warning -s bash tests/git/sweep_test.sh
+          shfmt -d -i 4 -ci tests/git/sweep_test.sh
           shellcheck -S warning -s bash scripts/supply-chain/*.sh tests/supply-chain/*.sh
           shfmt -d -i 4 -ci scripts/supply-chain/*.sh tests/supply-chain/*.sh
 
@@ -117,6 +119,7 @@ jobs:
           zsh -f tests/zsh/history_test.zsh
           bash tests/zsh/linux_homebrew_test.sh
           bash tests/chezmoi/apply_contract_test.sh
+          bash tests/git/sweep_test.sh
           bash tests/supply-chain/chezmoi_bootstrap_test.sh
           bash tests/supply-chain/brew_vulnerabilities_test.sh
 

@@ -8,8 +8,10 @@ trap 'rm -rf -- "$TEST_ROOT"' EXIT
 
 BREW_TEMPLATE="$REPO_ROOT/home/.chezmoiscripts/run_onchange_after_20_brew_bundle.sh.tmpl"
 DEFAULTS_TEMPLATE="$REPO_ROOT/home/.chezmoiscripts/run_onchange_after_90_macos_defaults.sh.tmpl"
+DOCTOR_TEMPLATE="$REPO_ROOT/home/dot_config/zsh/scripts/executable_doctor.sh.tmpl"
 BREW_SCRIPT="$TEST_ROOT/brew_bundle.sh"
 DEVCONTAINER_BREW_SCRIPT="$TEST_ROOT/devcontainer_brew_bundle.sh"
+DOCTOR_SCRIPT="$TEST_ROOT/doctor.sh"
 BREW_LOG="$TEST_ROOT/brew.log"
 
 chezmoi execute-template --source="$REPO_ROOT" \
@@ -69,4 +71,47 @@ if grep -Eqi 'ghostty|dot_config/ghostty/config' "$DEFAULTS_TEMPLATE"; then
     exit 1
 fi
 
-printf 'Chezmoi apply side-effect tests passed\n'
+# A failed status observation must never be reported as a clean chezmoi state.
+chezmoi execute-template --source="$REPO_ROOT" \
+    --override-data '{"machine_profile":"devcontainer","features":{"use_1password":false}}' \
+    <"$DOCTOR_TEMPLATE" >"$DOCTOR_SCRIPT"
+
+mkdir -p "$TEST_ROOT/doctor-bin"
+cat >"$TEST_ROOT/doctor-bin/chezmoi" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+printf '%s\n' "$*" >>"$CHEZMOI_DOCTOR_TEST_LOG"
+case "${1:-}" in
+--version)
+    printf 'chezmoi version v2.72.1, commit test\n'
+    ;;
+status)
+    printf 'CHEZMOI_STATUS_SENTINEL: source state is unavailable\n' >&2
+    exit 73
+    ;;
+*)
+    printf 'unexpected chezmoi command: %s\n' "$*" >&2
+    exit 64
+    ;;
+esac
+EOF
+chmod +x "$TEST_ROOT/doctor-bin/chezmoi"
+
+DOCTOR_LOG="$TEST_ROOT/doctor-commands.log"
+DOCTOR_OUTPUT="$TEST_ROOT/doctor-output.log"
+if CHEZMOI_DOCTOR_TEST_LOG="$DOCTOR_LOG" PATH="$TEST_ROOT/doctor-bin:$PATH" \
+    bash "$DOCTOR_SCRIPT" >"$DOCTOR_OUTPUT" 2>&1; then
+    echo "devdoctor contract violation: failed chezmoi status reported success" >&2
+    exit 1
+fi
+grep -q 'status failed, exit 73' "$DOCTOR_OUTPUT"
+grep -q 'CHEZMOI_STATUS_SENTINEL: source state is unavailable' "$DOCTOR_OUTPUT"
+if grep -q 'Synced / Clean' "$DOCTOR_OUTPUT"; then
+    echo "devdoctor contract violation: failed status reported a clean state" >&2
+    exit 1
+fi
+[ "$(grep -cx 'status' "$DOCTOR_LOG")" -eq 1 ]
+
+printf 'devdoctor status failure: stderr sentinel visible, exit 73 propagated\n'
+printf 'Chezmoi apply and observation side-effect tests passed\n'

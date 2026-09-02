@@ -58,9 +58,18 @@ alias cz="chezmoi"
 alias cza="chezmoi apply"
 alias czcd="chezmoi cd"
 alias czd="chezmoi diff"
-alias czu="chezmoi update"
 alias cm="chezmoi"
 alias cma="chezmoi apply"
+
+# 更新 source state 后只展示目标差异；应用仍由 cza 显式执行。
+function czu() {
+    (( $# == 0 )) || {
+        print -u2 "czu: 不接受参数；apply 请显式使用 cza"
+        return 2
+    }
+    chezmoi update --apply=false || return
+    chezmoi diff
+}
 
 # --- 5. 高效率 Git 操作快捷键 ---
 alias g="git"
