@@ -132,8 +132,8 @@ jobs:
           shfmt -d -i 4 -ci tests/nvim/cold_start.sh
           shellcheck -S warning -s bash tests/zsh/linux_homebrew_test.sh
           shfmt -d -i 4 -ci tests/zsh/linux_homebrew_test.sh
-          shellcheck -S warning -s bash .devcontainer/install-chezmoi.sh .devcontainer/post-create.sh .devcontainer/provision-nvim.sh tests/devcontainer/lifecycle_smoke.sh tests/devcontainer/provisioning_contract_test.sh
-          shfmt -d -i 4 -ci .devcontainer/install-chezmoi.sh .devcontainer/post-create.sh .devcontainer/provision-nvim.sh tests/devcontainer/lifecycle_smoke.sh tests/devcontainer/provisioning_contract_test.sh
+          shellcheck -S warning -s bash .devcontainer/install-chezmoi.sh .devcontainer/post-create.sh .devcontainer/provision-nvim.sh .devcontainer/agent/post-create.sh tests/devcontainer/lifecycle_smoke.sh tests/devcontainer/provisioning_contract_test.sh
+          shfmt -d -i 4 -ci .devcontainer/install-chezmoi.sh .devcontainer/post-create.sh .devcontainer/provision-nvim.sh .devcontainer/agent/post-create.sh tests/devcontainer/lifecycle_smoke.sh tests/devcontainer/provisioning_contract_test.sh
           shellcheck -S warning -s bash tests/brew/profile_smoke.sh
           shfmt -d -i 4 -ci tests/brew/profile_smoke.sh
           shellcheck -S warning -s bash tests/git/sweep_test.sh
@@ -172,6 +172,7 @@ jobs:
         run: |
           python3 tests/ci/test_install_cost_contract.py
           python3 tests/ci/test_pr_path_classifier.py
+          python3 tests/devcontainer/lane_contract_test.py
           python3 tests/fonts/test_monolisa_manifest.py
           python3 brew/generate.py --check
           python3 tests/brew/test_profiles.py
@@ -364,7 +365,7 @@ jobs:
           brew install devcontainer
           devcontainer --version
 
-      - name: Run full lifecycle twice
+      - name: Validate Human and Agent lanes
         run: bash tests/devcontainer/lifecycle_smoke.sh
 
   neovim-locked-cold-start:

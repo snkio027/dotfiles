@@ -1,0 +1,29 @@
+{
+  "name": "DevSecOps Restricted Agent",
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "context": "../.."
+  },
+  "containerEnv": {
+    "CHEZMOI_PROFILE": "devcontainer"
+  },
+  "remoteEnv": {
+    "SSH_AUTH_SOCK": "",
+    "OP_SSH_AUTH_SOCK": "",
+    "GH_TOKEN": "",
+    "GITHUB_TOKEN": ""
+  },
+  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+  "runArgs": [
+    "--cap-drop=SYS_PTRACE",
+    "--security-opt=seccomp=builtin"
+  ],
+  "containerUser": "vscode",
+  "remoteUser": "vscode",
+  "waitFor": "postCreateCommand",
+  "postCreateCommand": [
+    "/bin/bash",
+    "/workspaces/${localWorkspaceFolderBasename}/.devcontainer/agent/post-create.sh",
+    "/workspaces/${localWorkspaceFolderBasename}"
+  ]
+}

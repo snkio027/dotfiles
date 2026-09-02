@@ -51,7 +51,8 @@ Homebrew 负责全局 CLI 与语言 Runtime；`brew/ownership.toml` 是工具所
 ```text
 dotfiles/
 ├── .chezmoiroot                    # 将 chezmoi source state 指向 home/
-├── .devcontainer/                  # Ubuntu 26.04 + Linuxbrew 开发环境
+├── .devcontainer/                  # Human/Debug 与受限 Agent 两种容器入口
+│   └── agent/                      # 复用同一镜像和 provisioning 的 Agent lane
 ├── .github/
 │   └── workflows/ci.yml            # 模板、配置、安全与 profile 安装校验
 ├── brew/
@@ -111,6 +112,18 @@ chezmoi init --apply https://github.com/snkio027/dotfiles
 Linux 工作站由 Brewfile 显式安装 `/home/linuxbrew/.linuxbrew/bin/zsh`，新建的非登录交互 Shell 也会直接获得 Linuxbrew PATH、FPATH、插件与补全，不依赖 `.zprofile`。安装 Zsh 与选择登录 Shell 是两个独立行为：本仓库不会执行 `chsh` 或修改 `/etc/shells`。需要切换时，应先确认该路径存在，再由用户按发行版要求将它加入 `/etc/shells` 并显式运行 `chsh -s /home/linuxbrew/.linuxbrew/bin/zsh`。
 
 Dev Container 使用 `CHEZMOI_PROFILE=devcontainer` 和独立的 `devcontainer.Brewfile`，通过 Linuxbrew 获得与 Linux workstation 相同的 60 个公式声明，但不会生成宿主密钥、修改宿主 Git hooks 或应用 macOS 偏好。基础镜像保留 `resolute` tag 便于 Dependabot 识别，同时固定其覆盖 Linux amd64/arm64 的 OCI manifest digest；镜像内的 chezmoi bootstrap 固定到 `2.72.1` 双架构制品，下载后先比对由上游 Sigstore 签名 checksum 得出的 SHA-256，再检查二进制自身版本，失败时不会留下可执行文件或成功 receipt。该固定制品只负责无 Homebrew 时的首次引导，稳态命令仍由 core profile 的 Homebrew owner 提供。post-create 是缺失 Neovim/Mason 工具的唯一 provisioning owner：瞬时失败最多重试三次，只有插件锁未漂移且 21 项 Mason receipt 完整时才返回成功；后续 lifecycle 只观察状态，不补装工具或重新 apply。CI 使用 Dev Container CLI 真实执行 post-create、非 root Shell、chezmoi、Neovim warm smoke 和二次 `up` 幂等验证。可用 `GIT_AUTHOR_NAME` 与 `GIT_AUTHOR_EMAIL` 覆盖缺省身份。
+
+默认的 `.devcontainer/devcontainer.json` 是 Human/Debug lane，保留 `SYS_PTRACE` 与 unconfined seccomp 供 LLDB 等调试器使用。`.devcontainer/agent/devcontainer.json` 是受限 Agent lane：它复用同一 Dockerfile、devcontainer profile 和共享 post-create，不挂载 Docker socket 或宿主凭据，显式移除 `SYS_PTRACE` 并使用 Docker builtin seccomp。基础镜像提供的免密 sudo 只在受信任 provisioning 阶段可用；Agent 收尾脚本随后撤销该规则，而 `waitFor=postCreateCommand` 保证工具只能在 provisioning 和权限收口全部成功后连接。该 lane 仍允许访问网络、修改挂载的仓库和用户目录，因此是开发执行边界，不是运行恶意代码的强沙箱。
+
+使用 Dev Container CLI 启动受限入口时，应同时清除父进程中可能存在的凭据变量：
+
+```bash
+env -u SSH_AUTH_SOCK -u OP_SSH_AUTH_SOCK -u GH_TOKEN -u GITHUB_TOKEN \
+  devcontainer up --workspace-folder "$PWD" \
+  --config "$PWD/.devcontainer/agent/devcontainer.json"
+```
+
+无宿主凭据保证限定于上述受控 CLI 入口；外部客户端主动增加的 mount、secret 或 remote environment 不属于仓库可以否决的范围。[VS Code Dev Containers](https://code.visualstudio.com/remote/advancedcontainers/sharing-git-credentials) 会自动转发正在运行的本机 SSH Agent，因此不要通过其 UI 启动需要严格无凭据边界的 Agent lane，除非已在宿主侧关闭该转发。
 
 ## 日常维护
 
