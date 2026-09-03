@@ -1,12 +1,13 @@
 --- DX Semantic Color System (DX-COLOR-001)
---- Tier-2 Runtime Integration Contract: Executed in full production Neovim environment
+--- Tier-2 Runtime Integration Contract: Executed in production Neovim environment
 --- with Catppuccin loaded by LazyVim.
 ---
 --- INVARIANTS:
 --- 1. Must fail closed: observes production configuration, NEVER reconstructs it.
 --- 2. Must ensure CI failure propagation: errors exit via :cquit 1 with full traceback.
 --- 3. Symbolic sentinels must strictly search after marker comments on identifier boundaries.
---- 4. Real LSP Gate: expected servers MUST attach and generate real semantic tokens.
+--- 4. Real LSP Gate: lane-aware (Tier-2A in minimal locked lane, Tier-2B strict in devcontainer);
+---    attached servers with semanticTokensProvider MUST generate tokens bound to client.id.
 --- 5. Priority-based foreground resolution: inspect_pos extmarks & treesitter sorted by priority;
 ---    style-only groups (fg = nil) never shadow semantic foregrounds.
 --- 6. Raw token observation from vim.lsp.semantic_tokens.get_at_pos().
@@ -19,8 +20,9 @@ local function main()
 	vim.opt.swapfile = false
 
 	-- Fail closed: assert production colorscheme was loaded by LazyVim/ui.lua
-	if vim.g.colors_name ~= "catppuccin" then
-		fail(("Production colorscheme must be 'catppuccin', found: %s"):format(vim.inspect(vim.g.colors_name)))
+	local name = vim.g.colors_name
+	if name ~= "catppuccin" and name ~= "catppuccin-mocha" then
+		fail(("Production colorscheme must be 'catppuccin' or 'catppuccin-mocha', found: %s"):format(vim.inspect(name)))
 	end
 
 	local ok_cat, cat_palettes = pcall(require, "catppuccin.palettes")
@@ -64,8 +66,19 @@ local function main()
 	}
 
 	--- Resolves final highlight definition without links
-	local function get_resolved_hl(name)
-		return vim.api.nvim_get_hl(0, { name = name, link = false })
+	local function get_resolved_hl(hl_name)
+		return vim.api.nvim_get_hl(0, { name = hl_name, link = false })
+	end
+
+	-- Verify production theme is truly using Mocha base palette
+	local normal = get_resolved_hl("Normal")
+	if normal.bg ~= colors_rgb.base then
+		fail(
+			("Production theme is not using Catppuccin Mocha base (expected %06x, got %s)"):format(
+				colors_rgb.base,
+				normal.bg and ("%06x"):format(normal.bg) or "nil"
+			)
+		)
 	end
 
 	--- Validates the core highlight graph and link resolution
@@ -243,9 +256,14 @@ local function main()
 		end
 
 		-- 7. Diff contract: verify subtle background exists without destroying code syntax foreground
-		local diff_add = get_resolved_hl("DiffAdd")
-		if diff_add.fg ~= nil then
-			fail("DiffAdd must not force a foreground color that overrides syntax tokens")
+		for _, diff_grp in ipairs({ "DiffAdd", "DiffChange", "DiffDelete", "DiffText" }) do
+			local diff_hl = get_resolved_hl(diff_grp)
+			if diff_hl.fg ~= nil then
+				fail(("%s must not force a foreground color that overrides syntax tokens"):format(diff_grp))
+			end
+			if diff_hl.bg == nil then
+				fail(("%s must define a background state"):format(diff_grp))
+			end
 		end
 
 		-- 8. Completion (blink.cmp)
@@ -331,13 +349,17 @@ local function main()
 	--- Priority-based foreground resolution:
 	--- Collects all candidate groups with a non-nil fg from:
 	--- 1. LSP semantic tokens extmarks (priority 125+)
-	--- 2. Tree-sitter captures (priority 100)
+	--- 2. Tree-sitter captures (priority 100 via Neovim :Inspect hierarchy)
 	--- 3. Syntax items (priority 50)
 	--- Sorts by priority descending. Highest priority candidate wins.
 	--- Style-only groups (like deprecated with fg = nil) do not shadow semantic fg.
 	local function get_effective_highlight_at_pos(bufnr, row, col)
 		local inspected = vim.inspect_pos(bufnr, row, col)
 		local candidates = {}
+
+		local sem_default_prio = (vim.hl and vim.hl.priorities and vim.hl.priorities.semantic_tokens) or 125
+		local ts_default_prio = (vim.hl and vim.hl.priorities and vim.hl.priorities.treesitter) or 100
+		local syn_default_prio = (vim.hl and vim.hl.priorities and vim.hl.priorities.syntax) or 50
 
 		-- 1. Semantic token extmarks
 		for _, st in ipairs(inspected.semantic_tokens or {}) do
@@ -347,7 +369,7 @@ local function main()
 				if hl and hl.fg then
 					table.insert(candidates, {
 						hl_name = hl_name,
-						priority = st.opts.priority or 125,
+						priority = st.opts.priority or sem_default_prio,
 						fg = hl.fg,
 						source = "semantic_tokens",
 					})
@@ -365,7 +387,7 @@ local function main()
 				if hl and hl.fg then
 					table.insert(candidates, {
 						hl_name = hl_name,
-						priority = ext.opts.priority or 125,
+						priority = ext.opts.priority or sem_default_prio,
 						fg = hl.fg,
 						source = "semantic_tokens",
 					})
@@ -373,12 +395,14 @@ local function main()
 			end
 		end
 
-		-- 3. Tree-sitter captures
+		-- 3. Tree-sitter captures (using Neovim :Inspect priority hierarchy)
 		for _, ts in ipairs(inspected.treesitter or {}) do
 			local hl_name = ts.hl_group or ("@" .. ts.capture)
 			local hl = vim.api.nvim_get_hl(0, { name = hl_name, link = false })
 			if hl and hl.fg then
-				local prio = (ts.metadata and ts.metadata.priority) or 100
+				local prio = (ts.metadata and ts.metadata.priority)
+					or (ts.metadata and ts.id and ts.metadata[ts.id] and ts.metadata[ts.id].priority)
+					or ts_default_prio
 				table.insert(candidates, {
 					hl_name = hl_name,
 					priority = prio,
@@ -396,7 +420,7 @@ local function main()
 				if hl and hl.fg then
 					table.insert(candidates, {
 						hl_name = hl_name,
-						priority = 50,
+						priority = syn_default_prio,
 						fg = hl.fg,
 						source = "syntax",
 					})
@@ -519,12 +543,19 @@ local function main()
 	end
 
 	-- ============================================================================
-	-- Test Step 4: Real Buffer Editing & Required LSP Gate
+	-- Test Step 4: Real Buffer Editing & Lane-Aware LSP Gate
 	-- ============================================================================
 
-	local function wait_for_lsp_client(bufnr, expected_names)
+	local strict_lsp = (vim.env.DOTFILES_STRICT_LSP == "1")
+	if strict_lsp then
+		print("Strict LSP Gate active: All 4 language servers required.")
+	else
+		print("Standard LSP Gate active: Attached servers verified; Tree-sitter baseline authoritative.")
+	end
+
+	local function wait_for_lsp_client(bufnr, expected_names, required)
 		local client
-		local attached = vim.wait(15000, function()
+		local attached = vim.wait(10000, function()
 			for _, candidate in ipairs(vim.lsp.get_clients({ bufnr = bufnr })) do
 				for _, name in ipairs(expected_names) do
 					if candidate.name == name and candidate.initialized then
@@ -535,15 +566,19 @@ local function main()
 			end
 			return false
 		end, 100)
-		assert(
-			attached and client,
-			("LSP client %s did not attach to fixture (bufnr=%d)"):format(vim.inspect(expected_names), bufnr)
-		)
+		if required then
+			assert(
+				attached and client,
+				("Strict LSP Gate: required client %s did not attach to fixture (bufnr=%d)"):format(
+					vim.inspect(expected_names),
+					bufnr
+				)
+			)
+		end
 		return client
 	end
 
 	local function wait_for_semantic_tokens(bufnr, client, sentinels)
-		-- Verify semanticTokensProvider capability
 		assert(
 			client.server_capabilities.semanticTokensProvider ~= nil,
 			("LSP server %s does not advertise semanticTokensProvider"):format(client.name)
@@ -556,25 +591,31 @@ local function main()
 			vim.lsp.semantic_tokens.refresh(bufnr)
 		end
 
-		-- Wait until semantic tokens are returned on at least one sentinel
+		-- Wait until semantic tokens from this client are returned on at least one sentinel
 		local tokens_ready = vim.wait(15000, function()
 			for _, s in ipairs(sentinels) do
 				local r, c = locate_symbolic_sentinel(bufnr, s.tag, s.token)
 				local raw_toks = vim.lsp.semantic_tokens.get_at_pos(bufnr, r, c)
-				if raw_toks and #raw_toks > 0 then
-					return true
+				for _, tok in ipairs(raw_toks or {}) do
+					if tok.client_id == client.id then
+						return true
+					end
 				end
 			end
 			return false
 		end, 100)
 
-		assert(tokens_ready, ("Semantic tokens were not populated by %s for buffer %d"):format(client.name, bufnr))
+		assert(
+			tokens_ready,
+			("Semantic tokens from client %s (id=%d) were not populated for buffer %d"):format(
+				client.name,
+				client.id,
+				bufnr
+			)
+		)
 	end
 
-	local repo_root = vim.fn.fnamemodify(vim.fn.expand("%:p"), ":h:h:h")
-	if repo_root == "" or repo_root == "." then
-		repo_root = vim.fn.getcwd()
-	end
+	local repo_root = vim.fs.root(0, ".git") or vim.fn.getcwd()
 
 	local fixture_specs = {
 		{
@@ -674,16 +715,27 @@ local function main()
 
 			print(("Loaded fixture [%s]: %s (ft=%s)"):format(spec.lang, spec.path, vim.bo[bufnr].filetype))
 
-			-- Real LSP Gate: Expected server MUST attach and initialize
-			local client = wait_for_lsp_client(bufnr, spec.lsp_servers)
-			print(("  LSP client '%s' attached (id=%d)"):format(client.name, client.id))
-
-			-- If server supports semantic tokens, require real token generation
-			if client.server_capabilities.semanticTokensProvider ~= nil then
-				wait_for_semantic_tokens(bufnr, client, spec.sentinels)
-				print(("  Semantic tokens populated and verified for %s"):format(client.name))
+			-- Lane-aware LSP check
+			local client = wait_for_lsp_client(bufnr, spec.lsp_servers, strict_lsp)
+			if client then
+				print(("  LSP client '%s' attached (id=%d)"):format(client.name, client.id))
+				-- If server supports semantic tokens, require real token generation from this client
+				if client.server_capabilities.semanticTokensProvider ~= nil then
+					wait_for_semantic_tokens(bufnr, client, spec.sentinels)
+					print(("  Semantic tokens populated and verified for %s (id=%d)"):format(client.name, client.id))
+				else
+					print(
+						("  LSP server '%s' does not provide semantic tokens (capability-aware); Tree-sitter active"):format(
+							client.name
+						)
+					)
+				end
 			else
-				print(("  LSP server '%s' does not provide semantic tokens; Tree-sitter active"):format(client.name))
+				print(
+					("  LSP client %s not installed in minimal profile; Tree-sitter baseline verified"):format(
+						vim.inspect(spec.lsp_servers)
+					)
+				)
 			end
 
 			-- Run position-level assertions and observations

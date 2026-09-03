@@ -328,10 +328,7 @@ local function locate_symbolic_sentinel(bufnr, tag, token)
 	fail(("Symbolic sentinel not found: tag=%s, token=%s"):format(tag, token))
 end
 
-local repo_root = vim.fn.fnamemodify(vim.fn.expand("%:p"), ":h:h")
-if repo_root == "" or repo_root == "." then
-	repo_root = vim.fn.getcwd()
-end
+local repo_root = vim.fs.root(0, ".git") or vim.fn.getcwd()
 
 local fixture_checks = {
 	{
@@ -376,22 +373,30 @@ local fixture_checks = {
 	},
 }
 
+local verified_sentinels = 0
 for _, fix in ipairs(fixture_checks) do
-	if vim.fn.filereadable(fix.path) == 1 then
-		local buf = vim.fn.bufadd(fix.path)
-		vim.fn.bufload(buf)
-		for _, s in ipairs(fix.sentinels) do
-			local r, c, line_text, comment_r = locate_symbolic_sentinel(buf, s.tag, s.token)
-			if r <= comment_r then
-				fail(("Locator regression: %s matched comment row %d"):format(s.tag, comment_r))
-			end
-			local first_two = line_text:match("^%s*(.-)%s*$"):sub(1, 2)
-			if first_two == "//" or first_two:sub(1, 1) == "#" then
-				fail(("Locator regression: %s matched comment line: %s"):format(s.tag, line_text))
-			end
-		end
-		vim.api.nvim_buf_delete(buf, { force = true })
+	if vim.fn.filereadable(fix.path) ~= 1 then
+		fail("Fixture unreadable or missing: " .. fix.path)
 	end
+	local buf = vim.fn.bufadd(fix.path)
+	vim.fn.bufload(buf)
+	for _, s in ipairs(fix.sentinels) do
+		local r, c, line_text, comment_r = locate_symbolic_sentinel(buf, s.tag, s.token)
+		if r <= comment_r then
+			fail(("Locator regression: %s matched comment row %d"):format(s.tag, comment_r))
+		end
+		local first_two = line_text:match("^%s*(.-)%s*$"):sub(1, 2)
+		if first_two == "//" or first_two:sub(1, 1) == "#" then
+			fail(("Locator regression: %s matched comment line: %s"):format(s.tag, line_text))
+		end
+		verified_sentinels = verified_sentinels + 1
+	end
+	vim.api.nvim_buf_delete(buf, { force = true })
 end
+
+if verified_sentinels ~= 16 then
+	fail(("Expected exactly 16 verified sentinels, got %d"):format(verified_sentinels))
+end
+print(("Verified %d/16 symbolic sentinels with 100%% precision."):format(verified_sentinels))
 
 print("Tier-1 Color Unit Contract passed cleanly.")
