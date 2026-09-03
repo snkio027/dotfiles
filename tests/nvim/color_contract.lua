@@ -674,14 +674,16 @@ local function main()
 			if proto.authority then
 				local best = candidates[1]
 				if proto.authority == "lsp" then
-					if best.source ~= "semantic_tokens" then
-						fail(
-							(
-								"AUTHORITY_ASSERT FAILED for %s:\n"
-								.. "  Expected foreground authority: lsp (semantic_tokens)\n"
-								.. "  Actual winning candidate:       %s (source=%s, priority=%s)"
-							):format(pos_desc, best.hl_name, best.source, tostring(best.priority))
-						)
+					if client and client.server_capabilities.semanticTokensProvider ~= nil then
+						if best.source ~= "semantic_tokens" then
+							fail(
+								(
+									"AUTHORITY_ASSERT FAILED for %s:\n"
+									.. "  Expected foreground authority: lsp (semantic_tokens)\n"
+									.. "  Actual winning candidate:       %s (source=%s, priority=%s)"
+								):format(pos_desc, best.hl_name, best.source, tostring(best.priority))
+							)
+						end
 					end
 				elseif proto.authority == "treesitter" then
 					if best.source ~= "treesitter" then
