@@ -260,6 +260,17 @@ local M = {
 					desc = "Zig method-style function definition",
 				},
 				{
+					tag = "zig.pub.keyword",
+					token = "pub",
+					role = "DxKeyword",
+					desc = "Zig visibility modifier keyword (pub)",
+					required_ts_capture = "keyword.modifier.zig",
+					protocol = {
+						authority = "treesitter",
+						expected_type = "keyword",
+					},
+				},
+				{
 					tag = "zig.fn.keyword",
 					token = "fn",
 					role = "DxFunctionKeyword",
