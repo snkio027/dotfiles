@@ -390,56 +390,33 @@ for token, expected_role in pairs(required_typemods) do
 	end
 end
 
--- Type-Family Precedence Governance Contract
-local type_family = {
-	class = "DxType",
-	struct = "DxType",
-	enum = "DxType",
-	interface = "DxType",
-	type = "DxType",
-	typeParameter = "DxType",
-	typeAlias = "DxType",
-	union = "DxType",
-	selfTypeKeyword = "DxType",
-	builtinType = "DxBuiltin",
-	concept = "DxType",
-}
-
-local identity_preserving_modifiers = {
-	"declaration",
-	"definition",
-	"readonly",
-	"static",
-	"defaultLibrary",
-	"abstract",
-	"modification",
-	"documentation",
-}
-
-for token_type, role in pairs(type_family) do
-	for _, mod in ipairs(identity_preserving_modifiers) do
-		local key = "@lsp.typemod." .. token_type .. "." .. mod
-		if not groups[key] or groups[key].link ~= role then
-			fail(
-				("Type-family typemod governance mismatch for %s: expected link %s, got %s"):format(
-					key,
-					role,
-					vim.inspect(groups[key])
-				)
-			)
-		end
-	end
-end
-
+-- DX-COLOR Semantic Authority Model Contract
+assert_eq(groups["LspForegroundPassthrough"].fg, nil, "LspForegroundPassthrough must have no foreground")
+assert_eq(groups["LspForegroundPassthrough"].link, nil, "LspForegroundPassthrough must have no link")
 assert_eq(
-	groups["@lsp.typemod.type.defaultLibrary.c"].link,
-	"DxBuiltin",
-	"C primitive defaultLibrary must link to DxBuiltin"
+	groups["@lsp.type.type.c"].link,
+	"LspForegroundPassthrough",
+	"@lsp.type.type.c must link to LspForegroundPassthrough"
 )
 assert_eq(
-	groups["@lsp.typemod.type.defaultLibrary.cpp"].link,
-	"DxBuiltin",
-	"C++ primitive defaultLibrary must link to DxBuiltin"
+	groups["@lsp.type.type.cpp"].link,
+	"LspForegroundPassthrough",
+	"@lsp.type.type.cpp must link to LspForegroundPassthrough"
+)
+assert_eq(
+	groups["@lsp.type.type.zig"].link,
+	"LspForegroundPassthrough",
+	"@lsp.type.type.zig must link to LspForegroundPassthrough"
+)
+assert_eq(
+	groups["@lsp.type.variable.rust"].link,
+	"LspForegroundPassthrough",
+	"@lsp.type.variable.rust must link to LspForegroundPassthrough"
+)
+assert_eq(
+	groups["@lsp.type.lifetime.rust"].link,
+	"LspForegroundPassthrough",
+	"@lsp.type.lifetime.rust must link to LspForegroundPassthrough"
 )
 
 -- Deprecated Style-Only Composition Contract

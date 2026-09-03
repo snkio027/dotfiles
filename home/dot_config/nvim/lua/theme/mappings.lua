@@ -142,49 +142,27 @@ function M.groups(p)
   hl["@lsp.type.escapeSequence"] = { link = "DxString" }
 
   -- ==========================================================================
-  -- 3. LSP Precedence Governance: Typemod Neutralization & Deprecated Style
+  -- 3. DX-COLOR Semantic Authority Model & Typemod Neutralization
   -- ==========================================================================
 
-  -- Type-Family Precedence Governance:
-  -- Prevents modifiers (declaration, definition, readonly, static, defaultLibrary, etc.)
-  -- from overriding the semantic identity of types.
-  local type_family = {
-    class = "DxType",
-    struct = "DxType",
-    enum = "DxType",
-    interface = "DxType",
-    type = "DxType",
-    typeParameter = "DxType",
-    typeAlias = "DxType",
-    union = "DxType",
-    selfTypeKeyword = "DxType",
-    builtinType = "DxBuiltin",
-    concept = "DxType",
-  }
+  -- Root highlight group for LSP foreground authority suppression.
+  -- Has no foreground, no style attributes, and no dotted parent,
+  -- ensuring Neovim's resolver will not fall back to parent @lsp.type.type.
+  hl["LspForegroundPassthrough"] = {}
 
-  local identity_preserving_modifiers = {
-    "declaration",
-    "definition",
-    "readonly",
-    "static",
-    "defaultLibrary",
-    "abstract",
-    "modification",
-    "documentation",
-  }
+  -- Suppress generic type foreground for languages where LSP collapses
+  -- primitive types and structured types into a generic "type" token.
+  -- This allows Tree-sitter's precise @type.builtin capture to govern foreground color.
+  hl["@lsp.type.type.c"] = { link = "LspForegroundPassthrough" }
+  hl["@lsp.type.type.cpp"] = { link = "LspForegroundPassthrough" }
+  hl["@lsp.type.type.zig"] = { link = "LspForegroundPassthrough" }
 
-  for token_type, role in pairs(type_family) do
-    for _, mod in ipairs(identity_preserving_modifiers) do
-      hl["@lsp.typemod." .. token_type .. "." .. mod] = { link = role }
-    end
-  end
-
-  -- C / C++ Primitive Refinement:
-  -- clangd emits primitives (int, double, etc.) as "type" with "defaultLibrary".
-  -- Map these filetype-specifically to DxBuiltin so standard library classes (std::vector)
-  -- remain DxType while primitives become DxBuiltin.
-  hl["@lsp.typemod.type.defaultLibrary.c"] = { link = "DxBuiltin" }
-  hl["@lsp.typemod.type.defaultLibrary.cpp"] = { link = "DxBuiltin" }
+  -- Suppress generic variable and lifetime foreground for Rust where rust-analyzer collapses:
+  -- 1) function parameters and local variables into a generic "variable" token.
+  -- 2) loop control-flow labels and type lifetimes into a generic "lifetime" token.
+  -- This allows Tree-sitter's precise queries to govern foreground color.
+  hl["@lsp.type.variable.rust"] = { link = "LspForegroundPassthrough" }
+  hl["@lsp.type.lifetime.rust"] = { link = "LspForegroundPassthrough" }
 
   hl["@lsp.typemod.variable.readonly"] = { link = "DxVariable" }
   hl["@lsp.typemod.variable.defaultLibrary"] = { link = "DxVariable" }
@@ -194,6 +172,11 @@ function M.groups(p)
   hl["@lsp.typemod.function.async"] = { link = "DxCallable" }
   hl["@lsp.typemod.method.defaultLibrary"] = { link = "DxCallable" }
   hl["@lsp.typemod.method.async"] = { link = "DxCallable" }
+
+  -- Empirical modifier exception: Rust attribute identifiers (#[must_use])
+  -- rust-analyzer emits namespace tagged with modifier attribute.
+  hl["@lsp.typemod.namespace.attribute"] = { link = "DxMeta" }
+  hl["@lsp.mod.attribute"] = { link = "DxMeta" }
 
   -- Style-only deprecated composition: strikethrough without destroying semantic identity
   hl["@lsp.mod.deprecated"] = { strikethrough = true }

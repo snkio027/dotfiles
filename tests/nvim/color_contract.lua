@@ -232,24 +232,29 @@ local function main()
 			)
 		end
 
-		local typemod_struct_decl = get_resolved_hl("@lsp.typemod.struct.declaration")
-		if typemod_struct_decl.fg ~= colors_rgb.type then
-			fail("@lsp.typemod.struct.declaration fg mismatch: expected type")
+		local passthrough_c = get_resolved_hl("@lsp.type.type.c")
+		if passthrough_c.fg ~= nil then
+			fail("@lsp.type.type.c must have nil foreground (LspForegroundPassthrough)")
 		end
 
-		local typemod_class_deflib = get_resolved_hl("@lsp.typemod.class.defaultLibrary")
-		if typemod_class_deflib.fg ~= colors_rgb.type then
-			fail("@lsp.typemod.class.defaultLibrary fg mismatch: expected type")
+		local passthrough_cpp = get_resolved_hl("@lsp.type.type.cpp")
+		if passthrough_cpp.fg ~= nil then
+			fail("@lsp.type.type.cpp must have nil foreground (LspForegroundPassthrough)")
 		end
 
-		local typemod_c_primitive = get_resolved_hl("@lsp.typemod.type.defaultLibrary.c")
-		if typemod_c_primitive.fg ~= colors_rgb.builtin then
-			fail("@lsp.typemod.type.defaultLibrary.c fg mismatch: expected builtin")
+		local passthrough_zig = get_resolved_hl("@lsp.type.type.zig")
+		if passthrough_zig.fg ~= nil then
+			fail("@lsp.type.type.zig must have nil foreground (LspForegroundPassthrough)")
 		end
 
-		local typemod_cpp_primitive = get_resolved_hl("@lsp.typemod.type.defaultLibrary.cpp")
-		if typemod_cpp_primitive.fg ~= colors_rgb.builtin then
-			fail("@lsp.typemod.type.defaultLibrary.cpp fg mismatch: expected builtin")
+		local passthrough_rust_var = get_resolved_hl("@lsp.type.variable.rust")
+		if passthrough_rust_var.fg ~= nil then
+			fail("@lsp.type.variable.rust must have nil foreground (LspForegroundPassthrough)")
+		end
+
+		local passthrough_rust_life = get_resolved_hl("@lsp.type.lifetime.rust")
+		if passthrough_rust_life.fg ~= nil then
+			fail("@lsp.type.lifetime.rust must have nil foreground (LspForegroundPassthrough)")
 		end
 
 		local typemod_fn_deprecated = get_resolved_hl("@lsp.typemod.function.deprecated")
@@ -475,11 +480,12 @@ local function main()
 		return best.hl_name, resolved_hl, inspected, candidates
 	end
 
-	--- Three-level verification:
+	--- Four-level verification:
 	--- 1. ROLE_ASSERT: asserts that the effective highlight's fg matches expected role
 	--- 2. CAPTURE_PROOF: asserts required or forbidden Tree-sitter captures (e.g. lifetime vs attribute)
-	--- 3. TOKEN_OBSERVE: logs active Tree-sitter captures and raw LSP tokens from get_at_pos()
-	local function probe_sentinel_at(bufnr, sentinel, lang)
+	--- 3. PROTOCOL_CONTRACT: asserts raw LSP token type, modifiers, and foreground authority
+	--- 4. TOKEN_OBSERVE: logs active Tree-sitter captures and raw LSP tokens from get_at_pos()
+	local function probe_sentinel_at(bufnr, sentinel, lang, client)
 		local row, col, target_line, comment_row = locate_symbolic_sentinel(bufnr, sentinel.tag, sentinel.token, lang)
 		local pos_desc = ("%s (%s:%s at L%d:C%d)"):format(
 			sentinel.desc or sentinel.tag,
@@ -497,6 +503,10 @@ local function main()
 		if not expected_hl or not expected_hl.fg then
 			fail(("Expected role highlight %s is undefined"):format(sentinel.role))
 		end
+
+		-- Ensure window viewport contains the probed position so semantic tokens extmarks are materialized
+		pcall(vim.api.nvim_win_set_cursor, 0, { row + 1, col })
+		vim.cmd.redraw()
 
 		local eff_group, eff_hl, inspected, candidates = get_effective_highlight_at_pos(bufnr, row, col)
 		if not eff_hl or not eff_hl.fg then
@@ -572,8 +582,9 @@ local function main()
 			end
 		end
 
-		-- 3. TOKEN_OBSERVE: Raw inspection logging
+		-- 3. Extract raw and client-bound LSP tokens
 		local raw_lsp_tokens = {}
+		local client_lsp_tokens = {}
 		if vim.lsp and vim.lsp.semantic_tokens and vim.lsp.semantic_tokens.get_at_pos then
 			local raw = vim.lsp.semantic_tokens.get_at_pos(bufnr, row, col)
 			for _, tok in ipairs(raw or {}) do
@@ -593,6 +604,96 @@ local function main()
 						tostring(tok.client_id or "nil")
 					)
 				)
+				if client and tok.client_id == client.id then
+					table.insert(client_lsp_tokens, tok)
+				end
+			end
+		end
+
+		-- 4. PROTOCOL_CONTRACT: Assert raw LSP tokens and foreground authority
+		if sentinel.protocol then
+			local proto = sentinel.protocol
+			local matched_tok = nil
+
+			-- If client is attached and provides semantic tokens, assert expected raw token type
+			if client and client.server_capabilities.semanticTokensProvider ~= nil then
+				if proto.expected_type then
+					for _, tok in ipairs(client_lsp_tokens) do
+						if tok.type == proto.expected_type then
+							matched_tok = tok
+							break
+						end
+					end
+					if not matched_tok then
+						local observed_types = {}
+						for _, tok in ipairs(client_lsp_tokens) do
+							table.insert(observed_types, tok.type)
+						end
+						fail(
+							(
+								"PROTOCOL_ASSERT FAILED for %s:\n"
+								.. "  Expected raw client token type: %s\n"
+								.. "  Observed client token types:    [%s]"
+							):format(pos_desc, proto.expected_type, table.concat(observed_types, ", "))
+						)
+					end
+
+					-- Assert required modifiers
+					if proto.required_modifiers then
+						for _, req_mod in ipairs(proto.required_modifiers) do
+							if not (matched_tok.modifiers and matched_tok.modifiers[req_mod]) then
+								fail(
+									("PROTOCOL_ASSERT FAILED for %s: missing required modifier '%s' on token %s"):format(
+										pos_desc,
+										req_mod,
+										proto.expected_type
+									)
+								)
+							end
+						end
+					end
+
+					-- Assert forbidden modifiers
+					if proto.forbidden_modifiers then
+						for _, forb_mod in ipairs(proto.forbidden_modifiers) do
+							if matched_tok.modifiers and matched_tok.modifiers[forb_mod] then
+								fail(
+									("PROTOCOL_ASSERT FAILED for %s: contains forbidden modifier '%s' on token %s"):format(
+										pos_desc,
+										forb_mod,
+										proto.expected_type
+									)
+								)
+							end
+						end
+					end
+				end
+			end
+
+			-- Assert winning foreground authority
+			if proto.authority then
+				local best = candidates[1]
+				if proto.authority == "lsp" then
+					if best.source ~= "semantic_tokens" then
+						fail(
+							(
+								"AUTHORITY_ASSERT FAILED for %s:\n"
+								.. "  Expected foreground authority: lsp (semantic_tokens)\n"
+								.. "  Actual winning candidate:       %s (source=%s, priority=%s)"
+							):format(pos_desc, best.hl_name, best.source, tostring(best.priority))
+						)
+					end
+				elseif proto.authority == "treesitter" then
+					if best.source ~= "treesitter" then
+						fail(
+							(
+								"AUTHORITY_ASSERT FAILED for %s:\n"
+								.. "  Expected foreground authority: treesitter\n"
+								.. "  Actual winning candidate:       %s (source=%s, priority=%s)"
+							):format(pos_desc, best.hl_name, best.source, tostring(best.priority))
+						)
+					end
+				end
 			end
 		end
 
@@ -664,17 +765,30 @@ local function main()
 			vim.lsp.semantic_tokens.refresh(bufnr)
 		end
 
+		local protocol_sentinels = {}
+		for _, s in ipairs(sentinels) do
+			if s.protocol and s.protocol.expected_type then
+				table.insert(protocol_sentinels, s)
+			end
+		end
+		local check_list = (#protocol_sentinels > 0) and protocol_sentinels or sentinels
+
 		local tokens_ready = vim.wait(15000, function()
-			for _, s in ipairs(sentinels) do
+			for _, s in ipairs(check_list) do
 				local r, c = locate_symbolic_sentinel(bufnr, s.tag, s.token, lang)
 				local raw_toks = vim.lsp.semantic_tokens.get_at_pos(bufnr, r, c)
+				local found = false
 				for _, tok in ipairs(raw_toks or {}) do
 					if tok.client_id == client.id then
-						return true
+						found = true
+						break
 					end
 				end
+				if not found then
+					return false
+				end
 			end
-			return false
+			return true
 		end, 100)
 
 		assert(
@@ -749,9 +863,9 @@ local function main()
 
 			vim.cmd.redraw()
 
-			-- Run position-level assertions and capture proofs
+			-- Run position-level assertions, capture proofs, and protocol authority contracts
 			for _, s in ipairs(spec.sentinels) do
-				probe_sentinel_at(bufnr, s, lang_key)
+				probe_sentinel_at(bufnr, s, lang_key, client)
 			end
 
 			vim.cmd.bdelete({ bang = true })

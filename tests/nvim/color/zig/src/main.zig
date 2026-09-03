@@ -27,6 +27,8 @@ pub const FrameError = error{
 // DX:SENTINEL zig.network_buffer.type
 pub const NetworkBuffer = struct {
     allocator: std.mem.Allocator,
+    // Sentinel: primitive scalar type (Builtin = Steel Blue, authority = treesitter, LSP = type)
+    // DX:SENTINEL zig.u8.builtin
     // DX:SENTINEL zig.bytes.member
     bytes: []u8,
     length: usize,

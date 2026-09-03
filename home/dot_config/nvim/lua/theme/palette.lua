@@ -1,13 +1,6 @@
 --- DX Semantic Color System (DX-COLOR-002)
---- Palette Candidate C2
----
---- Design model:
---- Primary landmarks -> Callable / Type
---- Semantic body -> Identifiers / structure / grammar
---- Context -> Constants / numbers / namespace / labels
---- Scaffolding -> Operators / punctuation / comments
----
---- High-contrast Catppuccin colors remain reserved for transient state.
+--- Palette Definition: Decouples Source Semantic Colors from State and UI Colors.
+--- Single Source of Truth for all Source Semantic Hex Literals.
 
 local M = {}
 
@@ -16,103 +9,39 @@ local M = {}
 --- @return table
 function M.resolve(c)
   return {
-    -- ========================================================================
-    -- Source Semantic Palette
-    -- ========================================================================
-    --
-    -- Mocha Base: #1E1E2E
-    --
-    -- The palette intentionally uses both luminance hierarchy and hue/chroma
-    -- separation. Not every semantic distinction needs equal visual weight.
+    -- 1. Normal Source Semantic Palette (Muted, Low-Glare, High-Ergonomics)
+    -- Contrast against Mocha Base (#1E1E2E) strictly within 4.5:1 - 8.8:1
     code = {
-      -- ----------------------------------------------------------------------
-      -- L1 — Primary Landmarks
-      -- ----------------------------------------------------------------------
-      -- Execution: warm, unmistakable, but not glaring.
-      callable = "#D8A972", -- 7.68:1
-
-      -- User-defined types: move from green-teal toward clean cyan.
-      -- Keeps the cold structural anchor without the "green" feeling.
-      type = "#78B8BC", -- 7.33:1
-
-      -- ----------------------------------------------------------------------
-      -- L2 — Semantic Body
-      -- ----------------------------------------------------------------------
-      -- Rust lifetime: cyan-blue extension of the type family.
-      lifetime = "#7DB1C3", -- 6.99:1
-
-      -- Compile-time / macro / attributes.
-      meta = "#C395B9", -- 6.50:1
-
-      -- Language grammar and control flow.
-      keyword = "#B298CE", -- 6.46:1
-
-      -- Strings: muted parchment-gold.
-      -- No green, but considerably more colored than neutral gray.
-      string = "#B09E79", -- 6.26:1
-
-      -- Members: stronger violet-periwinkle identity.
-      member = "#9D95D3", -- 5.99:1
-
-      -- Ordinary variables: blue-lilac instead of gray.
-      variable = "#8F9BC2", -- 5.96:1
-
-      -- Parameters: soft mauve, visibly distinct from local variables.
-      parameter = "#A58FB8", -- 5.64:1
-
-      -- Primitive/system types.
-      -- Strongly reduced from the former bright blue.
-      builtin = "#7396B8", -- 5.30:1
-
-      -- ----------------------------------------------------------------------
-      -- L3 — Context & Anchors
-      -- ----------------------------------------------------------------------
-      -- API/documentation prose.
-      doc = "#9298AD", -- 5.71:1
-
-      -- Modules / namespaces.
-      namespace = "#7399CB", -- 5.58:1
-
-      -- Numeric literals.
-      number = "#C18975", -- 5.55:1
-
-      -- Symbolic constants / enum variants.
-      constant = "#B88892", -- 5.45:1
-
-      -- Control-flow labels.
-      label = "#8D91A4", -- 5.25:1
-
-      -- ----------------------------------------------------------------------
-      -- L4 — Syntactic Scaffolding
-      -- ----------------------------------------------------------------------
-      -- Expression mechanics should remain available but should never become
-      -- a navigation landmark.
-      operator = "#898FA6", -- 5.11:1
-
-      -- Brackets, delimiters, separators.
-      punctuation = "#858A9F", -- 4.79:1
-
-      -- Secondary explanatory prose.
-      comment = "#81869E", -- 4.56:1
+      variable = "#B4BCD6", -- Neutral body identifiers (8.67:1)
+      callable = "#D8AA7E", -- Execution landmarks / Functions & Methods (7.79:1 Muted Amber)
+      type = "#82BCAD", -- Data model / User-defined types & structs (7.61:1 Muted Teal)
+      lifetime = "#7DB1C3", -- Type-level lifetime bindings (6.99:1 Cyan)
+      string = "#90B18F", -- Strings & regular expressions (6.89:1 Muted Sage)
+      member = "#9DA4C7", -- Object structure / Fields & properties (6.69:1 Periwinkle)
+      operator = "#9DA2B8", -- Operators & expressions (6.55:1)
+      keyword = "#B298CE", -- Grammar & control flow constructs (6.51:1 Muted Violet)
+      meta = "#C395B9", -- Compile-time macros, decorators & attributes (6.46:1 Dusty Pink)
+      builtin = "#79A6C5", -- Primitives & system types (6.30:1 Muted Blue)
+      parameter = "#A19CAF", -- Function signature boundaries (6.16:1 Muted Violet-Gray)
+      constant = "#BB929B", -- Symbolic constants & enum variants (6.02:1 Dusty Rose)
+      doc = "#9298AD", -- Documentation comments / API contracts (5.67:1)
+      namespace = "#789BBF", -- Organization / Modules & packages (5.65:1)
+      number = "#B99072", -- Numeric literals (5.65:1 Muted Brown)
+      label = "#8D91A4", -- Control-flow anchors / Loop & goto labels (5.25:1)
+      punctuation = "#858A9F", -- Delimiters & brackets (4.79:1)
+      comment = "#81869E", -- Secondary explanatory prose (4.56:1)
     },
 
-    -- ========================================================================
-    -- Transient / State Palette
-    -- ========================================================================
-    --
-    -- Bright Catppuccin accents are deliberately NOT used for normal source
-    -- semantics. Their scarcity gives runtime state much stronger salience.
+    -- 2. State & Transient Palette (High-Contrast Catppuccin Accents for Attention / Diagnostics)
     state = {
-      error = c.red,
-      warn = c.yellow,
-      info = c.sapphire,
-      hint = c.teal,
-      success = c.green,
+      error = c.red, -- Critical errors / Failures / Destructive operations
+      warn = c.yellow, -- Attention NOW / Warnings / Search targets / Debugger pause
+      info = c.sapphire, -- Informational messages
+      hint = c.teal, -- Type hints & suggestions
+      success = c.green, -- Passes / Clean status
     },
 
-    -- ========================================================================
-    -- UI Surface Palette
-    -- ========================================================================
+    -- 3. Surfaces & UI Chrome (Inherited from Catppuccin Mocha)
     ui = {
       base = c.base,
       mantle = c.mantle,

@@ -12,6 +12,8 @@ struct Buffer {
     // Sentinel: struct member field (Member = Periwinkle)
     // DX:SENTINEL c.size.member
     size_t size;
+    // Sentinel: primitive typedef (Builtin = Steel Blue, authority = treesitter, LSP = type)
+    // DX:SENTINEL c.uint8.builtin
     uint8_t data[BUFFER_CAPACITY];
 };
 
