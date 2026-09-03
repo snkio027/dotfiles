@@ -1,5 +1,5 @@
 --- DX Semantic Color System (DX-COLOR-002)
---- Palette Candidate C1
+--- Palette Candidate C2
 ---
 --- Design model:
 --- Primary landmarks -> Callable / Type
@@ -28,48 +28,41 @@ function M.resolve(c)
       -- ----------------------------------------------------------------------
       -- L1 — Primary Landmarks
       -- ----------------------------------------------------------------------
-      -- Execution landmark.
-      -- Warm amber provides immediate call-path recognition without bright
-      -- Catppuccin Yellow glare.
+      -- Execution: warm, unmistakable, but not glaring.
       callable = "#D8A972", -- 7.68:1
 
-      -- Data-model landmark.
-      -- Clean muted teal; deliberately separated from Sage strings.
-      type = "#77BEAC", -- 7.61:1
+      -- User-defined types: move from green-teal toward clean cyan.
+      -- Keeps the cold structural anchor without the "green" feeling.
+      type = "#78B8BC", -- 7.33:1
 
       -- ----------------------------------------------------------------------
       -- L2 — Semantic Body
       -- ----------------------------------------------------------------------
-      -- Rust type-level lifetime bindings.
-      -- Rare enough to remain relatively visible; belongs to cool type family.
+      -- Rust lifetime: cyan-blue extension of the type family.
       lifetime = "#7DB1C3", -- 6.99:1
 
-      -- Ordinary program state.
-      -- Reduced substantially from v2 #B4BCD6 so local variables no longer
-      -- dominate the screen.
-      variable = "#9FA7BE", -- 6.83:1
-
-      -- Literal textual data.
-      -- Calm Sage green; visibly distinct from Teal types.
-      string = "#8EAE88", -- 6.69:1
+      -- Compile-time / macro / attributes.
+      meta = "#C395B9", -- 6.50:1
 
       -- Language grammar and control flow.
       keyword = "#B298CE", -- 6.46:1
 
-      -- Compile-time/meta layer: macros, attributes, decorators.
-      meta = "#C395B9", -- 6.50:1
+      -- Strings: muted parchment-gold.
+      -- No green, but considerably more colored than neutral gray.
+      string = "#B09E79", -- 6.26:1
 
-      -- Object structure.
-      -- True violet/periwinkle shift rather than another neutral blue-gray.
-      member = "#A19AD5", -- 6.33:1
+      -- Members: stronger violet-periwinkle identity.
+      member = "#9D95D3", -- 5.99:1
+
+      -- Ordinary variables: blue-lilac instead of gray.
+      variable = "#8F9BC2", -- 5.96:1
+
+      -- Parameters: soft mauve, visibly distinct from local variables.
+      parameter = "#A58FB8", -- 5.64:1
 
       -- Primitive/system types.
-      builtin = "#79A6C5", -- 6.31:1
-
-      -- Signature boundary.
-      -- Neutral mauve-gray: recognizable but intentionally quieter than
-      -- callable/type/member.
-      parameter = "#A49AAC", -- 6.09:1
+      -- Strongly reduced from the former bright blue.
+      builtin = "#7396B8", -- 5.30:1
 
       -- ----------------------------------------------------------------------
       -- L3 — Context & Anchors
@@ -77,13 +70,10 @@ function M.resolve(c)
       -- API/documentation prose.
       doc = "#9298AD", -- 5.71:1
 
-      -- Module/package/navigation hierarchy.
-      -- Slightly more saturated blue than builtin, but lower luminance.
+      -- Modules / namespaces.
       namespace = "#7399CB", -- 5.58:1
 
-      -- Numeric data.
-      -- Terracotta family separates numbers from Amber callables while keeping
-      -- them visually subordinate.
+      -- Numeric literals.
       number = "#C18975", -- 5.55:1
 
       -- Symbolic constants / enum variants.
