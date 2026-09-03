@@ -1,58 +1,64 @@
---- DX Semantic Color System (DX-COLOR-001)
+--- DX Semantic Color System (DX-COLOR-002)
 --- Semantic Role Definitions: maps abstract program semantics to palette roles.
 --- Zero external plugin knowledge; pure semantic role contract.
 
 local M = {}
 
----@param colors table Catppuccin Mocha named palette table
+---@param p table Unified palette returned by palette.resolve()
 ---@return table<string, vim.api.keyset.highlight>
-function M.roles(colors)
+function M.roles(p)
   return {
     -- Language Grammar & Core Constructs
-    DxKeyword = { fg = colors.mauve, bold = false, italic = false },
+    DxKeyword = { fg = p.code.keyword, bold = false, italic = false },
 
     -- Execution Landmarks: Functions & Methods
-    DxCallable = { fg = colors.yellow, bold = false, italic = false },
+    DxCallable = { fg = p.code.callable, bold = false, italic = false },
 
     -- Data Models: User-defined Structs, Classes, Enums, Interfaces, Type Parameters
-    DxType = { fg = colors.teal, bold = false, italic = false },
+    DxType = { fg = p.code.type, bold = false, italic = false },
 
     -- Primitives & Builtin Types: u64, int, bool, str, float
-    DxBuiltin = { fg = colors.sapphire, bold = false, italic = false },
+    DxBuiltin = { fg = p.code.builtin, bold = false, italic = false },
+
+    -- Type-level Lifetime Bindings: Rust 'a / 'static
+    DxLifetime = { fg = p.code.lifetime, bold = false, italic = false },
 
     -- Object Structure: Fields, Properties, Members
-    DxMember = { fg = colors.lavender, bold = false, italic = false },
+    DxMember = { fg = p.code.member, bold = false, italic = false },
 
     -- Signature Boundary: Function Parameters
-    DxParameter = { fg = colors.rosewater, bold = false, italic = false },
+    DxParameter = { fg = p.code.parameter, bold = false, italic = false },
 
     -- Neutral Foreground: Local Variables (preserves low visual noise)
-    DxVariable = { fg = colors.text, bold = false, italic = false },
+    DxVariable = { fg = p.code.variable, bold = false, italic = false },
 
     -- Meta-programming: Attributes, Derive Macros, Decorators, Builtin Macros
-    DxMeta = { fg = colors.pink, bold = false, italic = false },
+    DxMeta = { fg = p.code.meta, bold = false, italic = false },
 
     -- Organizational Hierarchy: Modules, Namespaces, Packages
-    DxNamespace = { fg = colors.blue, bold = false, italic = false },
+    DxNamespace = { fg = p.code.namespace, bold = false, italic = false },
 
     -- Literals & Constants
-    DxString = { fg = colors.green, bold = false, italic = false },
-    DxNumber = { fg = colors.peach, bold = false, italic = false },
-    DxConstant = { fg = colors.flamingo, bold = false, italic = false },
+    DxString = { fg = p.code.string, bold = false, italic = false },
+    DxNumber = { fg = p.code.number, bold = false, italic = false },
+    DxConstant = { fg = p.code.constant, bold = false, italic = false },
+
+    -- Control-flow Anchors: Loop & Goto Labels
+    DxLabel = { fg = p.code.label, bold = false, italic = false },
 
     -- Structural Syntax & Operators
-    DxOperator = { fg = colors.subtext1, bold = false, italic = false },
-    DxPunctuation = { fg = colors.subtext0, bold = false, italic = false },
+    DxOperator = { fg = p.code.operator, bold = false, italic = false },
+    DxPunctuation = { fg = p.code.punctuation, bold = false, italic = false },
 
     -- Comments & Documentation
-    DxComment = { fg = colors.overlay1, italic = true },
-    DxDocComment = { fg = colors.subtext0, italic = true },
+    DxComment = { fg = p.code.comment, italic = true },
+    DxDocComment = { fg = p.code.doc, italic = true },
 
-    -- Diagnostics & Transient States (Red Scarcity: Red strictly reserved for DxError)
-    DxError = { fg = colors.red, bold = false, italic = false },
-    DxWarn = { fg = colors.yellow, bold = false, italic = false },
-    DxInfo = { fg = colors.sapphire, bold = false, italic = false },
-    DxHint = { fg = colors.teal, bold = false, italic = false },
+    -- Diagnostics & Transient States (Red Scarcity & Yellow Scarcity Enforced)
+    DxError = { fg = p.state.error, bold = false, italic = false },
+    DxWarn = { fg = p.state.warn, bold = false, italic = false },
+    DxInfo = { fg = p.state.info, bold = false, italic = false },
+    DxHint = { fg = p.state.hint, bold = false, italic = false },
   }
 end
 

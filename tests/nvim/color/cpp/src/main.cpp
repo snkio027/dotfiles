@@ -12,10 +12,14 @@
 #include <string_view>
 #include <vector>
 
+// Sentinel: object-like macro (Meta = Dusty Pink)
+// DX:SENTINEL cpp.buffer_capacity.macro
+#define BUFFER_CAPACITY 4096
+
 namespace dx::network {
 
-// Constant definition
-inline constexpr std::size_t kDefaultBufferSize = 8192;
+// Constant definition using object macro
+inline constexpr std::size_t kDefaultBufferSize = BUFFER_CAPACITY;
 
 // Enum class
 enum class ConnectionState : std::uint8_t {
@@ -56,6 +60,15 @@ public:
         if (raw_header.empty()) {
             return std::nullopt;
         }
+
+        int retry_count = 2;
+        // Sentinel: control-flow goto label (Label = Neutral Slate)
+        // DX:SENTINEL cpp.retry.label
+    retry:
+        if (retry_count-- > 0) {
+            goto retry;
+        }
+
         state_ = ConnectionState::Connected;
         return Header{
             .key = std::string(raw_header),
@@ -65,7 +78,7 @@ public:
 
 private:
     std::size_t max_payload_;
-    // Sentinel: member variable definition (Member = Lavender)
+    // Sentinel: member variable definition (Member = Periwinkle)
     // DX:SENTINEL cpp.state.member
     ConnectionState state_;
 };
@@ -74,7 +87,7 @@ private:
 // DX:SENTINEL cpp.log_diagnostic.fn
 template <Printable T>
 void log_diagnostic(const T& message, std::uint32_t severity) {
-    // Local variable (Neutral text)
+    // Local variable (Neutral body)
     const double timestamp = 123.456;
     std::cout << "[" << timestamp << "] (" << severity << "): " << message << "\n";
 }
@@ -88,7 +101,7 @@ int main() {
     const std::string sample_data = "Authorization: Bearer xyz";
     PacketDecoder decoder{kDefaultBufferSize};
 
-    // Method call: decoder.decode() -> Yellow
+    // Method call: decoder.decode() -> Muted Amber
     auto header = decoder.decode(sample_data);
     if (header.has_value()) {
         log_diagnostic(header->key, 1);

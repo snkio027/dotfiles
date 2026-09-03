@@ -79,6 +79,16 @@ pub fn main() !void {
         return err;
     };
 
+    var counter: usize = 0;
+    // Sentinel: labeled while loop (Label = Neutral Slate)
+    // DX:SENTINEL zig.drain.label
+    drain: while (true) {
+        counter += 1;
+        if (counter >= 3) {
+            break :drain;
+        }
+    }
+
     const size = try processMessage(u64, 42);
-    std.debug.print("Bytes: {d}, Item size: {d}\n", .{ written, size });
+    std.debug.print("Bytes: {d}, Item size: {d}, Counter: {d}\n", .{ written, size, counter });
 }

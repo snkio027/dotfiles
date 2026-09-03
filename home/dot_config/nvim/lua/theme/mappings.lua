@@ -1,12 +1,13 @@
---- DX Semantic Color System (DX-COLOR-001)
+--- DX Semantic Color System (DX-COLOR-002)
 --- External highlight namespace mappings: maps Tree-sitter, LSP semantic tokens,
---- editor UI, diagnostics, and plugins to the Dx* semantic layer.
+--- editor UI, diagnostics, and plugins to abstract Dx* semantic roles.
+--- Completely decoupled from Dx* role definitions ({ link = "DxRole" }).
 
 local M = {}
 
----@param colors table Catppuccin Mocha named palette table
+---@param p table Unified palette returned by palette.resolve()
 ---@return table<string, vim.api.keyset.highlight>
-function M.mappings(colors)
+function M.groups(p)
   local hl = {}
 
   -- ==========================================================================
@@ -38,10 +39,12 @@ function M.mappings(colors)
   hl["@function.builtin.zig"] = { link = "DxMeta" }
   hl["@constructor"] = { link = "DxCallable" }
 
-  -- Data Models: User Types & Primitives
+  -- Data Models: User Types, Primitives, Lifetimes
   hl["@type"] = { link = "DxType" }
   hl["@type.definition"] = { link = "DxType" }
   hl["@type.builtin"] = { link = "DxBuiltin" }
+  hl["@type.lifetime"] = { link = "DxLifetime" }
+  hl["@type.lifetime.rust"] = { link = "DxLifetime" }
 
   -- Variables, Parameters, Members
   hl["@variable"] = { link = "DxVariable" }
@@ -56,12 +59,20 @@ function M.mappings(colors)
 
   -- Meta-programming: Attributes, Macros, Decorators
   hl["@attribute"] = { link = "DxMeta" }
+  hl["@attribute.builtin"] = { link = "DxMeta" }
   hl["@function.macro"] = { link = "DxMeta" }
+  hl["@constant.macro"] = { link = "DxMeta" }
+
+  -- Control-flow Anchors
+  hl["@label"] = { link = "DxLabel" }
 
   -- Literals
   hl["@string"] = { link = "DxString" }
   hl["@string.documentation"] = { link = "DxDocComment" }
+  hl["@string.regexp"] = { link = "DxString" }
+  hl["@string.escape"] = { link = "DxString" }
   hl["@character"] = { link = "DxString" }
+  hl["@character.special"] = { link = "DxPunctuation" }
   hl["@number"] = { link = "DxNumber" }
   hl["@number.float"] = { link = "DxNumber" }
   hl["@boolean"] = { link = "DxConstant" }
@@ -83,10 +94,12 @@ function M.mappings(colors)
   hl["@comment.note"] = { link = "DxInfo" }
 
   -- ==========================================================================
-  -- 2. LSP Semantic Tokens: Base Standard Closure
+  -- 2. LSP Semantic Tokens: Standard Closure & Observed Server Adapters
   -- ==========================================================================
 
+  -- Standard LSP Types
   hl["@lsp.type.keyword"] = { link = "DxKeyword" }
+  hl["@lsp.type.modifier"] = { link = "DxKeyword" }
   hl["@lsp.type.function"] = { link = "DxCallable" }
   hl["@lsp.type.method"] = { link = "DxCallable" }
   hl["@lsp.type.class"] = { link = "DxType" }
@@ -103,18 +116,21 @@ function M.mappings(colors)
   hl["@lsp.type.decorator"] = { link = "DxMeta" }
   hl["@lsp.type.enumMember"] = { link = "DxConstant" }
   hl["@lsp.type.string"] = { link = "DxString" }
+  hl["@lsp.type.regexp"] = { link = "DxString" }
   hl["@lsp.type.number"] = { link = "DxNumber" }
   hl["@lsp.type.operator"] = { link = "DxOperator" }
   hl["@lsp.type.comment"] = { link = "DxComment" }
+  hl["@lsp.type.event"] = { link = "DxMember" }
 
-  -- Optional server-specific adapter (non-standard token fallback)
+  -- Observed / Server-specific Adapters
+  hl["@lsp.type.label"] = { link = "DxLabel" }
+  hl["@lsp.type.lifetime"] = { link = "DxLifetime" }
   hl["@lsp.type.builtinType"] = { link = "DxBuiltin" }
 
   -- ==========================================================================
   -- 3. LSP Precedence Governance: Typemod Neutralization & Deprecated Style
   -- ==========================================================================
 
-  -- Neutralize high-precedence modifiers (typemod priority 127) to maintain neutrality
   hl["@lsp.typemod.variable.readonly"] = { link = "DxVariable" }
   hl["@lsp.typemod.variable.defaultLibrary"] = { link = "DxVariable" }
   hl["@lsp.typemod.variable.static"] = { link = "DxVariable" }
@@ -151,47 +167,47 @@ function M.mappings(colors)
   end
 
   -- ==========================================================================
-  -- 4. Editor UI Chrome (Quiet, receding background)
+  -- 4. Editor UI Chrome (Quiet, Receding Background)
   -- ==========================================================================
 
-  hl["CursorLine"] = { bg = colors.surface0 }
-  hl["CursorLineNr"] = { fg = colors.lavender }
-  hl["Visual"] = { bg = colors.surface2 }
+  hl["CursorLine"] = { bg = p.ui.surface0 }
+  hl["CursorLineNr"] = { fg = p.code.member }
+  hl["Visual"] = { bg = p.ui.surface2 }
 
-  -- Search: high-contrast target, softer background matches
-  hl["CurSearch"] = { fg = colors.base, bg = colors.yellow }
-  hl["IncSearch"] = { fg = colors.base, bg = colors.yellow }
-  hl["Search"] = { fg = colors.text, bg = colors.surface2 }
+  -- Search: high-contrast target, softer background matches (Yellow Scarcity applied)
+  hl["CurSearch"] = { fg = p.ui.base, bg = p.state.warn }
+  hl["IncSearch"] = { fg = p.ui.base, bg = p.state.warn }
+  hl["Search"] = { fg = p.ui.text, bg = p.ui.surface2 }
 
   -- Floating UI & Separators
-  hl["NormalFloat"] = { bg = colors.mantle }
-  hl["FloatBorder"] = { fg = colors.surface1, bg = colors.mantle }
-  hl["WinSeparator"] = { fg = colors.surface0 }
-  hl["Pmenu"] = { bg = colors.mantle, fg = colors.text }
-  hl["PmenuSel"] = { bg = colors.surface1, fg = colors.text }
+  hl["NormalFloat"] = { bg = p.ui.mantle }
+  hl["FloatBorder"] = { fg = p.ui.surface1, bg = p.ui.mantle }
+  hl["WinSeparator"] = { fg = p.ui.surface0 }
+  hl["Pmenu"] = { bg = p.ui.mantle, fg = p.ui.text }
+  hl["PmenuSel"] = { bg = p.ui.surface1, fg = p.ui.text }
 
   -- Indent Guides (Snacks indent)
-  hl["SnacksIndent"] = { fg = colors.surface1 }
-  hl["SnacksIndentScope"] = { fg = colors.lavender }
+  hl["SnacksIndent"] = { fg = p.ui.surface1 }
+  hl["SnacksIndentScope"] = { fg = p.code.member }
 
   -- ==========================================================================
   -- 5. Diagnostics: State Signs & Undercurls (Preserve Token Foreground)
   -- ==========================================================================
 
-  hl["DiagnosticError"] = { fg = colors.red }
-  hl["DiagnosticWarn"] = { fg = colors.yellow }
-  hl["DiagnosticInfo"] = { fg = colors.sapphire }
-  hl["DiagnosticHint"] = { fg = colors.teal }
+  hl["DiagnosticError"] = { fg = p.state.error }
+  hl["DiagnosticWarn"] = { fg = p.state.warn }
+  hl["DiagnosticInfo"] = { fg = p.state.info }
+  hl["DiagnosticHint"] = { fg = p.state.hint }
 
-  hl["DiagnosticUnderlineError"] = { undercurl = true, sp = colors.red }
-  hl["DiagnosticUnderlineWarn"] = { undercurl = true, sp = colors.yellow }
-  hl["DiagnosticUnderlineInfo"] = { undercurl = true, sp = colors.sapphire }
-  hl["DiagnosticUnderlineHint"] = { undercurl = true, sp = colors.teal }
+  hl["DiagnosticUnderlineError"] = { undercurl = true, sp = p.state.error }
+  hl["DiagnosticUnderlineWarn"] = { undercurl = true, sp = p.state.warn }
+  hl["DiagnosticUnderlineInfo"] = { undercurl = true, sp = p.state.info }
+  hl["DiagnosticUnderlineHint"] = { undercurl = true, sp = p.state.hint }
 
-  hl["DiagnosticVirtualTextError"] = { fg = colors.red }
-  hl["DiagnosticVirtualTextWarn"] = { fg = colors.yellow }
-  hl["DiagnosticVirtualTextInfo"] = { fg = colors.sapphire }
-  hl["DiagnosticVirtualTextHint"] = { fg = colors.teal }
+  hl["DiagnosticVirtualTextError"] = { fg = p.state.error }
+  hl["DiagnosticVirtualTextWarn"] = { fg = p.state.warn }
+  hl["DiagnosticVirtualTextInfo"] = { fg = p.state.info }
+  hl["DiagnosticVirtualTextHint"] = { fg = p.state.hint }
 
   -- ==========================================================================
   -- 6. Completion (blink.cmp)
@@ -219,62 +235,71 @@ function M.mappings(colors)
   hl["BlinkCmpKindVariable"] = { link = "DxVariable" }
   hl["BlinkCmpKindValue"] = { link = "DxVariable" }
   hl["BlinkCmpKindText"] = { link = "DxVariable" }
-  hl["BlinkCmpKindKeyword"] = { fg = colors.subtext0 }
-  hl["BlinkCmpKindFile"] = { fg = colors.subtext0 }
-  hl["BlinkCmpKindFolder"] = { fg = colors.subtext0 }
+  hl["BlinkCmpKindKeyword"] = { fg = p.ui.subtext0 }
+  hl["BlinkCmpKindFile"] = { fg = p.ui.subtext0 }
+  hl["BlinkCmpKindFolder"] = { fg = p.ui.subtext0 }
 
   -- ==========================================================================
   -- 7. Git & Diff State Contract
   -- ==========================================================================
 
-  hl["GitSignsAdd"] = { fg = colors.green }
-  hl["GitSignsChange"] = { fg = colors.yellow }
-  hl["GitSignsDelete"] = { fg = colors.red }
+  hl["GitSignsAdd"] = { fg = p.state.success }
+  hl["GitSignsChange"] = { fg = p.state.warn }
+  hl["GitSignsDelete"] = { fg = p.state.error }
 
-  hl["diffAdded"] = { fg = colors.green }
-  hl["diffChanged"] = { fg = colors.yellow }
-  hl["diffRemoved"] = { fg = colors.red }
+  hl["diffAdded"] = { fg = p.state.success }
+  hl["diffChanged"] = { fg = p.state.warn }
+  hl["diffRemoved"] = { fg = p.state.error }
 
   -- ==========================================================================
   -- 8. DAP & Neotest State Contract
   -- ==========================================================================
 
   -- Neotest State
-  hl["NeotestPassed"] = { fg = colors.green }
-  hl["NeotestFailed"] = { fg = colors.red }
-  hl["NeotestRunning"] = { fg = colors.yellow }
-  hl["NeotestSkipped"] = { fg = colors.overlay1 }
-  hl["NeotestMarked"] = { fg = colors.peach }
-  hl["NeotestFocused"] = { fg = colors.lavender }
+  hl["NeotestPassed"] = { fg = p.state.success }
+  hl["NeotestFailed"] = { fg = p.state.error }
+  hl["NeotestRunning"] = { fg = p.state.warn }
+  hl["NeotestSkipped"] = { fg = p.ui.overlay1 }
+  hl["NeotestMarked"] = { fg = p.code.number }
+  hl["NeotestFocused"] = { fg = p.code.member }
 
   -- DAP State
-  hl["DapBreakpoint"] = { fg = colors.red }
-  hl["DapBreakpointCondition"] = { fg = colors.peach }
-  hl["DapBreakpointRejected"] = { fg = colors.overlay1 }
-  hl["DapLogPoint"] = { fg = colors.sapphire }
-  hl["DapStopped"] = { fg = colors.yellow }
-  hl["DapStoppedLine"] = { bg = colors.surface1 }
+  hl["DapBreakpoint"] = { fg = p.state.error }
+  hl["DapBreakpointCondition"] = { fg = p.code.number }
+  hl["DapBreakpointRejected"] = { fg = p.ui.overlay1 }
+  hl["DapLogPoint"] = { fg = p.state.info }
+  hl["DapStopped"] = { fg = p.state.warn }
+  hl["DapStoppedLine"] = { bg = p.ui.surface1 }
 
   -- ==========================================================================
   -- 9. Markdown Presentation (render-markdown)
   -- ==========================================================================
 
-  hl["RenderMarkdownCodeInline"] = { fg = colors.peach, bg = "NONE" }
-  hl["RenderMarkdownDash"] = { fg = colors.surface1 }
-  hl["RenderMarkdownQuote"] = { fg = colors.mauve }
+  hl["RenderMarkdownCodeInline"] = { fg = p.code.number, bg = "NONE" }
+  hl["RenderMarkdownDash"] = { fg = p.ui.surface1 }
+  hl["RenderMarkdownQuote"] = { fg = p.code.keyword }
 
-  hl["RenderMarkdownH1"] = { fg = colors.mauve, bold = true }
-  hl["RenderMarkdownH2"] = { fg = colors.lavender, bold = true }
-  hl["RenderMarkdownH3"] = { fg = colors.teal, bold = true }
+  hl["RenderMarkdownH1"] = { fg = p.code.keyword, bold = true }
+  hl["RenderMarkdownH2"] = { fg = p.code.member, bold = true }
+  hl["RenderMarkdownH3"] = { fg = p.code.type, bold = true }
 
   -- Admonitions
-  hl["RenderMarkdownInfo"] = { fg = colors.sapphire }
-  hl["RenderMarkdownSuccess"] = { fg = colors.teal }
-  hl["RenderMarkdownHint"] = { fg = colors.mauve }
-  hl["RenderMarkdownWarn"] = { fg = colors.yellow }
-  hl["RenderMarkdownError"] = { fg = colors.red }
+  hl["RenderMarkdownInfo"] = { fg = p.state.info }
+  hl["RenderMarkdownSuccess"] = { fg = p.state.hint }
+  hl["RenderMarkdownHint"] = { fg = p.code.keyword }
+  hl["RenderMarkdownWarn"] = { fg = p.state.warn }
+  hl["RenderMarkdownError"] = { fg = p.state.error }
 
   return hl
+end
+
+--- Backward compatibility alias
+--- @param colors table Catppuccin Mocha palette table
+--- @return table<string, vim.api.keyset.highlight>
+function M.mappings(colors)
+  local palette_mod = require("theme.palette")
+  local p = palette_mod.resolve(colors)
+  return M.groups(p)
 end
 
 return M
