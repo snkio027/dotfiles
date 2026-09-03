@@ -83,6 +83,7 @@ assert_container_state() {
         nvim --headless "+luafile tests/nvim/startup_policy.lua" \
             "+luafile tests/nvim/smoke.lua" +qa
         DOTFILES_STRICT_LSP=1 nvim -n --headless "+luafile tests/nvim/run_contract.lua" "tests/nvim/color_contract.lua"
+        bash tests/nvim/color/validate_fixtures.sh
     ) >"$nvim_log" 2>&1 || {
         cat "$nvim_log" >&2
         fail "Neovim warm smoke failed"

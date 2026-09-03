@@ -293,13 +293,4 @@ function M.groups(p)
   return hl
 end
 
---- Backward compatibility alias
---- @param colors table Catppuccin Mocha palette table
---- @return table<string, vim.api.keyset.highlight>
-function M.mappings(colors)
-  local palette_mod = require("theme.palette")
-  local p = palette_mod.resolve(colors)
-  return M.groups(p)
-end
-
 return M

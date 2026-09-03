@@ -1,6 +1,7 @@
 --- DX Semantic Color System (DX-COLOR-002)
 --- Tier-1 Unit Contract: Standalone, fast, isolated verification of semantic roles,
---- mappings, contrast budget, source-state separation, and sentinel locators.
+--- mappings, contrast budget, source-state separation, typemod governance,
+--- assembly completeness, and sentinel locators.
 --- Runnable via:
 --- nvim -u NONE -i NONE --headless "+set rtp^=$PWD/home/dot_config/nvim" "+luafile tests/nvim/color_unit_contract.lua" +qa
 
@@ -240,22 +241,22 @@ assert(not ok_r, "Negative control failure: verify_red_scarcity must fail when D
 
 local repo_root = vim.fs.root(0, ".git") or vim.fn.getcwd()
 
-local function check_no_raw_hex_in_file(relpath)
-	local abspath = repo_root .. "/" .. relpath
-	local f = io.open(abspath, "r")
-	if not f then
-		fail("Could not read file for raw hex check: " .. relpath)
-	end
-	local content = f:read("*a")
-	f:close()
-	local found = content:match("#[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]")
-	if found then
-		fail(("No Raw Hex Outside Palette violation in %s: found literal %s"):format(relpath, found))
+local theme_dir = repo_root .. "/home/dot_config/nvim/lua/theme"
+for name, type_str in vim.fs.dir(theme_dir) do
+	if type_str == "file" and name:match("%.lua$") and name ~= "palette.lua" then
+		local abspath = theme_dir .. "/" .. name
+		local f = io.open(abspath, "r")
+		if not f then
+			fail("Could not read file for raw hex check: " .. abspath)
+		end
+		local content = f:read("*a")
+		f:close()
+		local found = content:match("#[0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F][0-9a-fA-F]")
+		if found then
+			fail(("No Raw Hex Outside Palette violation in %s: found literal %s"):format(name, found))
+		end
 	end
 end
-
-check_no_raw_hex_in_file("home/dot_config/nvim/lua/theme/semantic.lua")
-check_no_raw_hex_in_file("home/dot_config/nvim/lua/theme/init.lua")
 
 -- Namespace Disjointness
 for k, _ in pairs(roles) do
@@ -270,7 +271,7 @@ for k, _ in pairs(groups) do
 end
 
 -- ==========================================================================
--- 7. Validate Tree-sitter, LSP, and UI Group Mappings
+-- 7. Validate Tree-sitter, LSP Base, Typemod Governance, and Extra Groups
 -- ==========================================================================
 
 local required_ts = {
@@ -354,6 +355,118 @@ for token, expected_role in pairs(required_lsp) do
 				vim.inspect(groups[token])
 			)
 		)
+	end
+end
+
+-- Typemod Precedence Governance (Neutralization of overriding modifiers)
+local required_typemods = {
+	["@lsp.typemod.variable.readonly"] = "DxVariable",
+	["@lsp.typemod.variable.defaultLibrary"] = "DxVariable",
+	["@lsp.typemod.variable.static"] = "DxVariable",
+	["@lsp.typemod.property.readonly"] = "DxMember",
+	["@lsp.typemod.function.defaultLibrary"] = "DxCallable",
+	["@lsp.typemod.function.async"] = "DxCallable",
+	["@lsp.typemod.method.defaultLibrary"] = "DxCallable",
+	["@lsp.typemod.method.async"] = "DxCallable",
+}
+
+for token, expected_role in pairs(required_typemods) do
+	if not groups[token] or groups[token].link ~= expected_role then
+		fail(
+			("Typemod governance mapping mismatch for %s: expected link %s, got %s"):format(
+				token,
+				expected_role,
+				vim.inspect(groups[token])
+			)
+		)
+	end
+end
+
+-- Deprecated Style-Only Composition Contract
+assert_eq(groups["@lsp.mod.deprecated"].strikethrough, true, "@lsp.mod.deprecated must have strikethrough enabled")
+assert_eq(groups["@lsp.mod.deprecated"].fg, nil, "@lsp.mod.deprecated must not force a foreground color")
+
+local governed_lsp_types = {
+	"function",
+	"method",
+	"class",
+	"struct",
+	"enum",
+	"interface",
+	"type",
+	"typeParameter",
+	"property",
+	"parameter",
+	"variable",
+	"namespace",
+	"macro",
+	"decorator",
+	"enumMember",
+	"string",
+	"number",
+}
+for _, token_type in ipairs(governed_lsp_types) do
+	local key = "@lsp.typemod." .. token_type .. ".deprecated"
+	if not groups[key] then
+		fail("Missing governed deprecated typemod mapping: " .. key)
+	end
+	if not groups[key].strikethrough then
+		fail(key .. " must have strikethrough enabled")
+	end
+	if groups[key].fg ~= nil then
+		fail(key .. " must not override foreground color")
+	end
+end
+
+-- Completion, Editor UI, Diagnostics, Git, DAP, Neotest, Markdown Groups
+local required_extras = {
+	"BlinkCmpKindFunction",
+	"BlinkCmpKindClass",
+	"BlinkCmpKindField",
+	"BlinkCmpKindVariable",
+	"CursorLine",
+	"CursorLineNr",
+	"CurSearch",
+	"NormalFloat",
+	"FloatBorder",
+	"SnacksIndent",
+	"SnacksIndentScope",
+	"DiagnosticError",
+	"DiagnosticUnderlineError",
+	"DiagnosticWarn",
+	"DiagnosticUnderlineWarn",
+	"GitSignsAdd",
+	"GitSignsChange",
+	"GitSignsDelete",
+	"diffAdded",
+	"diffChanged",
+	"diffRemoved",
+	"NeotestPassed",
+	"NeotestFailed",
+	"NeotestRunning",
+	"DapBreakpoint",
+	"DapStopped",
+	"RenderMarkdownCodeInline",
+	"RenderMarkdownDash",
+	"RenderMarkdownQuote",
+}
+
+for _, extra in ipairs(required_extras) do
+	if not groups[extra] then
+		fail("Missing required extra highlight group mapping: " .. extra)
+	end
+end
+
+-- Theme Highlights Final Assembly Completeness
+local full_hl = theme.highlights(colors)
+for role, _ in pairs(roles) do
+	if not full_hl[role] then
+		fail("Combined theme.highlights() is missing semantic role: " .. role)
+	end
+end
+for group, _ in pairs(groups) do
+	if not full_hl[group] then
+		fail("Combined theme.highlights() is missing mapping group: " .. group)
 	end
 end
 
