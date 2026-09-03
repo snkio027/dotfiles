@@ -38,9 +38,9 @@ cd "$REPO_ROOT"
 run_nvim lazy-restore "+luafile tests/nvim/restore_lock.lua" "+Lazy! restore" \
     "+luafile tests/nvim/provision.lua" +qa
 run_nvim startup-policy "+luafile tests/nvim/startup_policy.lua" +qa
-run_nvim color-unit "+set rtp^=$PWD/home/dot_config/nvim" "+luafile tests/nvim/color_unit_contract.lua" +qa
+run_nvim color-unit "-n" "+set rtp^=$PWD/home/dot_config/nvim" "+luafile tests/nvim/run_contract.lua" "tests/nvim/color_unit_contract.lua"
 run_nvim smoke "+luafile tests/nvim/smoke.lua" +qa
-run_nvim color-contract "+luafile tests/nvim/color_contract.lua" +qa
+run_nvim color-contract "-n" "+luafile tests/nvim/run_contract.lua" "tests/nvim/color_contract.lua"
 
 if grep -ERni 'Package is already installing|MasonToolsStartingInstall|MasonToolsUpdateCompleted|^Installing tools:|^Updating tools:' \
     "$LOG_DIR/lazy-restore.log" "$LOG_DIR/startup-policy.log" "$LOG_DIR/smoke.log" \

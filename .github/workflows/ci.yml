@@ -182,7 +182,7 @@ jobs:
           find . -path ./.git -prune -o -type f \( -name '*.yml' -o -name '*.yaml' \) -print0 | xargs -0 -n1 ruby -e 'require "yaml"; YAML.load_file(ARGV.fetch(0))'
           find home/dot_config .github brew -type f -name '*.toml' -print0 | xargs -0 taplo format --check
           stylua --check home/dot_config/nvim tests/nvim
-          nvim -u NONE -i NONE --headless "+set rtp^=$PWD/home/dot_config/nvim" "+luafile tests/nvim/color_unit_contract.lua" +qa
+          nvim -n -u NONE -i NONE --headless "+set rtp^=$PWD/home/dot_config/nvim" "+luafile tests/nvim/run_contract.lua" "tests/nvim/color_unit_contract.lua"
           hadolint --failure-threshold error .devcontainer/Dockerfile
 
           yazi_version="$(yazi --version)"
@@ -433,7 +433,7 @@ jobs:
             nvim --headless "+Lazy! sync" "+luafile tests/nvim/provision.lua" +qa
             nvim --headless "+MasonToolsUpdateSync" +qa
             nvim --headless "+luafile tests/nvim/smoke.lua" +qa
-            nvim --headless "+luafile tests/nvim/color_contract.lua" +qa
+            nvim -n --headless "+luafile tests/nvim/run_contract.lua" "tests/nvim/color_contract.lua"
           } 2>&1 | tee "$rolling_log"
           if grep -Fqi 'Package is already installing' "$rolling_log"; then
             echo "::error::Concurrent Mason installation detected."

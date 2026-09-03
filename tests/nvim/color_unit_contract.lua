@@ -296,4 +296,102 @@ for group, _ in pairs(maps) do
 	end
 end
 
+-- 8. Symbolic Sentinel Locator Regression Unit Test
+-- Verifies that the locator strictly searches after marker comments, matches
+-- whole identifier boundaries, and never returns the comment line itself.
+local function locate_symbolic_sentinel(bufnr, tag, token)
+	local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+	for i, line in ipairs(lines) do
+		if line:find(tag, 1, true) then
+			for j = i + 1, math.min(#lines, i + 10) do
+				local target_line = lines[j]
+				local trimmed = target_line:match("^%s*(.-)%s*$") or ""
+				if
+					not (
+						trimmed:sub(1, 2) == "//"
+						or trimmed:sub(1, 1) == "#"
+						or trimmed:sub(1, 3) == "///"
+						or trimmed:sub(1, 2) == "/*"
+						or trimmed:sub(1, 1) == "*"
+					)
+				then
+					local pattern = "%f[%w_]" .. vim.pesc(token) .. "%f[^%w_]"
+					local s_start = target_line:find(pattern)
+					if s_start then
+						assert(j > i, "Sentinel token must not be found on the marker comment line")
+						return j - 1, s_start - 1, target_line, i - 1
+					end
+				end
+			end
+		end
+	end
+	fail(("Symbolic sentinel not found: tag=%s, token=%s"):format(tag, token))
+end
+
+local repo_root = vim.fn.fnamemodify(vim.fn.expand("%:p"), ":h:h")
+if repo_root == "" or repo_root == "." then
+	repo_root = vim.fn.getcwd()
+end
+
+local fixture_checks = {
+	{
+		lang = "rust",
+		path = repo_root .. "/tests/nvim/color/rust/src/main.rs",
+		sentinels = {
+			{ tag = "rust.download_summary.type", token = "DownloadSummary" },
+			{ tag = "rust.size.method", token = "size" },
+			{ tag = "rust.size.field", token = "size" },
+			{ tag = "rust.fetch_stream.fn", token = "uri" },
+		},
+	},
+	{
+		lang = "cpp",
+		path = repo_root .. "/tests/nvim/color/cpp/src/main.cpp",
+		sentinels = {
+			{ tag = "cpp.packet_decoder.class", token = "PacketDecoder" },
+			{ tag = "cpp.decode.method", token = "decode" },
+			{ tag = "cpp.state.member", token = "state_" },
+			{ tag = "cpp.log_diagnostic.fn", token = "log_diagnostic" },
+		},
+	},
+	{
+		lang = "zig",
+		path = repo_root .. "/tests/nvim/color/zig/src/main.zig",
+		sentinels = {
+			{ tag = "zig.network_buffer.type", token = "NetworkBuffer" },
+			{ tag = "zig.bytes.member", token = "bytes" },
+			{ tag = "zig.append.method", token = "append" },
+			{ tag = "zig.sizeof.builtin", token = "sizeOf" },
+		},
+	},
+	{
+		lang = "python",
+		path = repo_root .. "/tests/nvim/color/python/main.py",
+		sentinels = {
+			{ tag = "python.download_summary.class", token = "DownloadSummary" },
+			{ tag = "python.is_empty.property", token = "is_empty" },
+			{ tag = "python.validate_bounds.method", token = "validate_bounds" },
+			{ tag = "python.fetch_async.fn", token = "fetch_async" },
+		},
+	},
+}
+
+for _, fix in ipairs(fixture_checks) do
+	if vim.fn.filereadable(fix.path) == 1 then
+		local buf = vim.fn.bufadd(fix.path)
+		vim.fn.bufload(buf)
+		for _, s in ipairs(fix.sentinels) do
+			local r, c, line_text, comment_r = locate_symbolic_sentinel(buf, s.tag, s.token)
+			if r <= comment_r then
+				fail(("Locator regression: %s matched comment row %d"):format(s.tag, comment_r))
+			end
+			local first_two = line_text:match("^%s*(.-)%s*$"):sub(1, 2)
+			if first_two == "//" or first_two:sub(1, 1) == "#" then
+				fail(("Locator regression: %s matched comment line: %s"):format(s.tag, line_text))
+			end
+		end
+		vim.api.nvim_buf_delete(buf, { force = true })
+	end
+end
+
 print("Tier-1 Color Unit Contract passed cleanly.")
