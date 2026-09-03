@@ -26,6 +26,8 @@ static int decode(
         return -1;
     }
 
+    // Sentinel: primitive system type (Builtin = Steel Blue, type + defaultLibrary)
+    // DX:SENTINEL c.int.builtin
     int retry_count = 3;
 
     // Sentinel: control-flow goto label (Label = Neutral Slate)

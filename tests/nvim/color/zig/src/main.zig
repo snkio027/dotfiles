@@ -30,6 +30,8 @@ pub const NetworkBuffer = struct {
     // DX:SENTINEL zig.bytes.member
     bytes: []u8,
     length: usize,
+    // Sentinel: enum type reference (Type = Cyan, enum token)
+    // DX:SENTINEL zig.protocol_state.type
     state: ProtocolState,
 
     pub fn init(allocator: std.mem.Allocator, initial_capacity: usize) !NetworkBuffer {

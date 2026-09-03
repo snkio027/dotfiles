@@ -55,6 +55,12 @@ local M = {
 					forbidden_ts_capture = "type.lifetime.rust",
 				},
 				{
+					tag = "rust.duration.type",
+					token = "Duration",
+					role = "DxType",
+					desc = "Rust stdlib struct type with defaultLibrary (Duration)",
+				},
+				{
 					tag = "rust.dispatch.label",
 					token = "dispatch",
 					role = "DxLabel",
@@ -97,6 +103,12 @@ local M = {
 					token = "buffer",
 					role = "DxParameter",
 					desc = "C function parameter pointer (struct Buffer *buffer)",
+				},
+				{
+					tag = "c.int.builtin",
+					token = "int",
+					role = "DxBuiltin",
+					desc = "C primitive scalar type with defaultLibrary (int)",
 				},
 				{
 					tag = "c.retry.label",
@@ -143,6 +155,24 @@ local M = {
 					desc = "C++ standalone function definition",
 				},
 				{
+					tag = "cpp.printable.concept",
+					token = "Printable",
+					role = "DxType",
+					desc = "C++20 concept definition (Printable)",
+				},
+				{
+					tag = "cpp.vector.type",
+					token = "vector",
+					role = "DxType",
+					desc = "C++ stdlib template class with defaultLibrary (std::vector)",
+				},
+				{
+					tag = "cpp.int.builtin",
+					token = "int",
+					role = "DxBuiltin",
+					desc = "C++ primitive scalar type with defaultLibrary (int)",
+				},
+				{
 					tag = "cpp.retry.label",
 					token = "retry",
 					role = "DxLabel",
@@ -179,6 +209,12 @@ local M = {
 					token = "sizeOf",
 					role = "DxMeta",
 					desc = "Zig builtin function call (@sizeOf)",
+				},
+				{
+					tag = "zig.protocol_state.type",
+					token = "ProtocolState",
+					role = "DxType",
+					desc = "Zig enum type reference (ProtocolState)",
 				},
 				{
 					tag = "zig.drain.label",

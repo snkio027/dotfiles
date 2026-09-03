@@ -127,9 +127,64 @@ function M.groups(p)
   hl["@lsp.type.lifetime"] = { link = "DxLifetime" }
   hl["@lsp.type.builtinType"] = { link = "DxBuiltin" }
 
+  -- rust-analyzer extensions
+  hl["@lsp.type.typeAlias"] = { link = "DxType" }
+  hl["@lsp.type.union"] = { link = "DxType" }
+  hl["@lsp.type.selfTypeKeyword"] = { link = "DxType" }
+
+  -- clangd extensions
+  hl["@lsp.type.concept"] = { link = "DxType" }
+
+  -- zls extensions
+  hl["@lsp.type.builtin"] = { link = "DxMeta" }
+  hl["@lsp.type.keywordLiteral"] = { link = "DxConstant" }
+  hl["@lsp.type.errorTag"] = { link = "DxConstant" }
+  hl["@lsp.type.escapeSequence"] = { link = "DxString" }
+
   -- ==========================================================================
   -- 3. LSP Precedence Governance: Typemod Neutralization & Deprecated Style
   -- ==========================================================================
+
+  -- Type-Family Precedence Governance:
+  -- Prevents modifiers (declaration, definition, readonly, static, defaultLibrary, etc.)
+  -- from overriding the semantic identity of types.
+  local type_family = {
+    class = "DxType",
+    struct = "DxType",
+    enum = "DxType",
+    interface = "DxType",
+    type = "DxType",
+    typeParameter = "DxType",
+    typeAlias = "DxType",
+    union = "DxType",
+    selfTypeKeyword = "DxType",
+    builtinType = "DxBuiltin",
+    concept = "DxType",
+  }
+
+  local identity_preserving_modifiers = {
+    "declaration",
+    "definition",
+    "readonly",
+    "static",
+    "defaultLibrary",
+    "abstract",
+    "modification",
+    "documentation",
+  }
+
+  for token_type, role in pairs(type_family) do
+    for _, mod in ipairs(identity_preserving_modifiers) do
+      hl["@lsp.typemod." .. token_type .. "." .. mod] = { link = role }
+    end
+  end
+
+  -- C / C++ Primitive Refinement:
+  -- clangd emits primitives (int, double, etc.) as "type" with "defaultLibrary".
+  -- Map these filetype-specifically to DxBuiltin so standard library classes (std::vector)
+  -- remain DxType while primitives become DxBuiltin.
+  hl["@lsp.typemod.type.defaultLibrary.c"] = { link = "DxBuiltin" }
+  hl["@lsp.typemod.type.defaultLibrary.cpp"] = { link = "DxBuiltin" }
 
   hl["@lsp.typemod.variable.readonly"] = { link = "DxVariable" }
   hl["@lsp.typemod.variable.defaultLibrary"] = { link = "DxVariable" }

@@ -199,6 +199,14 @@ local function main()
 			{ "@lsp.type.label", colors_rgb.label },
 			{ "@lsp.type.lifetime", colors_rgb.lifetime },
 			{ "@lsp.type.builtinType", colors_rgb.builtin },
+			{ "@lsp.type.typeAlias", colors_rgb.type },
+			{ "@lsp.type.union", colors_rgb.type },
+			{ "@lsp.type.selfTypeKeyword", colors_rgb.type },
+			{ "@lsp.type.concept", colors_rgb.type },
+			{ "@lsp.type.builtin", colors_rgb.meta },
+			{ "@lsp.type.keywordLiteral", colors_rgb.constant },
+			{ "@lsp.type.errorTag", colors_rgb.constant },
+			{ "@lsp.type.escapeSequence", colors_rgb.string },
 		}
 		for _, item in ipairs(lsp_assertions) do
 			local hl = get_resolved_hl(item[1])
@@ -213,7 +221,7 @@ local function main()
 			end
 		end
 
-		-- 4. Precedence Governance: Neutralized typemods
+		-- 4. Precedence Governance: Neutralized typemods & Type-Family Governance
 		local typemod_var_readonly = get_resolved_hl("@lsp.typemod.variable.readonly")
 		if typemod_var_readonly.fg ~= colors_rgb.variable then
 			fail(
@@ -222,6 +230,26 @@ local function main()
 					typemod_var_readonly.fg and ("%06x"):format(typemod_var_readonly.fg) or "nil"
 				)
 			)
+		end
+
+		local typemod_struct_decl = get_resolved_hl("@lsp.typemod.struct.declaration")
+		if typemod_struct_decl.fg ~= colors_rgb.type then
+			fail("@lsp.typemod.struct.declaration fg mismatch: expected type")
+		end
+
+		local typemod_class_deflib = get_resolved_hl("@lsp.typemod.class.defaultLibrary")
+		if typemod_class_deflib.fg ~= colors_rgb.type then
+			fail("@lsp.typemod.class.defaultLibrary fg mismatch: expected type")
+		end
+
+		local typemod_c_primitive = get_resolved_hl("@lsp.typemod.type.defaultLibrary.c")
+		if typemod_c_primitive.fg ~= colors_rgb.builtin then
+			fail("@lsp.typemod.type.defaultLibrary.c fg mismatch: expected builtin")
+		end
+
+		local typemod_cpp_primitive = get_resolved_hl("@lsp.typemod.type.defaultLibrary.cpp")
+		if typemod_cpp_primitive.fg ~= colors_rgb.builtin then
+			fail("@lsp.typemod.type.defaultLibrary.cpp fg mismatch: expected builtin")
 		end
 
 		local typemod_fn_deprecated = get_resolved_hl("@lsp.typemod.function.deprecated")

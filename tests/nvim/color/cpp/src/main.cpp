@@ -30,12 +30,16 @@ enum class ConnectionState : std::uint8_t {
 };
 
 // C++20/23 Concept
+// Sentinel: C++ concept definition (Type = Cyan, concept token)
+// DX:SENTINEL cpp.printable.concept
 template <typename T>
 concept Printable = requires(T val) {
     { std::cout << val } -> std::same_as<std::ostream&>;
 };
 
 // Type alias
+// Sentinel: stdlib template class (Type = Cyan, class + defaultLibrary)
+// DX:SENTINEL cpp.vector.type
 using ByteVector = std::vector<std::uint8_t>;
 
 // Data struct
@@ -94,6 +98,8 @@ void log_diagnostic(const T& message, std::uint32_t severity) {
 
 } // namespace dx::network
 
+// Sentinel: primitive system type (Builtin = Steel Blue, type + defaultLibrary)
+// DX:SENTINEL cpp.int.builtin
 int main() {
     using namespace dx::network;
 

@@ -22,6 +22,8 @@ pub trait StreamConsumer<T> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DownloadSummary {
     pub size: u64,
+    // Sentinel: standard library type (Type = Cyan, defaultLibrary)
+    // DX:SENTINEL rust.duration.type
     pub latency: Duration,
     pub status: Status,
     pub metadata: HashMap<String, String>,
