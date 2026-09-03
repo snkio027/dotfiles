@@ -304,7 +304,7 @@ local function main()
 		-- 9. Neotest & DAP
 		local neotest_passed = get_resolved_hl("NeotestPassed")
 		if neotest_passed.fg ~= colors_rgb.success then
-			fail("NeotestPassed must resolve to success green")
+			fail("NeotestPassed must resolve to state success")
 		end
 
 		local dap_breakpoint = get_resolved_hl("DapBreakpoint")

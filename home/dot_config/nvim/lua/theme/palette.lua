@@ -9,36 +9,43 @@ local M = {}
 --- @return table
 function M.resolve(c)
   return {
-    -- 1. Normal Source Semantic Palette (Muted, Low-Glare, High-Ergonomics)
+    -- 1. Normal Source Semantic Palette (Candidate C3 — CVD-aware, Hierarchy-First)
     -- Contrast against Mocha Base (#1E1E2E) strictly within 4.5:1 - 8.8:1
     code = {
-      variable = "#B4BCD6", -- Neutral body identifiers (8.67:1)
-      callable = "#D8AA7E", -- Execution landmarks / Functions & Methods (7.79:1 Muted Amber)
-      type = "#82BCAD", -- Data model / User-defined types & structs (7.61:1 Muted Teal)
-      lifetime = "#7DB1C3", -- Type-level lifetime bindings (6.99:1 Cyan)
-      string = "#90B18F", -- Strings & regular expressions (6.89:1 Muted Sage)
-      member = "#9DA4C7", -- Object structure / Fields & properties (6.69:1 Periwinkle)
-      operator = "#9DA2B8", -- Operators & expressions (6.55:1)
-      keyword = "#B298CE", -- Grammar & control flow constructs (6.51:1 Muted Violet)
-      meta = "#C395B9", -- Compile-time macros, decorators & attributes (6.46:1 Dusty Pink)
-      builtin = "#79A6C5", -- Primitives & system types (6.30:1 Muted Blue)
-      parameter = "#A19CAF", -- Function signature boundaries (6.16:1 Muted Violet-Gray)
-      constant = "#BB929B", -- Symbolic constants & enum variants (6.02:1 Dusty Rose)
-      doc = "#9298AD", -- Documentation comments / API contracts (5.67:1)
-      namespace = "#789BBF", -- Organization / Modules & packages (5.65:1)
-      number = "#B99072", -- Numeric literals (5.65:1 Muted Brown)
-      label = "#8D91A4", -- Control-flow anchors / Loop & goto labels (5.25:1)
-      punctuation = "#858A9F", -- Delimiters & brackets (4.79:1)
-      comment = "#81869E", -- Secondary explanatory prose (4.56:1)
+      -- L1 — Primary landmarks
+      callable = "#D8A972", -- 7.68:1 Amber execution landmark
+      type = "#72AFC4", -- 6.75:1 Cyan structure anchor
+
+      -- L2 — Semantic body
+      string = "#ADA497", -- 6.67:1 Warm Stone (no green dependency)
+      meta = "#C395B9", -- 6.50:1 Dusty Magenta
+      keyword = "#B298CE", -- 6.46:1 Violet grammar
+      lifetime = "#7DA6C8", -- 6.37:1 Cyan-blue
+      variable = "#919CC4", -- 6.06:1 Blue-lilac semantic body
+      member = "#A38BDA", -- 5.67:1 Periwinkle
+      parameter = "#A58FB2", -- 5.60:1 Mauve
+      builtin = "#7393B7", -- 5.14:1 Quiet Steel Blue
+
+      -- L3 — Context
+      doc = "#9298AD", -- 5.71:1 Secondary prose
+      constant = "#B08BAA", -- 5.56:1 Dusty Orchid
+      number = "#C18975", -- 5.55:1 Terracotta
+      namespace = "#6D97CC", -- 5.43:1 Navigation Azure
+      label = "#8D91A4", -- 5.25:1 Slate
+
+      -- L4 — Scaffolding
+      operator = "#898FA6", -- 5.11:1 Scaffolding
+      punctuation = "#858A9F", -- 4.79:1 Scaffolding
+      comment = "#81869E", -- 4.56:1 Deepest normal prose
     },
 
-    -- 2. State & Transient Palette (High-Contrast Catppuccin Accents for Attention / Diagnostics)
+    -- 2. State & Transient Palette (CVD-Aware Accents without Red/Green Dependency)
     state = {
-      error = c.red, -- Critical errors / Failures / Destructive operations
+      error = c.red, -- Critical errors / Failures / Destructive operations (pink-red)
       warn = c.yellow, -- Attention NOW / Warnings / Search targets / Debugger pause
-      info = c.sapphire, -- Informational messages
-      hint = c.teal, -- Type hints & suggestions
-      success = c.green, -- Passes / Clean status
+      success = c.sky, -- Passes / Clean status (CVD-safe Cyan-Sky replaces Green)
+      info = c.blue, -- Informational messages
+      hint = c.lavender, -- Type hints & suggestions
     },
 
     -- 3. Surfaces & UI Chrome (Inherited from Catppuccin Mocha)
