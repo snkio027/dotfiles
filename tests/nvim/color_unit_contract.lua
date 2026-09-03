@@ -366,7 +366,7 @@ local fixture_checks = {
 		path = repo_root .. "/tests/nvim/color/python/main.py",
 		sentinels = {
 			{ tag = "python.download_summary.class", token = "DownloadSummary" },
-			{ tag = "python.is_empty.property", token = "is_empty" },
+			{ tag = "python.size.member", token = "size" },
 			{ tag = "python.validate_bounds.method", token = "validate_bounds" },
 			{ tag = "python.fetch_async.fn", token = "fetch_async" },
 		},

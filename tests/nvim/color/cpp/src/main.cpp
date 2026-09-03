@@ -56,8 +56,6 @@ public:
         if (raw_header.empty()) {
             return std::nullopt;
         }
-        // Member access: state_ is Member (Lavender)
-        // DX:SENTINEL cpp.state.member
         state_ = ConnectionState::Connected;
         return Header{
             .key = std::string(raw_header),
@@ -67,6 +65,8 @@ public:
 
 private:
     std::size_t max_payload_;
+    // Sentinel: member variable definition (Member = Lavender)
+    // DX:SENTINEL cpp.state.member
     ConnectionState state_;
 };
 

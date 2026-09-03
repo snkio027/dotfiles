@@ -25,10 +25,11 @@ class DownloadSummary(Generic[T]):
     tags: list[str] = field(default_factory=list)
     _cached_hash: Optional[str] = None
 
-    # DX:SENTINEL python.is_empty.property
     @property
     def is_empty(self) -> bool:
-        """Sentinel: property definition (DxMember = Lavender)."""
+        """Sentinel: property definition."""
+        # Sentinel: member attribute access (DxMember = Lavender)
+        # DX:SENTINEL python.size.member
         return self.size == 0
 
     # DX:SENTINEL python.validate_bounds.method

@@ -362,7 +362,7 @@ local function main()
 		local syn_default_prio = (vim.hl and vim.hl.priorities and vim.hl.priorities.syntax) or 50
 
 		-- 1. Semantic token extmarks
-		for _, st in ipairs(inspected.semantic_tokens or {}) do
+		for i, st in ipairs(inspected.semantic_tokens or {}) do
 			local hl_name = st.opts and st.opts.hl_group
 			if hl_name then
 				local hl = vim.api.nvim_get_hl(0, { name = hl_name, link = false })
@@ -371,6 +371,7 @@ local function main()
 						hl_name = hl_name,
 						priority = st.opts.priority or sem_default_prio,
 						fg = hl.fg,
+						order = i,
 						source = "semantic_tokens",
 					})
 				end
@@ -378,7 +379,7 @@ local function main()
 		end
 
 		-- 2. General extmarks in semantic tokens namespace
-		for _, ext in ipairs(inspected.extmarks or {}) do
+		for i, ext in ipairs(inspected.extmarks or {}) do
 			local hl_name = ext.opts and ext.opts.hl_group
 			if
 				hl_name and (ext.ns == "vim_lsp_semantic_tokens" or (ext.opts.priority and ext.opts.priority >= 120))
@@ -389,6 +390,7 @@ local function main()
 						hl_name = hl_name,
 						priority = ext.opts.priority or sem_default_prio,
 						fg = hl.fg,
+						order = i,
 						source = "semantic_tokens",
 					})
 				end
@@ -396,7 +398,8 @@ local function main()
 		end
 
 		-- 3. Tree-sitter captures (using Neovim :Inspect priority hierarchy)
-		for _, ts in ipairs(inspected.treesitter or {}) do
+		-- Later captures in traversal order override earlier captures at equal priority
+		for i, ts in ipairs(inspected.treesitter or {}) do
 			local hl_name = ts.hl_group or ("@" .. ts.capture)
 			local hl = vim.api.nvim_get_hl(0, { name = hl_name, link = false })
 			if hl and hl.fg then
@@ -407,13 +410,14 @@ local function main()
 					hl_name = hl_name,
 					priority = prio,
 					fg = hl.fg,
+					order = i,
 					source = "treesitter",
 				})
 			end
 		end
 
 		-- 4. Syntax items fallback
-		for _, syn in ipairs(inspected.syntax or {}) do
+		for i, syn in ipairs(inspected.syntax or {}) do
 			local hl_name = syn.hl_group
 			if hl_name then
 				local hl = vim.api.nvim_get_hl(0, { name = hl_name, link = false })
@@ -422,6 +426,7 @@ local function main()
 						hl_name = hl_name,
 						priority = syn_default_prio,
 						fg = hl.fg,
+						order = i,
 						source = "syntax",
 					})
 				end
@@ -432,9 +437,12 @@ local function main()
 			return nil, nil, inspected, candidates
 		end
 
-		-- Sort by priority descending
+		-- Sort by priority descending; on tie, later traversal order wins
 		table.sort(candidates, function(a, b)
-			return a.priority > b.priority
+			if a.priority ~= b.priority then
+				return a.priority > b.priority
+			end
+			return (a.order or 0) > (b.order or 0)
 		end)
 
 		local best = candidates[1]
@@ -676,7 +684,7 @@ local function main()
 					role = "DxType",
 					label = "Python class",
 				},
-				{ tag = "python.is_empty.property", token = "is_empty", role = "DxMember", label = "Python property" },
+				{ tag = "python.size.member", token = "size", role = "DxMember", label = "Python member" },
 				{
 					tag = "python.validate_bounds.method",
 					token = "validate_bounds",
@@ -737,6 +745,8 @@ local function main()
 					)
 				)
 			end
+
+			vim.cmd.redraw()
 
 			-- Run position-level assertions and observations
 			for _, s in ipairs(spec.sentinels) do
