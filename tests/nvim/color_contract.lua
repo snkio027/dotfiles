@@ -369,7 +369,7 @@ local function main()
 				if hl and hl.fg then
 					table.insert(candidates, {
 						hl_name = hl_name,
-						priority = st.opts.priority or sem_default_prio,
+						priority = tonumber(st.opts and st.opts.priority) or sem_default_prio,
 						fg = hl.fg,
 						order = i,
 						source = "semantic_tokens",
@@ -381,14 +381,13 @@ local function main()
 		-- 2. General extmarks in semantic tokens namespace
 		for i, ext in ipairs(inspected.extmarks or {}) do
 			local hl_name = ext.opts and ext.opts.hl_group
-			if
-				hl_name and (ext.ns == "vim_lsp_semantic_tokens" or (ext.opts.priority and ext.opts.priority >= 120))
-			then
+			local ext_prio = tonumber(ext.opts and ext.opts.priority)
+			if hl_name and ((ext.ns and ext.ns:find("semantic_tokens")) or (ext_prio and ext_prio >= 120)) then
 				local hl = vim.api.nvim_get_hl(0, { name = hl_name, link = false })
 				if hl and hl.fg then
 					table.insert(candidates, {
 						hl_name = hl_name,
-						priority = ext.opts.priority or sem_default_prio,
+						priority = ext_prio or sem_default_prio,
 						fg = hl.fg,
 						order = i,
 						source = "semantic_tokens",
@@ -403,9 +402,9 @@ local function main()
 			local hl_name = ts.hl_group or ("@" .. ts.capture)
 			local hl = vim.api.nvim_get_hl(0, { name = hl_name, link = false })
 			if hl and hl.fg then
-				local prio = (ts.metadata and ts.metadata.priority)
+				local raw_prio = (ts.metadata and ts.metadata.priority)
 					or (ts.metadata and ts.id and ts.metadata[ts.id] and ts.metadata[ts.id].priority)
-					or ts_default_prio
+				local prio = tonumber(raw_prio) or ts_default_prio
 				table.insert(candidates, {
 					hl_name = hl_name,
 					priority = prio,
@@ -439,10 +438,14 @@ local function main()
 
 		-- Sort by priority descending; on tie, later traversal order wins
 		table.sort(candidates, function(a, b)
-			if a.priority ~= b.priority then
-				return a.priority > b.priority
+			local pa = tonumber(a.priority) or 0
+			local pb = tonumber(b.priority) or 0
+			if pa ~= pb then
+				return pa > pb
 			end
-			return (a.order or 0) > (b.order or 0)
+			local oa = tonumber(a.order) or 0
+			local ob = tonumber(b.order) or 0
+			return oa > ob
 		end)
 
 		local best = candidates[1]
