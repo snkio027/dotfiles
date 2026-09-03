@@ -385,6 +385,7 @@ end
 -- Deprecated Style-Only Composition Contract
 assert_eq(groups["@lsp.mod.deprecated"].strikethrough, true, "@lsp.mod.deprecated must have strikethrough enabled")
 assert_eq(groups["@lsp.mod.deprecated"].fg, nil, "@lsp.mod.deprecated must not force a foreground color")
+assert_eq(groups["@lsp.mod.deprecated"].link, nil, "@lsp.mod.deprecated must not link to another highlight")
 
 local governed_lsp_types = {
 	"function",
@@ -415,6 +416,9 @@ for _, token_type in ipairs(governed_lsp_types) do
 	end
 	if groups[key].fg ~= nil then
 		fail(key .. " must not override foreground color")
+	end
+	if groups[key].link ~= nil then
+		fail(key .. " must not define a link")
 	end
 end
 
