@@ -127,10 +127,35 @@ function M.groups(p)
   hl["@lsp.type.lifetime"] = { link = "DxLifetime" }
   hl["@lsp.type.builtinType"] = { link = "DxBuiltin" }
 
+  -- rust-analyzer extensions
+  hl["@lsp.type.typeAlias"] = { link = "DxType" }
+  hl["@lsp.type.union"] = { link = "DxType" }
+  hl["@lsp.type.selfTypeKeyword"] = { link = "DxType" }
+
+  -- clangd extensions
+  hl["@lsp.type.concept"] = { link = "DxType" }
+
+  -- zls extensions
+  hl["@lsp.type.builtin"] = { link = "DxMeta" }
+  hl["@lsp.type.keywordLiteral"] = { link = "DxConstant" }
+  hl["@lsp.type.errorTag"] = { link = "DxConstant" }
+  hl["@lsp.type.escapeSequence"] = { link = "DxString" }
+
   -- ==========================================================================
-  -- 3. LSP Precedence Governance: Typemod Neutralization & Deprecated Style
+  -- 3. DX-COLOR Semantic Authority Model & Typemod Neutralization
   -- ==========================================================================
 
+  -- Root highlight group for LSP foreground authority suppression.
+  -- Has no foreground, no style attributes, and no dotted parent,
+  -- ensuring Neovim's resolver will not fall back to parent @lsp.type.type.
+  hl["LspForegroundPassthrough"] = {}
+
+  -- Suppress generic type foreground for languages where LSP collapses
+  -- primitive types and structured types into a generic "type" token.
+  -- This allows Tree-sitter's precise @type.builtin capture to govern foreground color.
+  hl["@lsp.type.type.c"] = { link = "LspForegroundPassthrough" }
+  hl["@lsp.type.type.cpp"] = { link = "LspForegroundPassthrough" }
+  hl["@lsp.type.type.zig"] = { link = "LspForegroundPassthrough" }
   hl["@lsp.typemod.variable.readonly"] = { link = "DxVariable" }
   hl["@lsp.typemod.variable.defaultLibrary"] = { link = "DxVariable" }
   hl["@lsp.typemod.variable.static"] = { link = "DxVariable" }
@@ -139,6 +164,10 @@ function M.groups(p)
   hl["@lsp.typemod.function.async"] = { link = "DxCallable" }
   hl["@lsp.typemod.method.defaultLibrary"] = { link = "DxCallable" }
   hl["@lsp.typemod.method.async"] = { link = "DxCallable" }
+
+  -- Empirical modifier exception: Rust attribute identifiers (#[must_use])
+  -- rust-analyzer emits namespace tagged with modifier attribute.
+  hl["@lsp.typemod.namespace.attribute.rust"] = { link = "DxMeta" }
 
   -- Style-only deprecated composition: strikethrough without destroying semantic identity
   hl["@lsp.mod.deprecated"] = { strikethrough = true }

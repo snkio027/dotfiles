@@ -12,6 +12,8 @@ struct Buffer {
     // Sentinel: struct member field (Member = Periwinkle)
     // DX:SENTINEL c.size.member
     size_t size;
+    // Sentinel: primitive typedef (Builtin = Steel Blue, authority = treesitter, LSP = type)
+    // DX:SENTINEL c.uint8.builtin
     uint8_t data[BUFFER_CAPACITY];
 };
 
@@ -26,6 +28,8 @@ static int decode(
         return -1;
     }
 
+    // Sentinel: primitive scalar type (Builtin = Steel Blue)
+    // DX:SENTINEL c.int.builtin
     int retry_count = 3;
 
     // Sentinel: control-flow goto label (Label = Neutral Slate)

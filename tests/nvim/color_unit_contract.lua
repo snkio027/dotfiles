@@ -344,6 +344,14 @@ local required_lsp = {
 	["@lsp.type.label"] = "DxLabel",
 	["@lsp.type.lifetime"] = "DxLifetime",
 	["@lsp.type.builtinType"] = "DxBuiltin",
+	["@lsp.type.typeAlias"] = "DxType",
+	["@lsp.type.union"] = "DxType",
+	["@lsp.type.selfTypeKeyword"] = "DxType",
+	["@lsp.type.concept"] = "DxType",
+	["@lsp.type.builtin"] = "DxMeta",
+	["@lsp.type.keywordLiteral"] = "DxConstant",
+	["@lsp.type.errorTag"] = "DxConstant",
+	["@lsp.type.escapeSequence"] = "DxString",
 }
 
 for token, expected_role in pairs(required_lsp) do
@@ -381,6 +389,36 @@ for token, expected_role in pairs(required_typemods) do
 		)
 	end
 end
+
+-- DX-COLOR Semantic Authority Model Contract
+assert_eq(groups["LspForegroundPassthrough"].fg, nil, "LspForegroundPassthrough must have no foreground")
+assert_eq(groups["LspForegroundPassthrough"].link, nil, "LspForegroundPassthrough must have no link")
+assert_eq(
+	groups["@lsp.type.type.c"].link,
+	"LspForegroundPassthrough",
+	"@lsp.type.type.c must link to LspForegroundPassthrough"
+)
+assert_eq(
+	groups["@lsp.type.type.cpp"].link,
+	"LspForegroundPassthrough",
+	"@lsp.type.type.cpp must link to LspForegroundPassthrough"
+)
+assert_eq(
+	groups["@lsp.type.type.zig"].link,
+	"LspForegroundPassthrough",
+	"@lsp.type.type.zig must link to LspForegroundPassthrough"
+)
+assert_eq(
+	groups["@lsp.typemod.namespace.attribute.rust"].link,
+	"DxMeta",
+	"@lsp.typemod.namespace.attribute.rust must link to DxMeta"
+)
+assert_eq(groups["@lsp.mod.attribute"], nil, "@lsp.mod.attribute must not be globally defined")
+assert_eq(
+	groups["@lsp.typemod.namespace.attribute"],
+	nil,
+	"@lsp.typemod.namespace.attribute must not be globally defined"
+)
 
 -- Deprecated Style-Only Composition Contract
 assert_eq(groups["@lsp.mod.deprecated"].strikethrough, true, "@lsp.mod.deprecated must have strikethrough enabled")

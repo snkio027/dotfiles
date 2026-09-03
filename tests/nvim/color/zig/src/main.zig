@@ -27,9 +27,13 @@ pub const FrameError = error{
 // DX:SENTINEL zig.network_buffer.type
 pub const NetworkBuffer = struct {
     allocator: std.mem.Allocator,
+    // Sentinel: primitive scalar type (Builtin = Steel Blue, authority = treesitter, LSP = type)
+    // DX:SENTINEL zig.u8.builtin
     // DX:SENTINEL zig.bytes.member
     bytes: []u8,
     length: usize,
+    // Sentinel: enum type reference (Type = Cyan, enum token)
+    // DX:SENTINEL zig.protocol_state.type
     state: ProtocolState,
 
     pub fn init(allocator: std.mem.Allocator, initial_capacity: usize) !NetworkBuffer {

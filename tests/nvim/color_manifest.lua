@@ -55,6 +55,16 @@ local M = {
 					forbidden_ts_capture = "type.lifetime.rust",
 				},
 				{
+					tag = "rust.duration.type",
+					token = "Duration",
+					role = "DxType",
+					desc = "Rust stdlib struct type reference (Duration)",
+					protocol = {
+						authority = "lsp",
+						expected_type = "struct",
+					},
+				},
+				{
 					tag = "rust.dispatch.label",
 					token = "dispatch",
 					role = "DxLabel",
@@ -79,6 +89,10 @@ local M = {
 					token = "Buffer",
 					role = "DxType",
 					desc = "C struct declaration (struct Buffer)",
+					protocol = {
+						authority = "lsp",
+						expected_type = "class",
+					},
 				},
 				{
 					tag = "c.size.member",
@@ -97,6 +111,24 @@ local M = {
 					token = "buffer",
 					role = "DxParameter",
 					desc = "C function parameter pointer (struct Buffer *buffer)",
+				},
+				{
+					tag = "c.uint8.builtin",
+					token = "uint8_t",
+					role = "DxBuiltin",
+					desc = "C primitive typedef (uint8_t)",
+					required_ts_capture = "type.builtin.c",
+					protocol = {
+						authority = "treesitter",
+						expected_type = "type",
+					},
+				},
+				{
+					tag = "c.int.builtin",
+					token = "int",
+					role = "DxBuiltin",
+					desc = "C primitive scalar type (int)",
+					required_ts_capture = "type.builtin.c",
 				},
 				{
 					tag = "c.retry.label",
@@ -123,24 +155,55 @@ local M = {
 					token = "PacketDecoder",
 					role = "DxType",
 					desc = "C++ class definition",
+					protocol = {
+						authority = "lsp",
+						expected_type = "class",
+					},
+				},
+				{
+					tag = "cpp.printable.concept",
+					token = "Printable",
+					role = "DxType",
+					desc = "C++ concept definition",
+					protocol = {
+						authority = "lsp",
+						expected_type = "concept",
+					},
 				},
 				{
 					tag = "cpp.decode.method",
 					token = "decode",
 					role = "DxCallable",
-					desc = "C++ class method definition",
+					desc = "C++ class method declaration",
 				},
 				{
 					tag = "cpp.state.member",
 					token = "state_",
 					role = "DxMember",
-					desc = "C++ private member declaration",
+					desc = "C++ private member variable",
 				},
 				{
 					tag = "cpp.log_diagnostic.fn",
 					token = "log_diagnostic",
 					role = "DxCallable",
-					desc = "C++ standalone function definition",
+					desc = "C++ free function definition",
+				},
+				{
+					tag = "cpp.vector.type",
+					token = "vector",
+					role = "DxType",
+					desc = "C++ stdlib template class (std::vector)",
+					protocol = {
+						authority = "lsp",
+						expected_type = "class",
+					},
+				},
+				{
+					tag = "cpp.int.builtin",
+					token = "int",
+					role = "DxBuiltin",
+					desc = "C++ primitive scalar type (int)",
+					required_ts_capture = "type.builtin.cpp",
 				},
 				{
 					tag = "cpp.retry.label",
@@ -161,6 +224,21 @@ local M = {
 					token = "NetworkBuffer",
 					role = "DxType",
 					desc = "Zig struct definition",
+					protocol = {
+						authority = "lsp",
+						expected_type = "struct",
+					},
+				},
+				{
+					tag = "zig.u8.builtin",
+					token = "u8",
+					role = "DxBuiltin",
+					desc = "Zig primitive scalar type (u8)",
+					required_ts_capture = "type.builtin.zig",
+					protocol = {
+						authority = "treesitter",
+						expected_type = "type",
+					},
 				},
 				{
 					tag = "zig.bytes.member",
@@ -179,6 +257,16 @@ local M = {
 					token = "sizeOf",
 					role = "DxMeta",
 					desc = "Zig builtin function call (@sizeOf)",
+				},
+				{
+					tag = "zig.protocol_state.type",
+					token = "ProtocolState",
+					role = "DxType",
+					desc = "Zig enum type reference (ProtocolState)",
+					protocol = {
+						authority = "lsp",
+						expected_type = "enum",
+					},
 				},
 				{
 					tag = "zig.drain.label",
