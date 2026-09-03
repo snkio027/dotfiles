@@ -22,12 +22,7 @@ return {
         },
       },
       custom_highlights = function(colors)
-        return {
-          -- Markdown should read like a document, not a collection of badges.
-          RenderMarkdownCodeInline = { fg = colors.peach, bg = "NONE" },
-          RenderMarkdownDash = { fg = colors.surface1 },
-          RenderMarkdownQuote = { fg = colors.mauve },
-        }
+        return require("theme").highlights(colors)
       end,
       integrations = {
         blink_cmp = true,
