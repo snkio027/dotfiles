@@ -20,6 +20,9 @@ return {
           information = { "nocombine" },
           ok = { "nocombine" },
         },
+        inlay_hints = {
+          background = false,
+        },
       },
       custom_highlights = function(colors)
         return require("theme").highlights(colors)

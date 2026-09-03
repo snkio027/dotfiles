@@ -85,6 +85,7 @@ local function main()
 		surface0 = hex_to_rgb(p.ui.surface0),
 		surface1 = hex_to_rgb(p.ui.surface1),
 		surface2 = hex_to_rgb(p.ui.surface2),
+		overlay0 = hex_to_rgb(p.ui.overlay0),
 		text = hex_to_rgb(p.ui.text),
 	}
 
@@ -315,6 +316,15 @@ local function main()
 		local dap_stopped = get_resolved_hl("DapStopped")
 		if dap_stopped.fg ~= colors_rgb.warn then
 			fail("DapStopped must resolve to warn yellow")
+		end
+
+		-- 10. Auxiliary LSP UI Chrome: Inlay Hints (Background disabled to prevent intrusive badge chips)
+		local inlay_hint = get_resolved_hl("LspInlayHint")
+		if inlay_hint.bg ~= nil then
+			fail("LspInlayHint must have nil background (inlay_hints.background = false)")
+		end
+		if inlay_hint.fg ~= colors_rgb.overlay0 then
+			fail("LspInlayHint must have overlay0 foreground")
 		end
 	end
 
