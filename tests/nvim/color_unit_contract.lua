@@ -81,6 +81,7 @@ local groups = mappings.groups(p)
 
 local required_semantic_roles = {
 	"DxKeyword",
+	"DxFunctionKeyword",
 	"DxCallable",
 	"DxType",
 	"DxBuiltin",
@@ -114,10 +115,10 @@ end
 
 for role, _ in pairs(roles) do
 	if not vim.tbl_contains(required_semantic_roles, role) then
-		fail("Unexpected extra semantic role outside 22-role closure: " .. role)
+		fail("Unexpected extra semantic role outside 23-role closure: " .. role)
 	end
 end
-assert_eq(role_count, 22, "Expected exactly 22 semantic roles in DX-COLOR-002")
+assert_eq(role_count, 23, "Expected exactly 23 semantic roles in DX-COLOR-002")
 
 -- ==========================================================================
 -- 3. Source Contrast Budget Gate (Calculated Mathematically vs Mocha Base)
@@ -342,7 +343,7 @@ end
 
 local required_ts = {
 	["@keyword"] = "DxKeyword",
-	["@keyword.function"] = "DxKeyword",
+	["@keyword.function"] = "DxFunctionKeyword",
 	["@keyword.return"] = "DxKeyword",
 	["@function"] = "DxCallable",
 	["@function.call"] = "DxCallable",
@@ -473,6 +474,11 @@ assert_eq(
 	groups["@lsp.type.type.zig"].link,
 	"LspForegroundPassthrough",
 	"@lsp.type.type.zig must link to LspForegroundPassthrough"
+)
+assert_eq(
+	groups["@lsp.type.keyword.zig"].link,
+	"LspForegroundPassthrough",
+	"@lsp.type.keyword.zig must link to LspForegroundPassthrough"
 )
 assert_eq(
 	groups["@lsp.typemod.namespace.attribute.rust"].link,

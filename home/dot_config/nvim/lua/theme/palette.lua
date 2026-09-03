@@ -14,23 +14,24 @@ function M.resolve(c)
     code = {
       -- L1 — Primary landmarks
       callable = "#D8A972", -- 7.68:1 Amber execution landmark
-      type = "#72AFC4", -- 6.75:1 Cyan structure anchor
+      type = "#78B6CC", -- Clear Sky Blue structure anchor
 
       -- L2 — Semantic body
       string = "#ADA497", -- 6.67:1 Warm Stone (no green dependency)
       meta = "#C395B9", -- 6.50:1 Dusty Magenta
       keyword = "#B298CE", -- 6.46:1 Violet grammar
+      keyword_function = "#82AEDB", -- Sky Blue function declaration marker (fn / def)
       lifetime = "#7DA6C8", -- 6.37:1 Cyan-blue
-      variable = "#919CC4", -- 6.06:1 Blue-lilac semantic body
-      member = "#A38BDA", -- 5.67:1 Periwinkle
-      parameter = "#A58FB2", -- 5.60:1 Mauve
+      variable = "#989FCC", -- Clear Blue-lilac semantic body
+      member = "#AA91DF", -- Vibrant Periwinkle purple
+      parameter = "#AA94BE", -- Mauve signature boundary
       builtin = "#7393B7", -- 5.14:1 Quiet Steel Blue
 
       -- L3 — Context
       doc = "#9298AD", -- 5.71:1 Secondary prose
-      constant = "#B08BAA", -- 5.56:1 Dusty Orchid
+      constant = "#B78EAF", -- Orchid pink breathing accent
       number = "#C18975", -- 5.55:1 Terracotta
-      namespace = "#6D97CC", -- 5.43:1 Navigation Azure
+      namespace = "#75A0D8", -- Clear Sky Blue navigation axis
       label = "#8D91A4", -- 5.25:1 Slate
 
       -- L4 — Scaffolding

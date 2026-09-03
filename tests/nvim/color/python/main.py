@@ -38,6 +38,7 @@ class DownloadSummary(Generic[T]):
         return self.size == 0
 
     # DX:SENTINEL python.validate_bounds.method
+    # DX:SENTINEL python.def.keyword
     def validate_bounds(self, limit: int) -> bool:
         """Sentinel: method definition (DxCallable = Muted Amber, Parameters = Muted Violet-Gray)."""
         # Local variable (Neutral body)

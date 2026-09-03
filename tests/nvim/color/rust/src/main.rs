@@ -30,8 +30,10 @@ pub struct DownloadSummary {
 }
 
 impl DownloadSummary {
-    /// Sentinel: method definition (Callable = Muted Amber)
+    // Sentinel: method definition (Callable = Muted Amber)
     // DX:SENTINEL rust.size.method
+    // Sentinel: function declaration keyword (DxFunctionKeyword = Sky Blue)
+    // DX:SENTINEL rust.fn.keyword
     // Sentinel: standard attribute (Meta = Dusty Pink)
     // DX:SENTINEL rust.must_use.attribute
     #[must_use]
