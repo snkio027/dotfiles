@@ -10,6 +10,7 @@ function M.roles(p)
   return {
     -- Language Grammar & Core Constructs
     DxKeyword = { fg = p.code.keyword, bold = false, italic = false },
+    DxFunctionKeyword = { fg = p.code.keyword_function, bold = false, italic = false },
 
     -- Execution Landmarks: Functions & Methods
     DxCallable = { fg = p.code.callable, bold = false, italic = false },

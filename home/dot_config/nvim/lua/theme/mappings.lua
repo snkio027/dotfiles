@@ -16,7 +16,7 @@ function M.groups(p)
 
   -- Language Grammar & Keywords
   hl["@keyword"] = { link = "DxKeyword" }
-  hl["@keyword.function"] = { link = "DxKeyword" }
+  hl["@keyword.function"] = { link = "DxFunctionKeyword" }
   hl["@keyword.return"] = { link = "DxKeyword" }
   hl["@keyword.type"] = { link = "DxKeyword" }
   hl["@keyword.import"] = { link = "DxKeyword" }

@@ -61,6 +61,7 @@ local function main()
 		member = hex_to_rgb(p.code.member),
 		operator = hex_to_rgb(p.code.operator),
 		keyword = hex_to_rgb(p.code.keyword),
+		keyword_function = hex_to_rgb(p.code.keyword_function),
 		meta = hex_to_rgb(p.code.meta),
 		builtin = hex_to_rgb(p.code.builtin),
 		parameter = hex_to_rgb(p.code.parameter),
@@ -107,9 +108,10 @@ local function main()
 
 	--- Validates the core highlight graph and link resolution
 	local function assert_contract()
-		-- 1. All 22 Semantic Roles
+		-- 1. All 23 Semantic Roles
 		local role_assertions = {
 			{ "DxKeyword", colors_rgb.keyword, "keyword" },
+			{ "DxFunctionKeyword", colors_rgb.keyword_function, "keyword_function" },
 			{ "DxCallable", colors_rgb.callable, "callable" },
 			{ "DxType", colors_rgb.type, "type" },
 			{ "DxBuiltin", colors_rgb.builtin, "builtin" },
@@ -155,6 +157,7 @@ local function main()
 		-- 2. Tree-sitter link resolution
 		local ts_assertions = {
 			{ "@keyword", colors_rgb.keyword },
+			{ "@keyword.function", colors_rgb.keyword_function },
 			{ "@function", colors_rgb.callable },
 			{ "@function.call", colors_rgb.callable },
 			{ "@function.method", colors_rgb.callable },
