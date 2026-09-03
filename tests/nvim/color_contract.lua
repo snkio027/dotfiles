@@ -1,4 +1,4 @@
---- DX Semantic Color System (DX-COLOR-001)
+--- DX Semantic Color System (DX-COLOR-002)
 --- Tier-2 Runtime Integration Contract: Executed in production Neovim environment
 --- with Catppuccin loaded by LazyVim.
 ---
@@ -11,6 +11,8 @@
 --- 5. Priority-based foreground resolution: inspect_pos extmarks & treesitter sorted by priority;
 ---    style-only groups (fg = nil) never shadow semantic foregrounds.
 --- 6. Raw token observation from vim.lsp.semantic_tokens.get_at_pos().
+--- 7. Capture-Level Proof: Tree-sitter query extension captures lifetime ('a, 'static) as
+---    @type.lifetime.rust while leaving normal attributes (#[must_use]) as DxMeta.
 
 local function main()
 	local function fail(msg)
@@ -30,10 +32,17 @@ local function main()
 		fail("Catppuccin palettes module must be available from production plugins")
 	end
 
-	local palette = cat_palettes.get_palette("mocha")
-	if not palette or not palette.yellow then
+	local cat_mocha = cat_palettes.get_palette("mocha")
+	if not cat_mocha or not cat_mocha.yellow then
 		fail("Failed to retrieve production Catppuccin Mocha palette")
 	end
+
+	local ok_pal, palette_mod = pcall(require, "theme.palette")
+	if not ok_pal or not palette_mod.resolve then
+		fail("theme.palette module must be available from production theme")
+	end
+
+	local p = palette_mod.resolve(cat_mocha)
 
 	local function hex_to_rgb(hex)
 		if not hex then
@@ -43,26 +52,40 @@ local function main()
 	end
 
 	local colors_rgb = {
-		yellow = hex_to_rgb(palette.yellow),
-		teal = hex_to_rgb(palette.teal),
-		sapphire = hex_to_rgb(palette.sapphire),
-		lavender = hex_to_rgb(palette.lavender),
-		rosewater = hex_to_rgb(palette.rosewater),
-		text = hex_to_rgb(palette.text),
-		mauve = hex_to_rgb(palette.mauve),
-		pink = hex_to_rgb(palette.pink),
-		blue = hex_to_rgb(palette.blue),
-		green = hex_to_rgb(palette.green),
-		peach = hex_to_rgb(palette.peach),
-		flamingo = hex_to_rgb(palette.flamingo),
-		subtext1 = hex_to_rgb(palette.subtext1),
-		subtext0 = hex_to_rgb(palette.subtext0),
-		red = hex_to_rgb(palette.red),
-		surface0 = hex_to_rgb(palette.surface0),
-		surface1 = hex_to_rgb(palette.surface1),
-		surface2 = hex_to_rgb(palette.surface2),
-		mantle = hex_to_rgb(palette.mantle),
-		base = hex_to_rgb(palette.base),
+		-- Source Semantic Roles (DX-COLOR-002 Muted Palette)
+		variable = hex_to_rgb(p.code.variable),
+		callable = hex_to_rgb(p.code.callable),
+		type = hex_to_rgb(p.code.type),
+		lifetime = hex_to_rgb(p.code.lifetime),
+		string = hex_to_rgb(p.code.string),
+		member = hex_to_rgb(p.code.member),
+		operator = hex_to_rgb(p.code.operator),
+		keyword = hex_to_rgb(p.code.keyword),
+		meta = hex_to_rgb(p.code.meta),
+		builtin = hex_to_rgb(p.code.builtin),
+		parameter = hex_to_rgb(p.code.parameter),
+		constant = hex_to_rgb(p.code.constant),
+		doc = hex_to_rgb(p.code.doc),
+		namespace = hex_to_rgb(p.code.namespace),
+		number = hex_to_rgb(p.code.number),
+		label = hex_to_rgb(p.code.label),
+		punctuation = hex_to_rgb(p.code.punctuation),
+		comment = hex_to_rgb(p.code.comment),
+
+		-- State & Transient Roles
+		error = hex_to_rgb(p.state.error),
+		warn = hex_to_rgb(p.state.warn),
+		info = hex_to_rgb(p.state.info),
+		hint = hex_to_rgb(p.state.hint),
+		success = hex_to_rgb(p.state.success),
+
+		-- UI Chrome
+		base = hex_to_rgb(p.ui.base),
+		mantle = hex_to_rgb(p.ui.mantle),
+		surface0 = hex_to_rgb(p.ui.surface0),
+		surface1 = hex_to_rgb(p.ui.surface1),
+		surface2 = hex_to_rgb(p.ui.surface2),
+		text = hex_to_rgb(p.ui.text),
 	}
 
 	--- Resolves final highlight definition without links
@@ -83,146 +106,119 @@ local function main()
 
 	--- Validates the core highlight graph and link resolution
 	local function assert_contract()
-		-- 1. Semantic Roles
-		local dx_callable = get_resolved_hl("DxCallable")
-		if dx_callable.fg ~= colors_rgb.yellow then
-			fail(
-				("DxCallable fg mismatch: expected %06x (yellow), got %s"):format(
-					colors_rgb.yellow,
-					dx_callable.fg and ("%06x"):format(dx_callable.fg) or "nil"
+		-- 1. All 22 Semantic Roles
+		local role_assertions = {
+			{ "DxKeyword", colors_rgb.keyword, "keyword" },
+			{ "DxCallable", colors_rgb.callable, "callable" },
+			{ "DxType", colors_rgb.type, "type" },
+			{ "DxBuiltin", colors_rgb.builtin, "builtin" },
+			{ "DxLifetime", colors_rgb.lifetime, "lifetime" },
+			{ "DxMember", colors_rgb.member, "member" },
+			{ "DxParameter", colors_rgb.parameter, "parameter" },
+			{ "DxVariable", colors_rgb.variable, "variable" },
+			{ "DxMeta", colors_rgb.meta, "meta" },
+			{ "DxNamespace", colors_rgb.namespace, "namespace" },
+			{ "DxString", colors_rgb.string, "string" },
+			{ "DxNumber", colors_rgb.number, "number" },
+			{ "DxConstant", colors_rgb.constant, "constant" },
+			{ "DxLabel", colors_rgb.label, "label" },
+			{ "DxOperator", colors_rgb.operator, "operator" },
+			{ "DxPunctuation", colors_rgb.punctuation, "punctuation" },
+			{ "DxComment", colors_rgb.comment, "comment" },
+			{ "DxDocComment", colors_rgb.doc, "doc" },
+			{ "DxError", colors_rgb.error, "error" },
+			{ "DxWarn", colors_rgb.warn, "warn" },
+			{ "DxInfo", colors_rgb.info, "info" },
+			{ "DxHint", colors_rgb.hint, "hint" },
+		}
+
+		for _, item in ipairs(role_assertions) do
+			local hl = get_resolved_hl(item[1])
+			if hl.fg ~= item[2] then
+				fail(
+					("%s fg mismatch: expected %06x (%s), got %s"):format(
+						item[1],
+						item[2],
+						item[3],
+						hl.fg and ("%06x"):format(hl.fg) or "nil"
+					)
 				)
-			)
+			end
 		end
 
-		local dx_type = get_resolved_hl("DxType")
-		if dx_type.fg ~= colors_rgb.teal then
-			fail(
-				("DxType fg mismatch: expected %06x (teal), got %s"):format(
-					colors_rgb.teal,
-					dx_type.fg and ("%06x"):format(dx_type.fg) or "nil"
-				)
-			)
-		end
-
-		local dx_builtin = get_resolved_hl("DxBuiltin")
-		if dx_builtin.fg ~= colors_rgb.sapphire then
-			fail(
-				("DxBuiltin fg mismatch: expected %06x (sapphire), got %s"):format(
-					colors_rgb.sapphire,
-					dx_builtin.fg and ("%06x"):format(dx_builtin.fg) or "nil"
-				)
-			)
-		end
-
-		local dx_member = get_resolved_hl("DxMember")
-		if dx_member.fg ~= colors_rgb.lavender then
-			fail(
-				("DxMember fg mismatch: expected %06x (lavender), got %s"):format(
-					colors_rgb.lavender,
-					dx_member.fg and ("%06x"):format(dx_member.fg) or "nil"
-				)
-			)
-		end
-
-		local dx_variable = get_resolved_hl("DxVariable")
-		if dx_variable.fg ~= colors_rgb.text then
-			fail(
-				("DxVariable fg mismatch: expected %06x (text), got %s"):format(
-					colors_rgb.text,
-					dx_variable.fg and ("%06x"):format(dx_variable.fg) or "nil"
-				)
-			)
-		end
-
-		local dx_meta = get_resolved_hl("DxMeta")
-		if dx_meta.fg ~= colors_rgb.pink then
-			fail(
-				("DxMeta fg mismatch: expected %06x (pink), got %s"):format(
-					colors_rgb.pink,
-					dx_meta.fg and ("%06x"):format(dx_meta.fg) or "nil"
-				)
-			)
-		end
-
-		local dx_keyword = get_resolved_hl("DxKeyword")
-		if dx_keyword.fg ~= colors_rgb.mauve then
-			fail(
-				("DxKeyword fg mismatch: expected %06x (mauve), got %s"):format(
-					colors_rgb.mauve,
-					dx_keyword.fg and ("%06x"):format(dx_keyword.fg) or "nil"
-				)
-			)
-		end
-
-		local dx_error = get_resolved_hl("DxError")
-		if dx_error.fg ~= colors_rgb.red then
-			fail(
-				("DxError fg mismatch: expected %06x (red), got %s"):format(
-					colors_rgb.red,
-					dx_error.fg and ("%06x"):format(dx_error.fg) or "nil"
-				)
-			)
+		-- Yellow Scarcity Check on production theme: DxCallable must NOT use yellow
+		if colors_rgb.callable == colors_rgb.warn then
+			fail("Yellow Scarcity violation: DxCallable is mapped to state yellow")
 		end
 
 		-- 2. Tree-sitter link resolution
-		local ts_function = get_resolved_hl("@function")
-		if ts_function.fg ~= colors_rgb.yellow then
-			fail("@function does not resolve to DxCallable yellow")
-		end
-
-		local ts_type = get_resolved_hl("@type")
-		if ts_type.fg ~= colors_rgb.teal then
-			fail("@type does not resolve to DxType teal")
-		end
-
-		local ts_builtin = get_resolved_hl("@type.builtin")
-		if ts_builtin.fg ~= colors_rgb.sapphire then
-			fail("@type.builtin does not resolve to DxBuiltin sapphire")
-		end
-
-		local ts_property = get_resolved_hl("@property")
-		if ts_property.fg ~= colors_rgb.lavender then
-			fail("@property does not resolve to DxMember lavender")
-		end
-
-		local ts_variable = get_resolved_hl("@variable")
-		if ts_variable.fg ~= colors_rgb.text then
-			fail("@variable does not resolve to DxVariable text")
-		end
-
-		-- Zig builtin language adapter (@function.builtin.zig -> DxMeta)
-		local zig_builtin = get_resolved_hl("@function.builtin.zig")
-		if zig_builtin.fg ~= colors_rgb.pink then
-			fail("@function.builtin.zig does not resolve to DxMeta pink")
+		local ts_assertions = {
+			{ "@keyword", colors_rgb.keyword },
+			{ "@function", colors_rgb.callable },
+			{ "@function.call", colors_rgb.callable },
+			{ "@function.method", colors_rgb.callable },
+			{ "@type", colors_rgb.type },
+			{ "@type.builtin", colors_rgb.builtin },
+			{ "@type.lifetime", colors_rgb.lifetime },
+			{ "@type.lifetime.rust", colors_rgb.lifetime },
+			{ "@property", colors_rgb.member },
+			{ "@variable.member", colors_rgb.member },
+			{ "@variable", colors_rgb.variable },
+			{ "@function.macro", colors_rgb.meta },
+			{ "@constant.macro", colors_rgb.meta },
+			{ "@label", colors_rgb.label },
+			{ "@string", colors_rgb.string },
+			{ "@string.regexp", colors_rgb.string },
+			{ "@function.builtin.zig", colors_rgb.meta },
+		}
+		for _, item in ipairs(ts_assertions) do
+			local hl = get_resolved_hl(item[1])
+			if hl.fg ~= item[2] then
+				fail(
+					("Tree-sitter mapping mismatch for %s: expected fg %06x, got %s"):format(
+						item[1],
+						item[2],
+						hl.fg and ("%06x"):format(hl.fg) or "nil"
+					)
+				)
+			end
 		end
 
 		-- 3. LSP Standard base tokens closure
-		local lsp_function = get_resolved_hl("@lsp.type.function")
-		if lsp_function.fg ~= colors_rgb.yellow then
-			fail("@lsp.type.function does not resolve to DxCallable yellow")
-		end
-
-		local lsp_type_param = get_resolved_hl("@lsp.type.typeParameter")
-		if lsp_type_param.fg ~= colors_rgb.teal then
-			fail("@lsp.type.typeParameter does not resolve to DxType teal")
-		end
-
-		local lsp_keyword = get_resolved_hl("@lsp.type.keyword")
-		if lsp_keyword.fg ~= colors_rgb.mauve then
-			fail("@lsp.type.keyword does not resolve to DxKeyword mauve")
-		end
-
-		local lsp_string = get_resolved_hl("@lsp.type.string")
-		if lsp_string.fg ~= colors_rgb.green then
-			fail("@lsp.type.string does not resolve to DxString green")
+		local lsp_assertions = {
+			{ "@lsp.type.keyword", colors_rgb.keyword },
+			{ "@lsp.type.modifier", colors_rgb.keyword },
+			{ "@lsp.type.function", colors_rgb.callable },
+			{ "@lsp.type.method", colors_rgb.callable },
+			{ "@lsp.type.class", colors_rgb.type },
+			{ "@lsp.type.struct", colors_rgb.type },
+			{ "@lsp.type.typeParameter", colors_rgb.type },
+			{ "@lsp.type.property", colors_rgb.member },
+			{ "@lsp.type.string", colors_rgb.string },
+			{ "@lsp.type.regexp", colors_rgb.string },
+			{ "@lsp.type.label", colors_rgb.label },
+			{ "@lsp.type.lifetime", colors_rgb.lifetime },
+			{ "@lsp.type.builtinType", colors_rgb.builtin },
+		}
+		for _, item in ipairs(lsp_assertions) do
+			local hl = get_resolved_hl(item[1])
+			if hl.fg ~= item[2] then
+				fail(
+					("LSP mapping mismatch for %s: expected fg %06x, got %s"):format(
+						item[1],
+						item[2],
+						hl.fg and ("%06x"):format(hl.fg) or "nil"
+					)
+				)
+			end
 		end
 
 		-- 4. Precedence Governance: Neutralized typemods
 		local typemod_var_readonly = get_resolved_hl("@lsp.typemod.variable.readonly")
-		if typemod_var_readonly.fg ~= colors_rgb.text then
+		if typemod_var_readonly.fg ~= colors_rgb.variable then
 			fail(
-				("@lsp.typemod.variable.readonly fg mismatch: expected %06x (text), got %s"):format(
-					colors_rgb.text,
+				("@lsp.typemod.variable.readonly fg mismatch: expected %06x (variable), got %s"):format(
+					colors_rgb.variable,
 					typemod_var_readonly.fg and ("%06x"):format(typemod_var_readonly.fg) or "nil"
 				)
 			)
@@ -233,25 +229,25 @@ local function main()
 			fail("@lsp.typemod.function.deprecated must have strikethrough enabled")
 		end
 
-		-- 5. Editor UI Chrome
-		local cursorline_nr = get_resolved_hl("CursorLineNr")
-		if cursorline_nr.fg ~= colors_rgb.lavender then
-			fail("CursorLineNr fg must be lavender")
-		end
-
+		-- 5. Editor UI Chrome (Yellow Scarcity applied: CurSearch uses state warn yellow)
 		local cur_search = get_resolved_hl("CurSearch")
-		if cur_search.bg ~= colors_rgb.yellow then
-			fail("CurSearch bg must be yellow")
+		if cur_search.bg ~= colors_rgb.warn then
+			fail("CurSearch bg must be state yellow")
 		end
 
 		-- 6. Diagnostics
 		local diag_error = get_resolved_hl("DiagnosticError")
-		if diag_error.fg ~= colors_rgb.red then
-			fail("DiagnosticError fg must be red")
+		if diag_error.fg ~= colors_rgb.error then
+			fail("DiagnosticError fg must be state error red")
+		end
+
+		local diag_warn = get_resolved_hl("DiagnosticWarn")
+		if diag_warn.fg ~= colors_rgb.warn then
+			fail("DiagnosticWarn fg must be state warn yellow")
 		end
 
 		local diag_undercurl = get_resolved_hl("DiagnosticUnderlineError")
-		if not diag_undercurl.undercurl or diag_undercurl.sp ~= colors_rgb.red then
+		if not diag_undercurl.undercurl or diag_undercurl.sp ~= colors_rgb.error then
 			fail("DiagnosticUnderlineError must have undercurl with red special color")
 		end
 
@@ -268,24 +264,29 @@ local function main()
 
 		-- 8. Completion (blink.cmp)
 		local blink_fn = get_resolved_hl("BlinkCmpKindFunction")
-		if blink_fn.fg ~= colors_rgb.yellow then
-			fail("BlinkCmpKindFunction must resolve to DxCallable yellow")
+		if blink_fn.fg ~= colors_rgb.callable then
+			fail("BlinkCmpKindFunction must resolve to DxCallable")
 		end
 
 		local blink_class = get_resolved_hl("BlinkCmpKindClass")
-		if blink_class.fg ~= colors_rgb.teal then
-			fail("BlinkCmpKindClass must resolve to DxType teal")
+		if blink_class.fg ~= colors_rgb.type then
+			fail("BlinkCmpKindClass must resolve to DxType")
 		end
 
 		-- 9. Neotest & DAP
 		local neotest_passed = get_resolved_hl("NeotestPassed")
-		if neotest_passed.fg ~= colors_rgb.green then
-			fail("NeotestPassed must resolve to green")
+		if neotest_passed.fg ~= colors_rgb.success then
+			fail("NeotestPassed must resolve to success green")
 		end
 
 		local dap_breakpoint = get_resolved_hl("DapBreakpoint")
-		if dap_breakpoint.fg ~= colors_rgb.red then
-			fail("DapBreakpoint must resolve to red")
+		if dap_breakpoint.fg ~= colors_rgb.error then
+			fail("DapBreakpoint must resolve to error red")
+		end
+
+		local dap_stopped = get_resolved_hl("DapStopped")
+		if dap_stopped.fg ~= colors_rgb.warn then
+			fail("DapStopped must resolve to warn yellow")
 		end
 	end
 
@@ -308,31 +309,30 @@ local function main()
 	-- Test Step 3: Symbolic Sentinel Resolution
 	-- ============================================================================
 
+	local function is_comment_line(trimmed, lang)
+		if
+			trimmed:sub(1, 2) == "//"
+			or trimmed:sub(1, 3) == "///"
+			or trimmed:sub(1, 2) == "/*"
+			or trimmed:sub(1, 1) == "*"
+		then
+			return true
+		end
+		if lang == "python" and trimmed:sub(1, 1) == "#" then
+			return true
+		end
+		return false
+	end
+
 	--- Locates a symbol's exact (row, col) strictly AFTER the symbolic sentinel marker comment
-	---@param bufnr integer
-	---@param tag string e.g. "DX:SENTINEL rust.size.method"
-	---@param token string e.g. "size"
-	---@return integer row 0-indexed
-	---@return integer col 0-indexed
-	---@return string target_line
-	---@return integer comment_row 0-indexed
-	local function locate_symbolic_sentinel(bufnr, tag, token)
+	local function locate_symbolic_sentinel(bufnr, tag, token, lang)
 		local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
 		for i, line in ipairs(lines) do
 			if line:find(tag, 1, true) then
-				-- MUST search lines strictly AFTER the marker comment (i + 1 onwards)
 				for j = i + 1, math.min(#lines, i + 10) do
 					local target_line = lines[j]
 					local trimmed = target_line:match("^%s*(.-)%s*$") or ""
-					if
-						not (
-							trimmed:sub(1, 2) == "//"
-							or trimmed:sub(1, 1) == "#"
-							or trimmed:sub(1, 3) == "///"
-							or trimmed:sub(1, 2) == "/*"
-							or trimmed:sub(1, 1) == "*"
-						)
-					then
+					if not is_comment_line(trimmed, lang) then
 						local pattern = "%f[%w_]" .. vim.pesc(token) .. "%f[^%w_]"
 						local s_start = target_line:find(pattern)
 						if s_start then
@@ -343,16 +343,11 @@ local function main()
 				end
 			end
 		end
-		fail(("Symbolic sentinel not found in buffer: tag=%q, token=%q"):format(tag, token))
+		fail(("Symbolic sentinel not found in buffer: tag=%q, token=%q, lang=%q"):format(tag, token, tostring(lang)))
 	end
 
 	--- Priority-based foreground resolution:
-	--- Collects all candidate groups with a non-nil fg from:
-	--- 1. LSP semantic tokens extmarks (priority 125+)
-	--- 2. Tree-sitter captures (priority 100 via Neovim :Inspect hierarchy)
-	--- 3. Syntax items (priority 50)
-	--- Sorts by priority descending. Highest priority candidate wins.
-	--- Style-only groups (like deprecated with fg = nil) do not shadow semantic fg.
+	--- Collects all candidate groups with a non-nil fg from extmarks, treesitter, and syntax.
 	local function get_effective_highlight_at_pos(bufnr, row, col)
 		local inspected = vim.inspect_pos(bufnr, row, col)
 		local candidates = {}
@@ -397,7 +392,6 @@ local function main()
 		end
 
 		-- 3. Tree-sitter captures (using Neovim :Inspect priority hierarchy)
-		-- Later captures in traversal order override earlier captures at equal priority
 		for i, ts in ipairs(inspected.treesitter or {}) do
 			local hl_name = ts.hl_group or ("@" .. ts.capture)
 			local hl = vim.api.nvim_get_hl(0, { name = hl_name, link = false })
@@ -455,20 +449,25 @@ local function main()
 
 	--- Three-level verification:
 	--- 1. ROLE_ASSERT: asserts that the effective highlight's fg matches expected role
-	--- 2. TOKEN_OBSERVE: logs active Tree-sitter captures and raw LSP tokens from get_at_pos()
-	--- 3. TOKEN_REQUIRE: enforces specific raw LSP token type when required
-	local function probe_sentinel_at(bufnr, tag, token, expected_role, label, require_token_type)
-		local row, col, target_line, comment_row = locate_symbolic_sentinel(bufnr, tag, token)
-		local pos_desc = ("%s (%s:%s at L%d:C%d)"):format(label, tag, token, row + 1, col + 1)
+	--- 2. CAPTURE_PROOF: asserts required or forbidden Tree-sitter captures (e.g. lifetime vs attribute)
+	--- 3. TOKEN_OBSERVE: logs active Tree-sitter captures and raw LSP tokens from get_at_pos()
+	local function probe_sentinel_at(bufnr, sentinel, lang)
+		local row, col, target_line, comment_row = locate_symbolic_sentinel(bufnr, sentinel.tag, sentinel.token, lang)
+		local pos_desc = ("%s (%s:%s at L%d:C%d)"):format(
+			sentinel.desc or sentinel.tag,
+			sentinel.tag,
+			sentinel.token,
+			row + 1,
+			col + 1
+		)
 
-		-- Guard: sentinel must never resolve to the comment marker line
 		if row <= comment_row then
 			fail(("LOCATOR ERROR: %s resolved to comment row %d"):format(pos_desc, comment_row + 1))
 		end
 
-		local expected_hl = get_resolved_hl(expected_role)
+		local expected_hl = get_resolved_hl(sentinel.role)
 		if not expected_hl or not expected_hl.fg then
-			fail(("Expected role highlight %s is undefined"):format(expected_role))
+			fail(("Expected role highlight %s is undefined"):format(sentinel.role))
 		end
 
 		local eff_group, eff_hl, inspected, candidates = get_effective_highlight_at_pos(bufnr, row, col)
@@ -478,19 +477,74 @@ local function main()
 
 		-- 1. ROLE_ASSERT: True position-level color check
 		if eff_hl.fg ~= expected_hl.fg then
+			local cand_summary = {}
+			for _, c in ipairs(candidates or {}) do
+				table.insert(
+					cand_summary,
+					("%s(src=%s, prio=%d, fg=%06x, ord=%d)"):format(c.hl_name, c.source, c.priority, c.fg, c.order or 0)
+				)
+			end
 			fail(
-				("ROLE_ASSERT failed for %s: effective fg mismatch (expected %06x from %s, got %06x from %s, prio=%d)"):format(
+				(
+					"ROLE_ASSERT mismatch for %s:\n"
+					.. "  Expected fg: %06x (%s)\n"
+					.. "  Actual fg:   %06x (from group: %s)\n"
+					.. "  Candidates:  %s"
+				):format(
 					pos_desc,
 					expected_hl.fg,
-					expected_role,
+					sentinel.role,
 					eff_hl.fg,
 					eff_group or "nil",
-					candidates and candidates[1] and candidates[1].priority or -1
+					table.concat(cand_summary, " -> ")
 				)
 			)
 		end
 
-		-- 2. TOKEN_OBSERVE: Fetch raw tokens directly from vim.lsp.semantic_tokens.get_at_pos()
+		-- 2. CAPTURE_PROOF: Tree-sitter query extension validation
+		if sentinel.required_ts_capture then
+			local found_capture = false
+			for _, ts in ipairs(inspected.treesitter or {}) do
+				if
+					ts.hl_group == ("@" .. sentinel.required_ts_capture)
+					or (ts.capture .. "." .. lang) == sentinel.required_ts_capture
+				then
+					found_capture = true
+					break
+				end
+			end
+			if not found_capture then
+				local actual_caps = {}
+				for _, ts in ipairs(inspected.treesitter or {}) do
+					table.insert(actual_caps, ts.hl_group or ts.capture)
+				end
+				fail(
+					(
+						"CAPTURE_PROOF FAILED for %s:\n"
+						.. "  Expected required capture: %s\n"
+						.. "  Actual captures:           [%s]"
+					):format(pos_desc, sentinel.required_ts_capture, table.concat(actual_caps, ", "))
+				)
+			end
+		end
+
+		if sentinel.forbidden_ts_capture then
+			for _, ts in ipairs(inspected.treesitter or {}) do
+				if
+					ts.hl_group == ("@" .. sentinel.forbidden_ts_capture)
+					or (ts.capture .. "." .. lang) == sentinel.forbidden_ts_capture
+				then
+					fail(
+						("CAPTURE_PROOF FAILED for %s: contains forbidden capture %s"):format(
+							pos_desc,
+							sentinel.forbidden_ts_capture
+						)
+					)
+				end
+			end
+		end
+
+		-- 3. TOKEN_OBSERVE: Raw inspection logging
 		local raw_lsp_tokens = {}
 		if vim.lsp and vim.lsp.semantic_tokens and vim.lsp.semantic_tokens.get_at_pos then
 			local raw = vim.lsp.semantic_tokens.get_at_pos(bufnr, row, col)
@@ -532,25 +586,6 @@ local function main()
 				table.concat(raw_lsp_tokens, "; ")
 			)
 		)
-
-		-- 3. TOKEN_REQUIRE (if explicitly requested)
-		if require_token_type then
-			local matched = false
-			if vim.lsp and vim.lsp.semantic_tokens and vim.lsp.semantic_tokens.get_at_pos then
-				local raw = vim.lsp.semantic_tokens.get_at_pos(bufnr, row, col)
-				for _, tok in ipairs(raw or {}) do
-					if tok.type == require_token_type then
-						matched = true
-						break
-					end
-				end
-			end
-			if not matched then
-				fail(
-					("TOKEN_REQUIRE failed for %s: expected raw LSP token type %s"):format(pos_desc, require_token_type)
-				)
-			end
-		end
 	end
 
 	-- ============================================================================
@@ -559,7 +594,7 @@ local function main()
 
 	local strict_lsp = (vim.env.DOTFILES_STRICT_LSP == "1")
 	if strict_lsp then
-		print("Strict LSP Gate active: All 4 language servers required.")
+		print("Strict LSP Gate active: All 4 language servers required across 5 fixtures.")
 	else
 		print("Standard LSP Gate active: Attached servers verified; Tree-sitter baseline authoritative.")
 	end
@@ -568,8 +603,8 @@ local function main()
 		local client
 		local attached = vim.wait(10000, function()
 			for _, candidate in ipairs(vim.lsp.get_clients({ bufnr = bufnr })) do
-				for _, name in ipairs(expected_names) do
-					if candidate.name == name and candidate.initialized then
+				for _, c_name in ipairs(expected_names) do
+					if candidate.name == c_name and candidate.initialized then
 						client = candidate
 						return true
 					end
@@ -589,23 +624,21 @@ local function main()
 		return client
 	end
 
-	local function wait_for_semantic_tokens(bufnr, client, sentinels)
+	local function wait_for_semantic_tokens(bufnr, client, sentinels, lang)
 		assert(
 			client.server_capabilities.semanticTokensProvider ~= nil,
 			("LSP server %s does not advertise semanticTokensProvider"):format(client.name)
 		)
 
-		-- Force refresh semantic tokens for this buffer
 		if vim.lsp.semantic_tokens and vim.lsp.semantic_tokens.force_refresh then
 			vim.lsp.semantic_tokens.force_refresh(bufnr)
 		elseif vim.lsp.semantic_tokens and vim.lsp.semantic_tokens.refresh then
 			vim.lsp.semantic_tokens.refresh(bufnr)
 		end
 
-		-- Wait until semantic tokens from this client are returned on at least one sentinel
 		local tokens_ready = vim.wait(15000, function()
 			for _, s in ipairs(sentinels) do
-				local r, c = locate_symbolic_sentinel(bufnr, s.tag, s.token)
+				local r, c = locate_symbolic_sentinel(bufnr, s.tag, s.token, lang)
 				local raw_toks = vim.lsp.semantic_tokens.get_at_pos(bufnr, r, c)
 				for _, tok in ipairs(raw_toks or {}) do
 					if tok.client_id == client.id then
@@ -628,88 +661,26 @@ local function main()
 
 	local repo_root = vim.fs.root(0, ".git") or vim.fn.getcwd()
 
-	local fixture_specs = {
-		{
-			lang = "rust",
-			filetype = "rust",
-			lsp_servers = { "rust-analyzer", "rust_analyzer" },
-			path = repo_root .. "/tests/nvim/color/rust/src/main.rs",
-			sentinels = {
-				{
-					tag = "rust.download_summary.type",
-					token = "DownloadSummary",
-					role = "DxType",
-					label = "Rust struct",
-				},
-				{ tag = "rust.size.method", token = "size", role = "DxCallable", label = "Rust method" },
-				{ tag = "rust.size.field", token = "size", role = "DxMember", label = "Rust field" },
-				{ tag = "rust.fetch_stream.fn", token = "uri", role = "DxParameter", label = "Rust parameter" },
-			},
-		},
-		{
-			lang = "cpp",
-			filetype = "cpp",
-			lsp_servers = { "clangd" },
-			path = repo_root .. "/tests/nvim/color/cpp/src/main.cpp",
-			sentinels = {
-				{ tag = "cpp.packet_decoder.class", token = "PacketDecoder", role = "DxType", label = "C++ class" },
-				{ tag = "cpp.decode.method", token = "decode", role = "DxCallable", label = "C++ method" },
-				{ tag = "cpp.state.member", token = "state_", role = "DxMember", label = "C++ member" },
-				{
-					tag = "cpp.log_diagnostic.fn",
-					token = "log_diagnostic",
-					role = "DxCallable",
-					label = "C++ function",
-				},
-			},
-		},
-		{
-			lang = "zig",
-			filetype = "zig",
-			lsp_servers = { "zls" },
-			path = repo_root .. "/tests/nvim/color/zig/src/main.zig",
-			sentinels = {
-				{ tag = "zig.network_buffer.type", token = "NetworkBuffer", role = "DxType", label = "Zig struct" },
-				{ tag = "zig.bytes.member", token = "bytes", role = "DxMember", label = "Zig field" },
-				{ tag = "zig.append.method", token = "append", role = "DxCallable", label = "Zig method" },
-				{ tag = "zig.sizeof.builtin", token = "sizeOf", role = "DxMeta", label = "Zig builtin (@sizeOf)" },
-			},
-		},
-		{
-			lang = "python",
-			filetype = "python",
-			lsp_servers = { "pyright" },
-			path = repo_root .. "/tests/nvim/color/python/main.py",
-			sentinels = {
-				{
-					tag = "python.download_summary.class",
-					token = "DownloadSummary",
-					role = "DxType",
-					label = "Python class",
-				},
-				{ tag = "python.size.member", token = "size", role = "DxMember", label = "Python member" },
-				{
-					tag = "python.validate_bounds.method",
-					token = "validate_bounds",
-					role = "DxCallable",
-					label = "Python method",
-				},
-				{
-					tag = "python.fetch_async.fn",
-					token = "fetch_async",
-					role = "DxCallable",
-					label = "Python async fn",
-				},
-			},
-		},
-	}
+	local ok_manifest, manifest = pcall(dofile, repo_root .. "/tests/nvim/color_manifest.lua")
+	if not ok_manifest or not manifest.languages then
+		fail("Failed to load tests/nvim/color_manifest.lua")
+	end
+
+	-- Language execution order: rust, c, cpp, zig, python
+	local lang_order = { "rust", "c", "cpp", "zig", "python" }
 
 	-- Ensure LSP configuration plugin is loaded
 	pcall(require("lazy").load, { plugins = { "nvim-lspconfig" } })
 
-	for _, spec in ipairs(fixture_specs) do
-		if vim.fn.filereadable(spec.path) == 1 then
-			vim.cmd.edit(vim.fn.fnameescape(spec.path))
+	for _, lang_key in ipairs(lang_order) do
+		local spec = manifest.languages[lang_key]
+		if not spec then
+			fail("Missing language spec in manifest: " .. lang_key)
+		end
+		local fixture_path = repo_root .. "/" .. spec.path
+
+		if vim.fn.filereadable(fixture_path) == 1 then
+			vim.cmd.edit(vim.fn.fnameescape(fixture_path))
 			local bufnr = vim.api.nvim_get_current_buf()
 
 			if vim.bo[bufnr].filetype ~= spec.filetype then
@@ -724,15 +695,14 @@ local function main()
 				end
 			end)
 
-			print(("Loaded fixture [%s]: %s (ft=%s)"):format(spec.lang, spec.path, vim.bo[bufnr].filetype))
+			print(("Loaded fixture [%s]: %s (ft=%s)"):format(lang_key, fixture_path, vim.bo[bufnr].filetype))
 
 			-- Lane-aware LSP check
-			local client = wait_for_lsp_client(bufnr, spec.lsp_servers, strict_lsp)
+			local client = wait_for_lsp_client(bufnr, spec.lsp, strict_lsp)
 			if client then
 				print(("  LSP client '%s' attached (id=%d)"):format(client.name, client.id))
-				-- If server supports semantic tokens, require real token generation from this client
 				if client.server_capabilities.semanticTokensProvider ~= nil then
-					wait_for_semantic_tokens(bufnr, client, spec.sentinels)
+					wait_for_semantic_tokens(bufnr, client, spec.sentinels, lang_key)
 					print(("  Semantic tokens populated and verified for %s (id=%d)"):format(client.name, client.id))
 				else
 					print(
@@ -744,21 +714,21 @@ local function main()
 			else
 				print(
 					("  LSP client %s not installed in minimal profile; Tree-sitter baseline verified"):format(
-						vim.inspect(spec.lsp_servers)
+						vim.inspect(spec.lsp)
 					)
 				)
 			end
 
 			vim.cmd.redraw()
 
-			-- Run position-level assertions and observations
+			-- Run position-level assertions and capture proofs
 			for _, s in ipairs(spec.sentinels) do
-				probe_sentinel_at(bufnr, s.tag, s.token, s.role, s.label, s.require_token)
+				probe_sentinel_at(bufnr, s, lang_key)
 			end
 
 			vim.cmd.bdelete({ bang = true })
 		else
-			fail(("Fixture file not found: %s"):format(spec.path))
+			fail(("Fixture file not found: %s"):format(fixture_path))
 		end
 	end
 

@@ -1,13 +1,10 @@
-//! Crate-level documentation comment for DX color fixture.
-
 use std::collections::HashMap;
-use std::fmt::Debug;
 use std::time::Duration;
 
-/// Maximum buffer size constant.
-pub const MAX_CAPACITY: usize = 4096;
+/// Constant limit value for buffer allocation.
+pub const MAX_CAPACITY: usize = 65536;
 
-/// Process status enumeration.
+/// An operational state classification.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Status {
     Ready,
@@ -15,8 +12,8 @@ pub enum Status {
     Finished(u32),
 }
 
-/// Abstract streaming protocol trait.
-pub trait StreamHandler<T: Clone> {
+/// A pipeline consumer trait for streaming data.
+pub trait StreamConsumer<T> {
     fn process(&mut self, item: T) -> Result<usize, String>;
 }
 
@@ -31,11 +28,13 @@ pub struct DownloadSummary {
 }
 
 impl DownloadSummary {
-    /// Sentinel: method definition (Callable = Yellow)
+    /// Sentinel: method definition (Callable = Muted Amber)
     // DX:SENTINEL rust.size.method
+    // Sentinel: standard attribute (Meta = Dusty Pink)
+    // DX:SENTINEL rust.must_use.attribute
     #[must_use]
     pub fn size(&self) -> u64 {
-        // Sentinel: field access (self = Text, .size = Lavender)
+        // Sentinel: field access (self = Neutral Body, .size = Periwinkle)
         // DX:SENTINEL rust.size.field
         self.size
     }
@@ -46,14 +45,19 @@ impl DownloadSummary {
     {
         Self {
             size: initial.into(),
-            latency: Duration::from_millis(100),
+            latency: Duration::from_millis(15),
             status: Status::Ready,
             metadata: HashMap::new(),
         }
     }
 }
 
-/// Lifetime-parameterized reader reference.
+/// Sentinel: static lifetime specifier (Lifetime = Cyan)
+// DX:SENTINEL rust.lifetime.static
+pub const DEFAULT_TAG: &'static str = "stream_decoder";
+
+/// Sentinel: lifetime generic parameter (Lifetime = Cyan)
+// DX:SENTINEL rust.lifetime.param
 pub struct FrameReader<'a> {
     pub buffer: &'a [u8],
 }
@@ -64,14 +68,23 @@ impl<'a> FrameReader<'a> {
     }
 }
 
-/// Sentinel: async free function (Callable = Yellow, Parameters = Rosewater)
+/// Sentinel: async free function (Callable = Muted Amber, Parameters = Muted Violet-Gray)
 // DX:SENTINEL rust.fetch_stream.fn
 pub async fn fetch_stream<'a>(uri: &'a str, retries: u32) -> Result<DownloadSummary, String> {
-    // Local variable (Neutral Text)
     let initial_size: u64 = MAX_CAPACITY as u64;
     let mut summary = DownloadSummary::with_capacity(initial_size);
 
     println!("Starting fetch from {}", uri);
+
+    let mut attempts = 0u32;
+    // Sentinel: loop control-flow label (Label = Neutral Slate)
+    // DX:SENTINEL rust.dispatch.label
+    'dispatch: loop {
+        attempts += 1;
+        if attempts >= retries {
+            break 'dispatch;
+        }
+    }
 
     let active_status = match retries {
         0 => Status::Ready,
@@ -87,7 +100,11 @@ fn main() {
     let target_uri = "https://example.com/stream";
     let count: u32 = 3;
 
-    // Async execution handle without external runtime dependencies
+    println!("Default tag: {}", DEFAULT_TAG);
+    let sample = [1u8, 2, 3];
+    let reader = FrameReader { buffer: &sample };
+    println!("Reader len: {}", reader.read_len());
+
     let _future = fetch_stream(target_uri, count);
     let summary = DownloadSummary::with_capacity(1024u64);
     println!("Initial summary size: {}", summary.size());
