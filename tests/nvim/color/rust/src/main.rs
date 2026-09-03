@@ -2,11 +2,10 @@
 
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::future::Future;
 use std::time::Duration;
 
 /// Maximum buffer size constant.
-const MAX_CAPACITY: usize = 4096;
+pub const MAX_CAPACITY: usize = 4096;
 
 /// Process status enumeration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -22,6 +21,7 @@ pub trait StreamHandler<T: Clone> {
 }
 
 /// A verified download summary data model.
+// DX:SENTINEL rust.download_summary.type
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DownloadSummary {
     pub size: u64,
@@ -32,9 +32,11 @@ pub struct DownloadSummary {
 
 impl DownloadSummary {
     /// Sentinel: method definition (Callable = Yellow)
+    // DX:SENTINEL rust.size.method
     #[must_use]
     pub fn size(&self) -> u64 {
         // Sentinel: field access (self = Text, .size = Lavender)
+        // DX:SENTINEL rust.size.field
         self.size
     }
 
@@ -63,9 +65,10 @@ impl<'a> FrameReader<'a> {
 }
 
 /// Sentinel: async free function (Callable = Yellow, Parameters = Rosewater)
+// DX:SENTINEL rust.fetch_stream.fn
 pub async fn fetch_stream<'a>(uri: &'a str, retries: u32) -> Result<DownloadSummary, String> {
     // Local variable (Neutral Text)
-    let initial_size: u64 = 1024;
+    let initial_size: u64 = MAX_CAPACITY as u64;
     let mut summary = DownloadSummary::with_capacity(initial_size);
 
     println!("Starting fetch from {}", uri);
@@ -80,18 +83,12 @@ pub async fn fetch_stream<'a>(uri: &'a str, retries: u32) -> Result<DownloadSumm
     Ok(summary)
 }
 
-#[tokio::main]
-async fn main() {
+fn main() {
     let target_uri = "https://example.com/stream";
     let count: u32 = 3;
 
-    let result = fetch_stream(target_uri, count).await;
-    match result {
-        Ok(summary) => {
-            println!("Fetched bytes: {}", summary.size());
-        }
-        Err(err) => {
-            eprintln!("Error occurred: {}", err);
-        }
-    }
+    // Async execution handle without external runtime dependencies
+    let _future = fetch_stream(target_uri, count);
+    let summary = DownloadSummary::with_capacity(1024u64);
+    println!("Initial summary size: {}", summary.size());
 }

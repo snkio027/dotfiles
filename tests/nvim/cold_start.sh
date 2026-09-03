@@ -43,7 +43,8 @@ run_nvim smoke "+luafile tests/nvim/smoke.lua" +qa
 run_nvim color-contract "+luafile tests/nvim/color_contract.lua" +qa
 
 if grep -ERni 'Package is already installing|MasonToolsStartingInstall|MasonToolsUpdateCompleted|^Installing tools:|^Updating tools:' \
-    "$LOG_DIR/lazy-restore.log" "$LOG_DIR/startup-policy.log" "$LOG_DIR/smoke.log"; then
+    "$LOG_DIR/lazy-restore.log" "$LOG_DIR/startup-policy.log" "$LOG_DIR/smoke.log" \
+    "$LOG_DIR/color-unit.log" "$LOG_DIR/color-contract.log"; then
     echo "Unexpected Mason background installation or update detected" >&2
     exit 1
 fi

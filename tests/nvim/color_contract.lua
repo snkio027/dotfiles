@@ -1,76 +1,36 @@
 --- DX Semantic Color System (DX-COLOR-001)
---- Tier-2 Runtime Integration Contract: Executed in full Neovim environment with
---- Catppuccin loaded. Verifies final resolved highlight graph via nvim_get_hl(),
---- colorscheme reload invariance, LSP precedence governance, and semantic token
---- sentinel observation across Rust, C++, Zig, Python, and Markdown fixtures.
+--- Tier-2 Runtime Integration Contract: Executed in full production Neovim environment
+--- with Catppuccin loaded by LazyVim.
+---
+--- INVARIANT: This test MUST observe production configuration; it MUST NOT
+--- reconstruct it (fail closed: no fallback palettes, no direct cat.setup() calls).
+--- Validates:
+--- 1. Production highlight graph via nvim_get_hl()
+--- 2. Colorscheme reload invariance (:colorscheme catppuccin lifecycle)
+--- 3. Diff state contract (subtle background, syntax foreground preserved)
+--- 4. LSP precedence governance (@lsp.typemod.* neutralization, deprecated style)
+--- 5. Symbolic sentinel lookup and position-level ROLE_ASSERT via vim.inspect_pos()
+--- 6. Real LSP client wait & semantic token observation (TOKEN_OBSERVE / TOKEN_REQUIRE)
 
 local function fail(msg)
 	error("COLOR_RUNTIME_CONTRACT_FAILURE: " .. msg, 2)
 end
 
-vim.opt.termguicolors = true
 vim.opt.swapfile = false
-if vim.lsp and vim.lsp.log and vim.lsp.log.set_level then
-	vim.lsp.log.set_level(vim.log.levels.OFF)
-elseif vim.lsp and vim.lsp.set_log_level then
-	pcall(vim.lsp.set_log_level, "off")
+
+-- Fail closed: assert production colorscheme was loaded by LazyVim/ui.lua
+if vim.g.colors_name ~= "catppuccin" then
+	fail(("Production colorscheme must be 'catppuccin', found: %s"):format(vim.inspect(vim.g.colors_name)))
 end
 
--- Retrieve Catppuccin Mocha palette or fallback to canonical Mocha constants
 local ok_cat, cat_palettes = pcall(require, "catppuccin.palettes")
-local palette
-if ok_cat and cat_palettes and cat_palettes.get_palette then
-	palette = cat_palettes.get_palette("mocha")
-else
-	palette = {
-		base = "#1e1e2e",
-		mantle = "#181825",
-		crust = "#11111b",
-		surface0 = "#313244",
-		surface1 = "#45475a",
-		surface2 = "#585b70",
-		overlay0 = "#6c7086",
-		overlay1 = "#7f849c",
-		overlay2 = "#9399b2",
-		subtext0 = "#a6adc8",
-		subtext1 = "#bac2de",
-		text = "#cdd6f4",
-		mauve = "#cba6f7",
-		lavender = "#b4befe",
-		blue = "#89b4fa",
-		sapphire = "#74c7ec",
-		sky = "#89dceb",
-		teal = "#94e2d5",
-		green = "#a6e3a1",
-		yellow = "#f9e2af",
-		peach = "#fab387",
-		maroon = "#eba0ac",
-		red = "#f38ba8",
-		pink = "#f5c2e7",
-		flamingo = "#f2cdcd",
-		rosewater = "#f5e0dc",
-	}
+if not ok_cat or not cat_palettes or not cat_palettes.get_palette then
+	fail("Catppuccin palettes module must be available from production plugins")
 end
 
-local function apply_theme_direct()
-	local theme = require("theme")
-	local full_hl = theme.highlights(palette)
-	for group, spec in pairs(full_hl) do
-		vim.api.nvim_set_hl(0, group, spec)
-	end
-end
-
-local ok_cat_mod, cat = pcall(require, "catppuccin")
-if ok_cat_mod and cat and cat.setup then
-	cat.setup({
-		flavour = "mocha",
-		custom_highlights = function(c)
-			return require("theme").highlights(c)
-		end,
-	})
-	vim.cmd.colorscheme("catppuccin")
-else
-	apply_theme_direct()
+local palette = cat_palettes.get_palette("mocha")
+if not palette or not palette.yellow then
+	fail("Failed to retrieve production Catppuccin Mocha palette")
 end
 
 local function hex_to_rgb(hex)
@@ -217,6 +177,12 @@ local function assert_contract()
 		fail("@variable does not resolve to DxVariable text")
 	end
 
+	-- Zig builtin language adapter
+	local zig_builtin = get_resolved_hl("@function.builtin.zig")
+	if zig_builtin.fg ~= colors_rgb.pink then
+		fail("@function.builtin.zig does not resolve to DxMeta pink")
+	end
+
 	-- 3. LSP Standard base tokens closure
 	local lsp_function = get_resolved_hl("@lsp.type.function")
 	if lsp_function.fg ~= colors_rgb.yellow then
@@ -276,7 +242,13 @@ local function assert_contract()
 		fail("DiagnosticUnderlineError must have undercurl with red special color")
 	end
 
-	-- 7. Completion (blink.cmp)
+	-- 7. Diff contract: verify subtle background exists without destroying code syntax foreground
+	local diff_add = get_resolved_hl("DiffAdd")
+	if diff_add.fg ~= nil then
+		fail("DiffAdd must not force a foreground color that overrides syntax tokens")
+	end
+
+	-- 8. Completion (blink.cmp)
 	local blink_fn = get_resolved_hl("BlinkCmpKindFunction")
 	if blink_fn.fg ~= colors_rgb.yellow then
 		fail("BlinkCmpKindFunction must resolve to DxCallable yellow")
@@ -287,7 +259,7 @@ local function assert_contract()
 		fail("BlinkCmpKindClass must resolve to DxType teal")
 	end
 
-	-- 8. Neotest & DAP
+	-- 9. Neotest & DAP
 	local neotest_passed = get_resolved_hl("NeotestPassed")
 	if neotest_passed.fg ~= colors_rgb.green then
 		fail("NeotestPassed must resolve to green")
@@ -300,66 +272,147 @@ local function assert_contract()
 end
 
 -- ============================================================================
--- Test Step 1: Initial Highlight Graph Verification
+-- Test Step 1: Initial Production Highlight Graph Verification
 -- ============================================================================
 assert_contract()
-print("Initial highlight graph verified.")
+print("Initial production highlight graph verified.")
 
 -- ============================================================================
--- Test Step 2: Colorscheme Reload Invariance
+-- Test Step 2: Colorscheme Reload Invariance (pure observation of production cycle)
 -- ============================================================================
-for i = 1, 3 do
-	if ok_cat_mod and cat and cat.setup then
-		vim.cmd.colorscheme("catppuccin")
-	else
-		apply_theme_direct()
-	end
+for _ = 1, 3 do
+	vim.cmd.colorscheme("catppuccin")
 	assert_contract()
 end
-print("Colorscheme reload invariance verified across 3 reload cycles.")
+print("Colorscheme reload invariance verified across 3 production reload cycles.")
 
 -- ============================================================================
--- Test Step 3: Semantic Token Observation Gate across Language Fixtures
+-- Test Step 3: Symbolic Sentinel Resolution & Position-Level Verification
 -- ============================================================================
 
---- Probe helper supporting 3 assertion levels:
---- ROLE_ASSERT: Mandatory assertion that the resolved visual role matches contract
---- TOKEN_OBSERVE: Observation log of active TS capture / LSP tokens (no false failures)
---- TOKEN_REQUIRE: Strict enforcement of LSP token type when required
-local function probe_sentinel(buf, line, col, expected_role, label, require_token_type)
-	local pos_desc = ("%s (L%d:C%d)"):format(label, line, col)
-
-	-- ROLE_ASSERT: Highlight role resolution must match contract
-	local role_hl = get_resolved_hl(expected_role)
-	if not role_hl or not role_hl.fg then
-		fail(("ROLE_ASSERT failed for %s: role %s is undefined"):format(pos_desc, expected_role))
+--- Locates a symbol's exact (row, col) near a symbolic sentinel tag comment
+---@param bufnr integer
+---@param tag string e.g. "DX:SENTINEL rust.download_summary.type"
+---@param token string e.g. "DownloadSummary"
+---@return integer row 0-indexed
+---@return integer col 0-indexed
+local function locate_symbolic_sentinel(bufnr, tag, token)
+	local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+	for i, line in ipairs(lines) do
+		if line:find(tag, 1, true) then
+			-- Search for token on subsequent lines (within 5 lines of the sentinel tag)
+			for j = i, math.min(#lines, i + 5) do
+				local target_line = lines[j]
+				local s_start, s_end = target_line:find(token, 1, true)
+				if s_start then
+					return j - 1, s_start - 1
+				end
+			end
+		end
 	end
+	fail(("Symbolic sentinel not found in buffer: tag=%q, token=%q"):format(tag, token))
+end
 
-	-- TOKEN_OBSERVE: probe active LSP semantic tokens at position if client attached
-	local lsp_tokens = {}
-	if vim.lsp and vim.lsp.semantic_tokens and vim.lsp.semantic_tokens.get_at_pos then
-		local tokens = vim.lsp.semantic_tokens.get_at_pos(buf, line - 1, col - 1)
-		if tokens and #tokens > 0 then
-			for _, tok in ipairs(tokens) do
-				table.insert(
-					lsp_tokens,
-					("type=%s, mods=%s"):format(tok.type or "nil", vim.inspect(tok.modifiers or {}))
-				)
+--- Inspects the effective highlight at (row, col) using Neovim's inspector
+--- Priority: LSP semantic tokens (priority 125+) > Tree-sitter captures (priority 100) > syntax
+local function get_effective_highlight_at_pos(bufnr, row, col)
+	local inspected = vim.inspect_pos(bufnr, row, col)
+
+	-- 1. Check semantic tokens
+	if inspected.semantic_tokens and #inspected.semantic_tokens > 0 then
+		for _, st in ipairs(inspected.semantic_tokens) do
+			local hl_name = st.opts and st.opts.hl_group
+			if hl_name then
+				local hl = vim.api.nvim_get_hl(0, { name = hl_name, link = false })
+				if hl and hl.fg then
+					return hl_name, hl, inspected
+				end
 			end
 		end
 	end
 
-	if #lsp_tokens > 0 then
-		print(("  [OBSERVE] %s -> LSP tokens: %s"):format(pos_desc, table.concat(lsp_tokens, "; ")))
-	else
-		print(("  [OBSERVE] %s -> role: %s (Tree-sitter / baseline resolved)"):format(pos_desc, expected_role))
+	-- 2. Check Tree-sitter captures
+	if inspected.treesitter and #inspected.treesitter > 0 then
+		for i = #inspected.treesitter, 1, -1 do
+			local ts = inspected.treesitter[i]
+			local hl_name = ts.hl_group or ("@" .. ts.capture)
+			local hl = vim.api.nvim_get_hl(0, { name = hl_name, link = false })
+			if hl and hl.fg then
+				return hl_name, hl, inspected
+			end
+		end
 	end
 
-	-- TOKEN_REQUIRE (if explicitly requested)
+	-- 3. Check syntax fallback
+	if inspected.syntax and #inspected.syntax > 0 then
+		local syn = inspected.syntax[#inspected.syntax]
+		local hl = vim.api.nvim_get_hl(0, { name = syn.hl_group, link = false })
+		if hl and hl.fg then
+			return syn.hl_group, hl, inspected
+		end
+	end
+
+	return nil, nil, inspected
+end
+
+--- Three-level verification:
+--- 1. ROLE_ASSERT: asserts that the effective highlight's fg matches expected role
+--- 2. TOKEN_OBSERVE: logs active Tree-sitter capture and LSP token metadata
+--- 3. TOKEN_REQUIRE: enforces specific LSP token type when required
+local function probe_sentinel_at(bufnr, tag, token, expected_role, label, require_token_type)
+	local row, col = locate_symbolic_sentinel(bufnr, tag, token)
+	local pos_desc = ("%s (%s:%s at L%d:C%d)"):format(label, tag, token, row + 1, col + 1)
+
+	local expected_hl = get_resolved_hl(expected_role)
+	if not expected_hl or not expected_hl.fg then
+		fail(("Expected role highlight %s is undefined"):format(expected_role))
+	end
+
+	local eff_group, eff_hl, inspected = get_effective_highlight_at_pos(bufnr, row, col)
+	if not eff_hl or not eff_hl.fg then
+		fail(("No effective highlight found at %s"):format(pos_desc))
+	end
+
+	-- 1. ROLE_ASSERT: True position-level color check
+	if eff_hl.fg ~= expected_hl.fg then
+		fail(
+			("ROLE_ASSERT failed for %s: effective fg mismatch (expected %06x from %s, got %06x from %s)"):format(
+				pos_desc,
+				expected_hl.fg,
+				expected_role,
+				eff_hl.fg,
+				eff_group or "nil"
+			)
+		)
+	end
+
+	-- 2. TOKEN_OBSERVE: Observation log of active TS captures and LSP tokens
+	local ts_names = {}
+	for _, ts in ipairs(inspected.treesitter or {}) do
+		table.insert(ts_names, ts.capture)
+	end
+	local lsp_names = {}
+	for _, st in ipairs(inspected.semantic_tokens or {}) do
+		table.insert(
+			lsp_names,
+			st.type .. (st.modifiers and ("+" .. table.concat(vim.tbl_keys(st.modifiers), ",")) or "")
+		)
+	end
+	print(
+		("  [OBSERVE] %s -> eff=%s (fg=%06x), ts=[%s], lsp=[%s]"):format(
+			pos_desc,
+			eff_group,
+			eff_hl.fg,
+			table.concat(ts_names, ","),
+			table.concat(lsp_names, ",")
+		)
+	)
+
+	-- 3. TOKEN_REQUIRE (if explicitly requested)
 	if require_token_type then
 		local matched = false
-		for _, desc in ipairs(lsp_tokens) do
-			if desc:find("type=" .. require_token_type, 1, true) then
+		for _, st in ipairs(inspected.semantic_tokens or {}) do
+			if st.type == require_token_type then
 				matched = true
 				break
 			end
@@ -370,61 +423,132 @@ local function probe_sentinel(buf, line, col, expected_role, label, require_toke
 	end
 end
 
--- Fixture files
+-- ============================================================================
+-- Test Step 4: Real Buffer Editing & LSP Waiting
+-- ============================================================================
+
+local function wait_for_lsp_client(bufnr, server_name)
+	local client
+	vim.wait(10000, function()
+		for _, candidate in ipairs(vim.lsp.get_clients({ bufnr = bufnr })) do
+			if candidate.name == server_name and candidate.initialized then
+				client = candidate
+				return true
+			end
+		end
+		return false
+	end, 100)
+	return client
+end
+
 local repo_root = vim.fn.fnamemodify(vim.fn.expand("%:p"), ":h:h:h")
 if repo_root == "" or repo_root == "." then
 	repo_root = vim.fn.getcwd()
 end
 
-local fixtures = {
-	rust = repo_root .. "/tests/nvim/color/rust/src/main.rs",
-	cpp = repo_root .. "/tests/nvim/color/cpp/src/main.cpp",
-	zig = repo_root .. "/tests/nvim/color/zig/src/main.zig",
-	python = repo_root .. "/tests/nvim/color/python/main.py",
-	markdown = repo_root .. "/tests/nvim/color/markdown/fixture.md",
+local fixture_specs = {
+	{
+		lang = "rust",
+		filetype = "rust",
+		lsp_server = "rust-analyzer",
+		path = repo_root .. "/tests/nvim/color/rust/src/main.rs",
+		sentinels = {
+			{ tag = "rust.download_summary.type", token = "DownloadSummary", role = "DxType", label = "Rust struct" },
+			{ tag = "rust.size.method", token = "size", role = "DxCallable", label = "Rust method" },
+			{ tag = "rust.size.field", token = "size", role = "DxMember", label = "Rust field" },
+			{ tag = "rust.fetch_stream.fn", token = "uri", role = "DxParameter", label = "Rust parameter" },
+		},
+	},
+	{
+		lang = "cpp",
+		filetype = "cpp",
+		lsp_server = "clangd",
+		path = repo_root .. "/tests/nvim/color/cpp/src/main.cpp",
+		sentinels = {
+			{ tag = "cpp.packet_decoder.class", token = "PacketDecoder", role = "DxType", label = "C++ class" },
+			{ tag = "cpp.decode.method", token = "decode", role = "DxCallable", label = "C++ method" },
+			{ tag = "cpp.state.member", token = "state_", role = "DxMember", label = "C++ member" },
+			{ tag = "cpp.log_diagnostic.fn", token = "log_diagnostic", role = "DxCallable", label = "C++ function" },
+		},
+	},
+	{
+		lang = "zig",
+		filetype = "zig",
+		lsp_server = "zls",
+		path = repo_root .. "/tests/nvim/color/zig/src/main.zig",
+		sentinels = {
+			{ tag = "zig.network_buffer.type", token = "NetworkBuffer", role = "DxType", label = "Zig struct" },
+			{ tag = "zig.bytes.member", token = "bytes", role = "DxMember", label = "Zig field" },
+			{ tag = "zig.append.method", token = "append", role = "DxCallable", label = "Zig method" },
+			{ tag = "zig.sizeof.builtin", token = "sizeOf", role = "DxMeta", label = "Zig builtin (@sizeOf)" },
+		},
+	},
+	{
+		lang = "python",
+		filetype = "python",
+		lsp_server = "pyright",
+		path = repo_root .. "/tests/nvim/color/python/main.py",
+		sentinels = {
+			{
+				tag = "python.download_summary.class",
+				token = "DownloadSummary",
+				role = "DxType",
+				label = "Python class",
+			},
+			{ tag = "python.is_empty.property", token = "is_empty", role = "DxMember", label = "Python property" },
+			{
+				tag = "python.validate_bounds.method",
+				token = "validate_bounds",
+				role = "DxCallable",
+				label = "Python method",
+			},
+			{ tag = "python.fetch_async.fn", token = "fetch_async", role = "DxCallable", label = "Python async fn" },
+		},
+	},
 }
 
-for lang, path in pairs(fixtures) do
-	if vim.fn.filereadable(path) == 1 then
-		local buf = vim.fn.bufadd(path)
-		vim.fn.bufload(buf)
-		print(("Loaded fixture [%s]: %s"):format(lang, path))
+-- Ensure LSP configuration plugin is loaded
+pcall(require("lazy").load, { plugins = { "nvim-lspconfig" } })
 
-		if lang == "rust" then
-			-- Sentinel 1: DownloadSummary struct -> DxType
-			probe_sentinel(buf, 26, 12, "DxType", "Rust struct DownloadSummary")
-			-- Sentinel 2: fn size -> DxCallable
-			probe_sentinel(buf, 36, 12, "DxCallable", "Rust fn size")
-			-- Sentinel 3: self.size -> DxMember
-			probe_sentinel(buf, 38, 14, "DxMember", "Rust field self.size")
-			-- Sentinel 4: uri: &'a str parameter -> DxParameter
-			probe_sentinel(buf, 60, 27, "DxParameter", "Rust parameter uri")
-		elseif lang == "cpp" then
-			-- Sentinel 1: PacketDecoder class -> DxType
-			probe_sentinel(buf, 36, 7, "DxType", "C++ class PacketDecoder")
-			-- Sentinel 2: decode method -> DxCallable
-			probe_sentinel(buf, 45, 30, "DxCallable", "C++ method decode")
-			-- Sentinel 3: state_ member -> DxMember
-			probe_sentinel(buf, 50, 9, "DxMember", "C++ member state_")
-		elseif lang == "zig" then
-			-- Sentinel 1: NetworkBuffer struct -> DxType
-			probe_sentinel(buf, 24, 18, "DxType", "Zig struct NetworkBuffer")
-			-- Sentinel 2: append method -> DxCallable
-			probe_sentinel(buf, 44, 12, "DxCallable", "Zig fn append")
-			-- Sentinel 3: bytes member -> DxMember
-			probe_sentinel(buf, 26, 5, "DxMember", "Zig field bytes")
-		elseif lang == "python" then
-			-- Sentinel 1: DownloadSummary class -> DxType
-			probe_sentinel(buf, 17, 7, "DxType", "Python class DownloadSummary")
-			-- Sentinel 2: validate_bounds method -> DxCallable
-			probe_sentinel(buf, 29, 9, "DxCallable", "Python def validate_bounds")
-			-- Sentinel 3: is_empty property -> DxMember
-			probe_sentinel(buf, 26, 9, "DxMember", "Python property is_empty")
+for _, spec in ipairs(fixture_specs) do
+	if vim.fn.filereadable(spec.path) == 1 then
+		vim.cmd.edit(vim.fn.fnameescape(spec.path))
+		local bufnr = vim.api.nvim_get_current_buf()
+
+		if vim.bo[bufnr].filetype ~= spec.filetype then
+			vim.bo[bufnr].filetype = spec.filetype
 		end
 
-		vim.api.nvim_buf_delete(buf, { force = true })
+		pcall(function()
+			local parser = vim.treesitter.get_parser(bufnr, spec.filetype)
+			if parser then
+				parser:parse()
+			end
+		end)
+
+		print(("Loaded fixture [%s]: %s (ft=%s)"):format(spec.lang, spec.path, vim.bo[bufnr].filetype))
+
+		-- Wait for LSP client if available
+		local client = wait_for_lsp_client(bufnr, spec.lsp_server)
+		if client then
+			print(("  LSP client '%s' attached (id=%d)"):format(spec.lsp_server, client.id))
+			-- Wait briefly for semantic tokens to populate if client supports them
+			vim.wait(2000, function()
+				local tokens = vim.lsp.semantic_tokens and vim.lsp.semantic_tokens.get_at_pos(bufnr, 0, 0)
+				return tokens ~= nil
+			end, 50)
+		else
+			print(("  LSP client '%s' not attached; Tree-sitter baseline active"):format(spec.lsp_server))
+		end
+
+		-- Run position-level assertions and observations
+		for _, s in ipairs(spec.sentinels) do
+			probe_sentinel_at(bufnr, s.tag, s.token, s.role, s.label, s.require_token)
+		end
+
+		vim.cmd.bdelete({ bang = true })
 	else
-		print(("Warning: fixture path unreadable [%s]: %s"):format(lang, path))
+		fail(("Fixture file not found: %s"):format(spec.path))
 	end
 end
 

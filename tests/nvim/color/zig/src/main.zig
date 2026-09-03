@@ -24,8 +24,10 @@ pub const FrameError = error{
 };
 
 /// Network buffer wrapper with allocator tracking.
+// DX:SENTINEL zig.network_buffer.type
 pub const NetworkBuffer = struct {
     allocator: std.mem.Allocator,
+    // DX:SENTINEL zig.bytes.member
     bytes: []u8,
     length: usize,
     state: ProtocolState,
@@ -45,6 +47,7 @@ pub const NetworkBuffer = struct {
         self.state = .terminated;
     }
 
+    // DX:SENTINEL zig.append.method
     pub fn append(self: *NetworkBuffer, slice: []const u8) FrameError!usize {
         if (self.length + slice.len > self.bytes.len) {
             return FrameError.BufferOverflow;
@@ -58,20 +61,19 @@ pub const NetworkBuffer = struct {
 
 /// Process frames with comptime validation.
 pub fn processMessage(comptime T: type, item: T) !usize {
+    // DX:SENTINEL zig.sizeof.builtin
     const item_size = @sizeOf(T);
     _ = item;
     return item_size;
 }
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+    const allocator = std.heap.page_allocator;
 
     var buffer = try NetworkBuffer.init(allocator, 1024);
     defer buffer.deinit();
 
-    const sample = "Zig 0.13 DX Semantic Highlights";
+    const sample = "Zig DX Semantic Highlights";
     const written = buffer.append(sample) catch |err| {
         std.debug.print("Error writing: {s}\n", .{@errorName(err)});
         return err;

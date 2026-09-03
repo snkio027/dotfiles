@@ -15,6 +15,7 @@ class NetworkError(Exception):
     pass
 
 
+# DX:SENTINEL python.download_summary.class
 @dataclass
 class DownloadSummary(Generic[T]):
     """Data model representing a verified download receipt."""
@@ -24,11 +25,13 @@ class DownloadSummary(Generic[T]):
     tags: list[str] = field(default_factory=list)
     _cached_hash: Optional[str] = None
 
+    # DX:SENTINEL python.is_empty.property
     @property
     def is_empty(self) -> bool:
         """Sentinel: property definition (DxMember = Lavender)."""
         return self.size == 0
 
+    # DX:SENTINEL python.validate_bounds.method
     def validate_bounds(self, limit: int) -> bool:
         """Sentinel: method definition (DxCallable = Yellow, Parameters = Rosewater)."""
         # Local variable (Neutral text)
@@ -36,6 +39,7 @@ class DownloadSummary(Generic[T]):
         return self.size + margin <= limit
 
 
+# DX:SENTINEL python.fetch_async.fn
 async def fetch_async(endpoint: str, timeout_seconds: float = 5.0) -> DownloadSummary[dict[str, str]]:
     """Sentinel: async function (DxCallable = Yellow)."""
     print(f"Connecting to {endpoint} with timeout {timeout_seconds}")

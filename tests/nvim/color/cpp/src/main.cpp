@@ -41,6 +41,7 @@ struct Header {
 };
 
 // Class definition
+// DX:SENTINEL cpp.packet_decoder.class
 class PacketDecoder {
 public:
     explicit PacketDecoder(std::size_t max_payload)
@@ -50,11 +51,13 @@ public:
         return max_payload_;
     }
 
+    // DX:SENTINEL cpp.decode.method
     [[nodiscard]] std::optional<Header> decode(std::string_view raw_header) {
         if (raw_header.empty()) {
             return std::nullopt;
         }
         // Member access: state_ is Member (Lavender)
+        // DX:SENTINEL cpp.state.member
         state_ = ConnectionState::Connected;
         return Header{
             .key = std::string(raw_header),
@@ -68,6 +71,7 @@ private:
 };
 
 // Template function with concept constraint and type parameter
+// DX:SENTINEL cpp.log_diagnostic.fn
 template <Printable T>
 void log_diagnostic(const T& message, std::uint32_t severity) {
     // Local variable (Neutral text)

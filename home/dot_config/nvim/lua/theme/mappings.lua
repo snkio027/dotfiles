@@ -35,6 +35,7 @@ function M.mappings(colors)
   hl["@function.method"] = { link = "DxCallable" }
   hl["@function.method.call"] = { link = "DxCallable" }
   hl["@function.builtin"] = { link = "DxCallable" }
+  hl["@function.builtin.zig"] = { link = "DxMeta" }
   hl["@constructor"] = { link = "DxCallable" }
 
   -- Data Models: User Types & Primitives
