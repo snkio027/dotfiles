@@ -212,6 +212,72 @@ end
 verify_red_scarcity(roles, p)
 
 -- ==========================================================================
+-- 4b. CVD-Aware Invariants & Visual Hierarchy Contract (Candidate C3)
+-- ==========================================================================
+
+-- P3: No normal source role uses green-dominant hue
+for name, hex in pairs(p.code) do
+	local r_val, g_val, b_val = hex_to_rgb(hex)
+	if g_val > r_val + 20 and g_val > b_val + 20 then
+		fail(("Source palette violation: code.%s (%s) uses a green-dominant hue"):format(name, hex))
+	end
+end
+
+-- P4: state.success != green; state.success == sky/cyan family
+assert(p.state.success:lower() ~= colors.green:lower(), "state.success must not use green for CVD safety")
+assert_eq(p.state.success:lower(), colors.sky:lower(), "state.success must use Catppuccin Sky")
+
+-- P5: Visual Hierarchy: callable > type > builtin; type - builtin has significant contrast-ratio gap
+local cr_callable = contrast_ratio(p.code.callable, base_hex)
+local cr_type = contrast_ratio(p.code.type, base_hex)
+local cr_builtin = contrast_ratio(p.code.builtin, base_hex)
+assert(
+	cr_callable > cr_type,
+	("Visual hierarchy violation: callable (%.2f) must exceed type (%.2f)"):format(cr_callable, cr_type)
+)
+assert(
+	cr_type > cr_builtin,
+	("Visual hierarchy violation: type (%.2f) must exceed builtin (%.2f)"):format(cr_type, cr_builtin)
+)
+local type_builtin_cr_gap = cr_type - cr_builtin
+assert(
+	type_builtin_cr_gap >= 1.0,
+	("Visual hierarchy violation: type/builtin contrast-ratio gap %.2f must be >= 1.0"):format(type_builtin_cr_gap)
+)
+
+-- P6: Scaffolding Ceiling: operator / punctuation / comment must not exceed semantic body
+local max_scaffolding_cr = math.max(
+	contrast_ratio(p.code.operator, base_hex),
+	contrast_ratio(p.code.punctuation, base_hex),
+	contrast_ratio(p.code.comment, base_hex)
+)
+local min_semantic_body_cr = math.min(
+	contrast_ratio(p.code.variable, base_hex),
+	contrast_ratio(p.code.member, base_hex),
+	contrast_ratio(p.code.parameter, base_hex),
+	contrast_ratio(p.code.builtin, base_hex)
+)
+assert(
+	max_scaffolding_cr <= min_semantic_body_cr,
+	("Scaffolding ceiling violation: max scaffolding (%.2f) exceeds min semantic body (%.2f)"):format(
+		max_scaffolding_cr,
+		min_semantic_body_cr
+	)
+)
+
+-- P7: Diagnostic Non-Color Redundancy Contract
+assert_eq(
+	groups["DiagnosticUnderlineError"].undercurl,
+	true,
+	"DiagnosticUnderlineError must provide non-color undercurl cue"
+)
+assert_eq(
+	groups["DiagnosticUnderlineWarn"].undercurl,
+	true,
+	"DiagnosticUnderlineWarn must provide non-color undercurl cue"
+)
+
+-- ==========================================================================
 -- 5. In-Memory Negative Control (Proves Gates Fail-Closed on Bad Palettes)
 -- ==========================================================================
 
