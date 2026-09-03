@@ -28,7 +28,7 @@ static int decode(
         return -1;
     }
 
-    // Sentinel: primitive system type (Builtin = Steel Blue, type + defaultLibrary)
+    // Sentinel: primitive scalar type (Builtin = Steel Blue)
     // DX:SENTINEL c.int.builtin
     int retry_count = 3;
 

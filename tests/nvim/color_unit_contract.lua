@@ -409,14 +409,15 @@ assert_eq(
 	"@lsp.type.type.zig must link to LspForegroundPassthrough"
 )
 assert_eq(
-	groups["@lsp.type.variable.rust"].link,
-	"LspForegroundPassthrough",
-	"@lsp.type.variable.rust must link to LspForegroundPassthrough"
+	groups["@lsp.typemod.namespace.attribute.rust"].link,
+	"DxMeta",
+	"@lsp.typemod.namespace.attribute.rust must link to DxMeta"
 )
+assert_eq(groups["@lsp.mod.attribute"], nil, "@lsp.mod.attribute must not be globally defined")
 assert_eq(
-	groups["@lsp.type.lifetime.rust"].link,
-	"LspForegroundPassthrough",
-	"@lsp.type.lifetime.rust must link to LspForegroundPassthrough"
+	groups["@lsp.typemod.namespace.attribute"],
+	nil,
+	"@lsp.typemod.namespace.attribute must not be globally defined"
 )
 
 -- Deprecated Style-Only Composition Contract

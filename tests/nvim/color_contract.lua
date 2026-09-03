@@ -247,14 +247,9 @@ local function main()
 			fail("@lsp.type.type.zig must have nil foreground (LspForegroundPassthrough)")
 		end
 
-		local passthrough_rust_var = get_resolved_hl("@lsp.type.variable.rust")
-		if passthrough_rust_var.fg ~= nil then
-			fail("@lsp.type.variable.rust must have nil foreground (LspForegroundPassthrough)")
-		end
-
-		local passthrough_rust_life = get_resolved_hl("@lsp.type.lifetime.rust")
-		if passthrough_rust_life.fg ~= nil then
-			fail("@lsp.type.lifetime.rust must have nil foreground (LspForegroundPassthrough)")
+		local rust_attr = get_resolved_hl("@lsp.typemod.namespace.attribute.rust")
+		if rust_attr.fg ~= colors_rgb.meta then
+			fail("@lsp.typemod.namespace.attribute.rust must resolve to DxMeta")
 		end
 
 		local typemod_fn_deprecated = get_resolved_hl("@lsp.typemod.function.deprecated")
@@ -504,9 +499,12 @@ local function main()
 			fail(("Expected role highlight %s is undefined"):format(sentinel.role))
 		end
 
-		-- Ensure window viewport contains the probed position so semantic tokens extmarks are materialized
-		pcall(vim.api.nvim_win_set_cursor, 0, { row + 1, col })
-		vim.cmd.redraw()
+		-- Ensure window viewport contains the probed position for protocol sentinels
+		-- so semantic tokens extmarks are materialized for protocol authority assertions
+		if sentinel.protocol then
+			pcall(vim.api.nvim_win_set_cursor, 0, { row + 1, col })
+			vim.cmd.redraw()
+		end
 
 		local eff_group, eff_hl, inspected, candidates = get_effective_highlight_at_pos(bufnr, row, col)
 		if not eff_hl or not eff_hl.fg then

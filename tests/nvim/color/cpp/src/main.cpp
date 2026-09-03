@@ -98,7 +98,7 @@ void log_diagnostic(const T& message, std::uint32_t severity) {
 
 } // namespace dx::network
 
-// Sentinel: primitive system type (Builtin = Steel Blue, type + defaultLibrary)
+// Sentinel: primitive scalar type (Builtin = Steel Blue)
 // DX:SENTINEL cpp.int.builtin
 int main() {
     using namespace dx::network;

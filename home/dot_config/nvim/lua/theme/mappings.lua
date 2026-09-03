@@ -156,14 +156,6 @@ function M.groups(p)
   hl["@lsp.type.type.c"] = { link = "LspForegroundPassthrough" }
   hl["@lsp.type.type.cpp"] = { link = "LspForegroundPassthrough" }
   hl["@lsp.type.type.zig"] = { link = "LspForegroundPassthrough" }
-
-  -- Suppress generic variable and lifetime foreground for Rust where rust-analyzer collapses:
-  -- 1) function parameters and local variables into a generic "variable" token.
-  -- 2) loop control-flow labels and type lifetimes into a generic "lifetime" token.
-  -- This allows Tree-sitter's precise queries to govern foreground color.
-  hl["@lsp.type.variable.rust"] = { link = "LspForegroundPassthrough" }
-  hl["@lsp.type.lifetime.rust"] = { link = "LspForegroundPassthrough" }
-
   hl["@lsp.typemod.variable.readonly"] = { link = "DxVariable" }
   hl["@lsp.typemod.variable.defaultLibrary"] = { link = "DxVariable" }
   hl["@lsp.typemod.variable.static"] = { link = "DxVariable" }
@@ -175,8 +167,7 @@ function M.groups(p)
 
   -- Empirical modifier exception: Rust attribute identifiers (#[must_use])
   -- rust-analyzer emits namespace tagged with modifier attribute.
-  hl["@lsp.typemod.namespace.attribute"] = { link = "DxMeta" }
-  hl["@lsp.mod.attribute"] = { link = "DxMeta" }
+  hl["@lsp.typemod.namespace.attribute.rust"] = { link = "DxMeta" }
 
   -- Style-only deprecated composition: strikethrough without destroying semantic identity
   hl["@lsp.mod.deprecated"] = { strikethrough = true }
