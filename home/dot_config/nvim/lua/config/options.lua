@@ -7,6 +7,7 @@ vim.g.lazyvim_python_ruff = "ruff"
 
 vim.opt.confirm = true
 vim.opt.cursorline = true
+vim.opt.cursorlineopt = "number"
 vim.opt.scrolloff = 6
 vim.opt.sidescrolloff = 8
 vim.opt.smoothscroll = true

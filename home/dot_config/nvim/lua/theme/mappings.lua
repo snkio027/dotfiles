@@ -199,8 +199,8 @@ function M.groups(p)
   -- 4. Editor UI Chrome (Quiet, Receding Background)
   -- ==========================================================================
 
-  hl["CursorLine"] = { bg = p.ui.surface0 }
-  hl["CursorLineNr"] = { fg = p.code.member }
+  hl["CursorLine"] = { bg = "NONE" }
+  hl["CursorLineNr"] = { fg = p.code.member, bold = true }
   hl["Visual"] = { bg = p.ui.surface2 }
 
   -- Search: high-contrast target, softer background matches (Yellow Scarcity applied)

@@ -326,6 +326,20 @@ local function main()
 		if inlay_hint.fg ~= colors_rgb.overlay0 then
 			fail("LspInlayHint must have overlay0 foreground")
 		end
+
+		-- 11. Current-line indication contract (quiet: line number only, no full-width text background)
+		local opt_cursorlineopt = vim.opt.cursorlineopt:get()
+		if not vim.tbl_contains(opt_cursorlineopt, "number") or vim.tbl_contains(opt_cursorlineopt, "line") then
+			fail("cursorlineopt must be 'number' to quiet full-width line background")
+		end
+		local cursor_line = get_resolved_hl("CursorLine")
+		if cursor_line.bg ~= nil then
+			fail("CursorLine must have nil background to prevent intrusive full-width highlight band")
+		end
+		local cursor_line_nr = get_resolved_hl("CursorLineNr")
+		if cursor_line_nr.fg ~= colors_rgb.member then
+			fail("CursorLineNr must resolve to member foreground")
+		end
 	end
 
 	-- ============================================================================
