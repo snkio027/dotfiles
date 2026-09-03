@@ -1,0 +1,82 @@
+//! Zig color stress fixture for DX semantic highlight validation.
+
+const std = @import("std");
+
+/// Protocol connection state.
+pub const ProtocolState = enum(u8) {
+    idle = 0,
+    active = 1,
+    terminated = 2,
+};
+
+/// Tagged union for message payloads.
+pub const Payload = union(enum) {
+    ping: u32,
+    data: []const u8,
+    close: void,
+};
+
+/// System errors.
+pub const FrameError = error{
+    BufferOverflow,
+    InvalidMagic,
+    Timeout,
+};
+
+/// Network buffer wrapper with allocator tracking.
+pub const NetworkBuffer = struct {
+    allocator: std.mem.Allocator,
+    bytes: []u8,
+    length: usize,
+    state: ProtocolState,
+
+    pub fn init(allocator: std.mem.Allocator, initial_capacity: usize) !NetworkBuffer {
+        const memory = try allocator.alloc(u8, initial_capacity);
+        return NetworkBuffer{
+            .allocator = allocator,
+            .bytes = memory,
+            .length = 0,
+            .state = .idle,
+        };
+    }
+
+    pub fn deinit(self: *NetworkBuffer) void {
+        self.allocator.free(self.bytes);
+        self.state = .terminated;
+    }
+
+    pub fn append(self: *NetworkBuffer, slice: []const u8) FrameError!usize {
+        if (self.length + slice.len > self.bytes.len) {
+            return FrameError.BufferOverflow;
+        }
+        @memcpy(self.bytes[self.length .. self.length + slice.len], slice);
+        self.length += slice.len;
+        self.state = .active;
+        return self.length;
+    }
+};
+
+/// Process frames with comptime validation.
+pub fn processMessage(comptime T: type, item: T) !usize {
+    const item_size = @sizeOf(T);
+    _ = item;
+    return item_size;
+}
+
+pub fn main() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
+
+    var buffer = try NetworkBuffer.init(allocator, 1024);
+    defer buffer.deinit();
+
+    const sample = "Zig 0.13 DX Semantic Highlights";
+    const written = buffer.append(sample) catch |err| {
+        std.debug.print("Error writing: {s}\n", .{@errorName(err)});
+        return err;
+    };
+
+    const size = try processMessage(u64, 42);
+    std.debug.print("Bytes: {d}, Item size: {d}\n", .{ written, size });
+}

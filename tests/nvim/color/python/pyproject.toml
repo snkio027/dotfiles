@@ -1,0 +1,7 @@
+[project]
+name = "dx-color-python-fixture"
+version = "0.1.0"
+description = "Python color stress fixture for DX semantic highlight validation"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
