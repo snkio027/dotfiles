@@ -156,6 +156,7 @@ function M.groups(p)
   hl["@lsp.type.type.c"] = { link = "LspForegroundPassthrough" }
   hl["@lsp.type.type.cpp"] = { link = "LspForegroundPassthrough" }
   hl["@lsp.type.type.zig"] = { link = "LspForegroundPassthrough" }
+  hl["@lsp.type.keyword.zig"] = { link = "LspForegroundPassthrough" }
   hl["@lsp.typemod.variable.readonly"] = { link = "DxVariable" }
   hl["@lsp.typemod.variable.defaultLibrary"] = { link = "DxVariable" }
   hl["@lsp.typemod.variable.static"] = { link = "DxVariable" }

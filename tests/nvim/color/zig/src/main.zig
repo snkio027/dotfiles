@@ -52,6 +52,7 @@ pub const NetworkBuffer = struct {
     }
 
     // DX:SENTINEL zig.append.method
+    // DX:SENTINEL zig.fn.keyword
     pub fn append(self: *NetworkBuffer, slice: []const u8) FrameError!usize {
         if (self.length + slice.len > self.bytes.len) {
             return FrameError.BufferOverflow;

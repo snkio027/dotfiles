@@ -251,6 +251,11 @@ local function main()
 			fail("@lsp.type.type.zig must have nil foreground (LspForegroundPassthrough)")
 		end
 
+		local passthrough_zig_kw = get_resolved_hl("@lsp.type.keyword.zig")
+		if passthrough_zig_kw.fg ~= nil then
+			fail("@lsp.type.keyword.zig must have nil foreground (LspForegroundPassthrough)")
+		end
+
 		local rust_attr = get_resolved_hl("@lsp.typemod.namespace.attribute.rust")
 		if rust_attr.fg ~= colors_rgb.meta then
 			fail("@lsp.typemod.namespace.attribute.rust must resolve to DxMeta")

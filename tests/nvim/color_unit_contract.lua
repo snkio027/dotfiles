@@ -476,6 +476,11 @@ assert_eq(
 	"@lsp.type.type.zig must link to LspForegroundPassthrough"
 )
 assert_eq(
+	groups["@lsp.type.keyword.zig"].link,
+	"LspForegroundPassthrough",
+	"@lsp.type.keyword.zig must link to LspForegroundPassthrough"
+)
+assert_eq(
 	groups["@lsp.typemod.namespace.attribute.rust"].link,
 	"DxMeta",
 	"@lsp.typemod.namespace.attribute.rust must link to DxMeta"

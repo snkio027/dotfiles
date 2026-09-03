@@ -22,6 +22,13 @@ local M = {
 					desc = "Rust method definition",
 				},
 				{
+					tag = "rust.fn.keyword",
+					token = "fn",
+					role = "DxFunctionKeyword",
+					desc = "Rust function declaration keyword (fn)",
+					required_ts_capture = "keyword.function.rust",
+				},
+				{
 					tag = "rust.size.field",
 					token = "size",
 					role = "DxMember",
@@ -253,6 +260,17 @@ local M = {
 					desc = "Zig method-style function definition",
 				},
 				{
+					tag = "zig.fn.keyword",
+					token = "fn",
+					role = "DxFunctionKeyword",
+					desc = "Zig function declaration keyword (fn)",
+					required_ts_capture = "keyword.function.zig",
+					protocol = {
+						authority = "treesitter",
+						expected_type = "keyword",
+					},
+				},
+				{
 					tag = "zig.sizeof.builtin",
 					token = "sizeOf",
 					role = "DxMeta",
@@ -299,6 +317,13 @@ local M = {
 					token = "validate_bounds",
 					role = "DxCallable",
 					desc = "Python instance method definition",
+				},
+				{
+					tag = "python.def.keyword",
+					token = "def",
+					role = "DxFunctionKeyword",
+					desc = "Python function declaration keyword (def)",
+					required_ts_capture = "keyword.function.python",
 				},
 				{
 					tag = "python.fetch_async.fn",
