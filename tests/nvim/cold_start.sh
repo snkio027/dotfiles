@@ -50,8 +50,7 @@ DOTFILES_M2C_CONFIG_HOME="$CONFIG_HOME" DOTFILES_M2C_LOG_DIR="$LOG_DIR" \
 if grep -ERni 'Package is already installing|MasonToolsStartingInstall|MasonToolsUpdateCompleted|^Installing tools:|^Updating tools:' \
     "$LOG_DIR/lazy-restore.log" "$LOG_DIR/startup-policy.log" "$LOG_DIR/smoke.log" \
     "$LOG_DIR/color-unit.log" "$LOG_DIR/python-provider-unit.log" "$LOG_DIR/color-contract.log" \
-    "$LOG_DIR/binding-evidence.log" "$LOG_DIR/python-provider-production.log" \
-    "$LOG_DIR/python-provider-ty-excluded.log"; then
+    "$LOG_DIR/binding-evidence.log" "$LOG_DIR/python-provider-production.log"; then
     echo "Unexpected Mason background installation or update detected" >&2
     exit 1
 fi

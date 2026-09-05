@@ -275,8 +275,8 @@ return {
     end,
   },
 
-  -- ty is intentionally an on-demand whole-project check for now. Pyright
-  -- remains the mature interactive LSP while ty evolves rapidly.
+  -- Ty owns interactive Python language intelligence. Keep an explicit
+  -- whole-project check for cases where an editor session is not the caller.
   {
     "folke/snacks.nvim",
     keys = {

@@ -43,7 +43,7 @@ Homebrew 负责全局 CLI 与语言 Runtime；`brew/ownership.toml` 是工具所
 - markdownlint-cli2 明确归 Mason 所有，仅供 Neovim lint/format 使用；XDG 配置保留结构与语义检查，只关闭对表格、URL 和 CJK 文档噪音较大的 `MD013` 行宽规则。Shell 不声明全局 markdownlint 命令。
 - `CMakeLists.txt` 是 CMake 源文件而非 Markdown；neocmake 负责语义和 100 列诊断，gersemi 按同一宽度统一格式。
 - `cxx init <name>` 从离线内置模板创建 C++23/CMake/Ninja 项目，生成后直接使用标准工具链，不依赖 cxx-init 运行。
-- uv 项目中存在 `uv.lock` 和 `.venv` 时，Neovim 会自动将 Pyright、Ruff、DAP、Neotest 与内置终端统一到项目 Python。
+- uv 项目中存在 `uv.lock` 和 `.venv` 时，Neovim 会自动将 Ty、Ruff、DAP、Neotest 与内置终端统一到项目 Python；Pyright 保留安装但默认不启用，作为回滚资产。
 - C/C++、Python、Zig、Go 与 Rust 共用 LSP、格式化、测试、任务和 DAP 工作流；项目的 `.vscode/launch.json` 也可直接复用。
 
 ## 目录
@@ -225,7 +225,7 @@ Quiet Ops Prompt 将第一行留给位置与 Git 状态，第二行留给命令�
 | 语言 | 语义、检查与格式化 | 构建、测试与调试 |
 | --- | --- | --- |
 | C/C++ | clangd、clang-tidy、clang-format | cxx-init、CMake、Ninja、ccache、Overseer、codelldb |
-| Python | uv、Pyright、Ruff；`<leader>cT` 运行 `ty check` | pytest、Neotest、debugpy |
+| Python | uv、Ty、Ruff；`<leader>cT` 运行 `ty check` | pytest、Neotest、debugpy |
 | Zig | zls、`zig fmt` | `zig build test`、Neotest、codelldb |
 | Go | gopls、gofumpt、goimports、golangci-lint | `go test`、Neotest、Delve |
 | Rust | rust-analyzer、rustaceanvim、rustfmt、Clippy | Cargo、Neotest、codelldb |
@@ -257,7 +257,7 @@ Markdown 在普通、命令和终端模式渲染标题、任务、表格、代�
 | `<leader>cv` | 在 Python Buffer 中手动选择虚拟环境 |
 | `<leader>cT` | 使用 ty 对整个 Python 项目做补充类型检查 |
 
-打开 uv 项目的 Python 文件时，会依据 `uv.lock` 自动激活 `.venv/bin/python`，并把同一环境交给 Pyright、Ruff、DAP 与 Neotest；Ruff 负责 Lint 和 Import，Pyright 专注类型分析，避免重复诊断。
+打开 uv 项目的 Python 文件时，会依据 `uv.lock` 自动激活 `.venv/bin/python`，并把同一环境交给 Ty、Ruff、DAP 与 Neotest；Ty 是主交互 LSP，负责补全、导航、重构与类型分析，Ruff 负责 Lint、修复与 Code Action。Pyright 仍由 Mason 安装，但默认禁用且不附着，作为显式回滚资产。
 
 ### Ghostty（macOS）与 Zellij（macOS/Linux）
 

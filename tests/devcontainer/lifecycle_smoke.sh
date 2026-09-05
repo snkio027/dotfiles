@@ -109,21 +109,17 @@ assert_container_state() {
         cat "$nvim_log" >&2
         fail "M2B-B static-data-member behavior correction did not complete"
     }
-    grep -Fq "M2C-A Python provider ownership evidence passed (production)." "$nvim_log" || {
+    grep -Fq "M2C-B explicit Python provider ownership passed." "$nvim_log" || {
         cat "$nvim_log" >&2
-        fail "M2C-A production provider-ownership evidence did not complete"
+        fail "M2C-B explicit provider-ownership evidence did not complete"
     }
-    grep -Fq "M2C-A Python provider ownership evidence passed (ty-excluded)." "$nvim_log" || {
+    grep -Fq "M2C-B topology: installed pyright+ruff+ty; enabled/attached ruff+ty; semantic producer ty." "$nvim_log" || {
         cat "$nvim_log" >&2
-        fail "M2C-A Ty-excluded provider-ownership evidence did not complete"
+        fail "M2C-B provider topology did not close"
     }
-    grep -Fq "M2C-A Ty exclusion changed only Ty activation; Pyright and Ruff topology remained stable." "$nvim_log" || {
+    grep -Fq "M2C-B decision implemented: ADOPT TY AS INTERACTIVE SEMANTIC PROVIDER" "$nvim_log" || {
         cat "$nvim_log" >&2
-        fail "M2C-A provider-ownership comparison did not complete"
-    }
-    grep -Fq "M2C-A decision: ADOPT TY AS INTERACTIVE SEMANTIC PROVIDER" "$nvim_log" || {
-        cat "$nvim_log" >&2
-        fail "M2C-A provider-ownership decision did not complete"
+        fail "M2C-B provider-ownership decision was not implemented"
     }
     if grep -Eqi 'Package is already installing|^Installing tools:|^Updating tools:|MasonToolsUpdate' "$nvim_log"; then
         cat "$nvim_log" >&2

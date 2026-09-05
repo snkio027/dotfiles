@@ -58,6 +58,9 @@ Milestone evidence records:
 - [`DX-COLOR-003-M2C-PYTHON-PROVIDER-OWNERSHIP.md`](./DX-COLOR-003-M2C-PYTHON-PROVIDER-OWNERSHIP.md)
   — the Python provider activation provenance, isolated Ty exclusion experiment,
   capability evidence, and interactive-provider ownership decision.
+- [`DX-COLOR-003-M2C-B-PYTHON-PROVIDER-CORRECTION.md`](./DX-COLOR-003-M2C-B-PYTHON-PROVIDER-CORRECTION.md)
+  — the explicit Ty/Ruff production ownership correction, Pyright rollback
+  boundary, capability matrix, and semantic-token provenance contract.
 
 The architecture and test specifications are normative. The C4 color values are candidate visual values and require runtime visual acceptance before becoming the default profile.
 

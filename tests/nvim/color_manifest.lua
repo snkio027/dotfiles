@@ -1144,10 +1144,9 @@ local M = {
 		python = {
 			filetype = "python",
 			path = "tests/nvim/color/python/main.py",
-			lsp = { "pyright" },
-			evidence_client = "pyright",
+			lsp = { "ty" },
+			evidence_client = "ty",
 			evidence_clients = {
-				{ name = "pyright", semantic_tokens = false },
 				{ name = "ruff", semantic_tokens = false },
 				{ name = "ty", semantic_tokens = true },
 			},
