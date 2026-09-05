@@ -62,13 +62,14 @@ local M = {
 						},
 						applied_foregrounds = {
 							{ group = "@lsp.type.variable.cpp", priority_delta = 0, role = "DxVariable" },
-							{ group = "@lsp.typemod.variable.static.cpp", priority_delta = 2, role = "DxVariable" },
+							{ group = "@lsp.typemod.variable.classScope.cpp", priority_delta = 2, role = "DxMember" },
 						},
 						effective = {
-							group = "@lsp.typemod.variable.static.cpp",
+							group = "@lsp.typemod.variable.classScope.cpp",
 							source = "lsp",
-							role = "DxVariable",
+							role = "DxMember",
 						},
+						require_unique_top_foreground = true,
 					},
 				},
 				{
@@ -82,13 +83,14 @@ local M = {
 						lsp = { provider = "clangd", type = "variable", modifiers = { "classScope", "static" } },
 						applied_foregrounds = {
 							{ group = "@lsp.type.variable.cpp", priority_delta = 0, role = "DxVariable" },
-							{ group = "@lsp.typemod.variable.static.cpp", priority_delta = 2, role = "DxVariable" },
+							{ group = "@lsp.typemod.variable.classScope.cpp", priority_delta = 2, role = "DxMember" },
 						},
 						effective = {
-							group = "@lsp.typemod.variable.static.cpp",
+							group = "@lsp.typemod.variable.classScope.cpp",
 							source = "lsp",
-							role = "DxVariable",
+							role = "DxMember",
 						},
+						require_unique_top_foreground = true,
 					},
 				},
 				{
@@ -106,13 +108,14 @@ local M = {
 						},
 						applied_foregrounds = {
 							{ group = "@lsp.type.variable.cpp", priority_delta = 0, role = "DxVariable" },
-							{ group = "@lsp.typemod.variable.static.cpp", priority_delta = 2, role = "DxVariable" },
+							{ group = "@lsp.typemod.variable.classScope.cpp", priority_delta = 2, role = "DxMember" },
 						},
 						effective = {
-							group = "@lsp.typemod.variable.static.cpp",
+							group = "@lsp.typemod.variable.classScope.cpp",
 							source = "lsp",
-							role = "DxVariable",
+							role = "DxMember",
 						},
+						require_unique_top_foreground = true,
 					},
 				},
 				{
@@ -146,6 +149,170 @@ local M = {
 							provider = "clangd",
 							type = "variable",
 							modifiers = { "declaration", "definition", "fileScope" },
+						},
+						applied_foregrounds = {
+							{ group = "@lsp.type.variable.cpp", priority_delta = 0, role = "DxVariable" },
+						},
+						effective = { group = "@lsp.type.variable.cpp", source = "lsp", role = "DxVariable" },
+					},
+				},
+			},
+		},
+	},
+	behavior_corrections = {
+		cpp_static_data_member = {
+			decision = "RECLASSIFY STATIC DATA MEMBER TO DxMember",
+			authorized_graph_groups = {
+				"@lsp.typemod.variable.classScope.cpp",
+				"@lsp.typemod.variable.static.cpp",
+				"@lsp.typemod.variable.readonly.cpp",
+				"@lsp.typemod.variable.defaultLibrary.cpp",
+			},
+			positive_case_tags = {
+				"cpp.classification.inline_static_member_declaration",
+				"cpp.classification.qualified_static_member_access",
+				"cpp.classification.out_of_class_static_definition",
+				"cpp.behavior.readonly_static_member_declaration",
+				"cpp.behavior.readonly_static_member_reference",
+				"cpp.behavior.default_library_static_member_reference",
+			},
+			preserved_member_case_tags = {
+				"cpp.classification.instance_member_declaration",
+				"cpp.classification.instance_member_access",
+			},
+			negative_control_tags = {
+				"cpp.classification.namespace_variable",
+				"cpp.classification.namespace_static_variable",
+				"cpp.behavior.function_local_static_variable",
+				"cpp.behavior.ordinary_local_variable",
+				"cpp.behavior.namespace_readonly_variable",
+			},
+			additional_cases = {
+				{
+					tag = "cpp.behavior.readonly_static_member_declaration",
+					token = "readonly_count",
+					semantic_description = "declaration and definition of a readonly C++ static data member",
+					source_identity = "member",
+					occurrence = "declaration-definition",
+					evidence = {
+						treesitter = { "property", "variable.member" },
+						lsp = {
+							provider = "clangd",
+							type = "variable",
+							modifiers = { "classScope", "declaration", "definition", "readonly", "static" },
+						},
+						applied_foregrounds = {
+							{ group = "@lsp.type.variable.cpp", priority_delta = 0, role = "DxVariable" },
+							{ group = "@lsp.typemod.variable.classScope.cpp", priority_delta = 2, role = "DxMember" },
+						},
+						effective = {
+							group = "@lsp.typemod.variable.classScope.cpp",
+							source = "lsp",
+							role = "DxMember",
+						},
+						require_unique_top_foreground = true,
+					},
+				},
+				{
+					tag = "cpp.behavior.readonly_static_member_reference",
+					token = "readonly_count",
+					semantic_description = "class-qualified reference to a readonly C++ static data member",
+					source_identity = "member",
+					occurrence = "reference",
+					evidence = {
+						treesitter = { "variable" },
+						lsp = {
+							provider = "clangd",
+							type = "variable",
+							modifiers = { "classScope", "readonly", "static" },
+						},
+						applied_foregrounds = {
+							{ group = "@lsp.type.variable.cpp", priority_delta = 0, role = "DxVariable" },
+							{ group = "@lsp.typemod.variable.classScope.cpp", priority_delta = 2, role = "DxMember" },
+						},
+						effective = {
+							group = "@lsp.typemod.variable.classScope.cpp",
+							source = "lsp",
+							role = "DxMember",
+						},
+						require_unique_top_foreground = true,
+					},
+				},
+				{
+					tag = "cpp.behavior.default_library_static_member_reference",
+					token = "preferred_separator",
+					semantic_description = "standard-library static data member provenance control",
+					source_identity = "member",
+					occurrence = "reference",
+					evidence = {
+						treesitter = { "variable" },
+						lsp = {
+							provider = "clangd",
+							type = "variable",
+							modifiers = { "classScope", "defaultLibrary", "readonly", "static" },
+						},
+						applied_foregrounds = {
+							{ group = "@lsp.type.variable.cpp", priority_delta = 0, role = "DxVariable" },
+							{ group = "@lsp.typemod.variable.classScope.cpp", priority_delta = 2, role = "DxMember" },
+						},
+						effective = {
+							group = "@lsp.typemod.variable.classScope.cpp",
+							source = "lsp",
+							role = "DxMember",
+						},
+						require_unique_top_foreground = true,
+					},
+				},
+				{
+					tag = "cpp.behavior.function_local_static_variable",
+					token = "function_static_count",
+					semantic_description = "function-local C++ static variable negative control",
+					source_identity = "variable",
+					occurrence = "declaration-definition",
+					evidence = {
+						treesitter = { "variable" },
+						lsp = {
+							provider = "clangd",
+							type = "variable",
+							modifiers = { "declaration", "definition", "functionScope", "static" },
+						},
+						applied_foregrounds = {
+							{ group = "@lsp.type.variable.cpp", priority_delta = 0, role = "DxVariable" },
+						},
+						effective = { group = "@lsp.type.variable.cpp", source = "lsp", role = "DxVariable" },
+					},
+				},
+				{
+					tag = "cpp.behavior.ordinary_local_variable",
+					token = "local_value",
+					semantic_description = "ordinary function-local C++ variable negative control",
+					source_identity = "variable",
+					occurrence = "declaration-definition",
+					evidence = {
+						treesitter = { "variable" },
+						lsp = {
+							provider = "clangd",
+							type = "variable",
+							modifiers = { "declaration", "definition", "functionScope" },
+						},
+						applied_foregrounds = {
+							{ group = "@lsp.type.variable.cpp", priority_delta = 0, role = "DxVariable" },
+						},
+						effective = { group = "@lsp.type.variable.cpp", source = "lsp", role = "DxVariable" },
+					},
+				},
+				{
+					tag = "cpp.behavior.namespace_readonly_variable",
+					token = "namespace_readonly",
+					semantic_description = "readonly namespace-scope C++ variable negative control",
+					source_identity = "variable",
+					occurrence = "declaration-definition",
+					evidence = {
+						treesitter = { "variable" },
+						lsp = {
+							provider = "clangd",
+							type = "variable",
+							modifiers = { "declaration", "definition", "globalScope", "readonly" },
 						},
 						applied_foregrounds = {
 							{ group = "@lsp.type.variable.cpp", priority_delta = 0, role = "DxVariable" },
@@ -663,7 +830,11 @@ local M = {
 							type = "variable",
 							modifiers = { "classScope", "declaration", "definition", "static" },
 						},
-						effective = { group = "@lsp.typemod.variable.static.cpp", source = "lsp", role = "DxVariable" },
+						effective = {
+							group = "@lsp.typemod.variable.classScope.cpp",
+							source = "lsp",
+							role = "DxMember",
+						},
 						producer_delta = { lsp_only = { "static vs instance data member" }, treesitter_only = {} },
 					},
 				},

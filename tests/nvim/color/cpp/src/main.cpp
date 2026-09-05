@@ -5,6 +5,7 @@
 
 #include <concepts>
 #include <cstdint>
+#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <optional>
@@ -26,6 +27,9 @@ inline int namespace_counter = 1;
 // DX:M2B cpp.classification.namespace_static_variable
 static int namespace_static_counter = 2;
 
+// DX:M2B-B cpp.behavior.namespace_readonly_variable
+inline constexpr int namespace_readonly = 7;
+
 struct BindingProbe {
     // DX:M2 cpp.binding.static_data_member
     // DX:M2B cpp.classification.inline_static_member_declaration
@@ -33,6 +37,8 @@ struct BindingProbe {
     // DX:M2 cpp.binding.instance_member
     // DX:M2B cpp.classification.instance_member_declaration
     int instance_value = 4;
+    // DX:M2B-B cpp.behavior.readonly_static_member_declaration
+    static inline const int readonly_count = 6;
     static int out_of_class_count;
 };
 
@@ -44,13 +50,20 @@ int observe_binding_topology(
     int parameter_value
 ) {
     // DX:M2 cpp.binding.local_variable
+    // DX:M2B-B cpp.behavior.ordinary_local_variable
     int local_value = parameter_value + namespace_counter + namespace_static_counter;
+    // DX:M2B-B cpp.behavior.function_local_static_variable
+    static int function_static_count = 8;
     const BindingProbe probe{};
-    int result = local_value;
+    int result = local_value + function_static_count + namespace_readonly;
     // DX:M2B cpp.classification.qualified_static_member_access
     result += BindingProbe::shared_count;
     // DX:M2B cpp.classification.instance_member_access
     result += probe.instance_value;
+    // DX:M2B-B cpp.behavior.readonly_static_member_reference
+    result += BindingProbe::readonly_count;
+    // DX:M2B-B cpp.behavior.default_library_static_member_reference
+    result += static_cast<int>(std::filesystem::path::preferred_separator);
     return result + BindingProbe::out_of_class_count;
 }
 

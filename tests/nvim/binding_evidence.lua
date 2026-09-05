@@ -1,4 +1,4 @@
---- DX-COLOR-003 M2A binding-topology runtime evidence contract.
+--- DX-COLOR-003 M2A/M2B binding and classification runtime evidence contract.
 --- Observes production Tree-sitter/LSP state and fails closed on evidence drift.
 
 local function fail(message)
@@ -497,6 +497,23 @@ local function capture_case(bufnr, case, lang, spec, clients_by_name, raw_tokens
 			expected.applied_foregrounds,
 			"Neovim semantic foreground competition drift for " .. case.tag
 		)
+		if expected.require_unique_top_foreground then
+			local top_priority
+			local top_groups = {}
+			for _, foreground in ipairs(application.foregrounds) do
+				if top_priority == nil or foreground.priority_delta > top_priority then
+					top_priority = foreground.priority_delta
+					top_groups = { foreground.group }
+				elseif foreground.priority_delta == top_priority then
+					top_groups[#top_groups + 1] = foreground.group
+				end
+			end
+			assert_equal(
+				top_groups,
+				{ expected.effective.group },
+				"equal-priority semantic foreground competition detected for " .. case.tag
+			)
+		end
 	end
 
 	local observation = {
@@ -583,8 +600,10 @@ local function main()
 
 	local observations = {}
 	local classification_observations = {}
+	local correction_observations = {}
 	local case_count = 0
 	local classification_count = 0
+	local correction_count = 0
 	for _, lang in ipairs({ "zig", "c", "cpp", "rust", "python" }) do
 		local spec = manifest.languages[lang]
 		if not spec or not spec.evidence_client or not spec.evidence_clients then
@@ -626,6 +645,23 @@ local function main()
 				classification_observations[case.tag] =
 					capture_case(bufnr, case, lang, spec, clients_by_name, raw_tokens_by_name)
 				classification_count = classification_count + 1
+			end
+
+			local correction = manifest.behavior_corrections and manifest.behavior_corrections.cpp_static_data_member
+			if not correction or type(correction.additional_cases) ~= "table" then
+				fail("M2B-B C++ static data member behavior correction is missing")
+			end
+			for _, case in ipairs(correction.additional_cases) do
+				if
+					observations[case.tag]
+					or classification_observations[case.tag]
+					or correction_observations[case.tag]
+				then
+					fail("duplicate M2B-B behavior evidence tag: " .. case.tag)
+				end
+				correction_observations[case.tag] =
+					capture_case(bufnr, case, lang, spec, clients_by_name, raw_tokens_by_name)
+				correction_count = correction_count + 1
 			end
 		end
 
@@ -683,6 +719,33 @@ local function main()
 		fail("M2B classification decision is not one of the three authorized outcomes")
 	end
 
+	local correction = manifest.behavior_corrections and manifest.behavior_corrections.cpp_static_data_member
+	if not correction then
+		fail("M2B-B behavior correction metadata missing")
+	end
+	assert_equal(correction.decision, review.decision, "M2B-B behavior correction changed the approved decision")
+	assert_equal(correction_count, 6, "M2B-B additional behavior-case count changed")
+	local all_behavior_observations = vim.tbl_extend("error", classification_observations, correction_observations)
+	local behavior_categories = {
+		correction.positive_case_tags,
+		correction.preserved_member_case_tags,
+		correction.negative_control_tags,
+	}
+	local categorized = {}
+	for _, tags in ipairs(behavior_categories) do
+		for _, tag in ipairs(tags or {}) do
+			if categorized[tag] then
+				fail("M2B-B behavior case appears in multiple categories: " .. tag)
+			end
+			if not all_behavior_observations[tag] then
+				fail("M2B-B behavior category references missing observation: " .. tag)
+			end
+			categorized[tag] = true
+		end
+	end
+	assert_equal(vim.tbl_count(all_behavior_observations), 13, "M2B-B behavior observation count changed")
+	assert_equal(vim.tbl_count(categorized), 13, "M2B-B behavior category topology changed")
+
 	print(
 		("M2A binding-topology evidence passed: %d/28 cases, %d/%d comparisons."):format(
 			case_count,
@@ -694,6 +757,12 @@ local function main()
 		("M2B static-data-member evidence passed: %d/7 cases; decision: %s"):format(
 			classification_count,
 			review.decision
+		)
+	)
+	print(
+		("M2B-B static-data-member behavior correction passed: %d/13 cases; decision: %s"):format(
+			vim.tbl_count(all_behavior_observations),
+			correction.decision
 		)
 	)
 end
