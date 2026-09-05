@@ -1,9 +1,9 @@
 # DX-COLOR-003 Development Documentation Set
 
-- **Status:** M2 Frozen / M3-A Visual Contract
+- **Status:** M2 Frozen / M3-B C4.0 Candidate
 - **Repository:** `snkio027/dotfiles`
 - **Initial M0 baseline:** `19f0570ee33025832ff1d1d49269d303677d9c0f`
-- **Current M3 base:** `c930a0330bfd4a19921985c6c24a33ce1c6f4aee`
+- **Current M3-B base:** `6348cc2fd99457f2ecf0cb574c46a07db45d6e75`
 - **Host theme:** Catppuccin Mocha
 - **Target editor:** Neovim / LazyVim
 - **Languages in current verification matrix:** Rust, C, C++23, Zig, Python
@@ -67,6 +67,9 @@ Milestone evidence records:
 - [`DX-COLOR-003-M2C-B-PYTHON-PROVIDER-CORRECTION.md`](./DX-COLOR-003-M2C-B-PYTHON-PROVIDER-CORRECTION.md)
   — the explicit Ty/Ruff production ownership correction, Pyright rollback
   boundary, capability matrix, and semantic-token provenance contract.
+- [`DX-COLOR-003-M3B-C4-CANDIDATE.md`](./DX-COLOR-003-M3B-C4-CANDIDATE.md)
+  — the first independently composable C4.0 palette and visual profile,
+  profile-aware contracts, and resolved-graph governance.
 
 The architecture and test specifications are normative. The C4 color values are candidate visual values and require runtime visual acceptance before becoming the default profile.
 
@@ -75,10 +78,11 @@ Current milestone status:
 ```text
 M1   Architecture extraction                    FROZEN
 M2   Evidence / authority / provider governance CLOSED / FROZEN
-M3-A C4 visual contract                         CURRENT
+M3-A C4 visual contract                         CLOSED / FROZEN
+M3-B C4.0 candidate visual profile              CURRENT
 
 C3.1                                            DEPRECATED / FROZEN
-C4                                              NOT IMPLEMENTED
+C4.0                                            IMPLEMENTED / NOT SELECTABLE
 ```
 
 ---
@@ -133,6 +137,7 @@ home/dot_config/nvim/lua/theme/
   authority.lua
   visual/
     c3_1.lua
+    c4.lua
   bindings/
     treesitter.lua
     lsp.lua

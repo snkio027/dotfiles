@@ -8,6 +8,35 @@ local M = {}
 --- @param c table Catppuccin Mocha palette table
 --- @return table
 function M.resolve(c)
+  local c4 = {
+    -- Band A — bright neutral reading body
+    variable = "#CDD6F4",
+
+    -- Band B — sparse semantic landmarks
+    type = "#74C7EC",
+    callable = "#D8A972",
+    keyword_function = "#86B7F7",
+    keyword = "#B298CE",
+    operator = "#8BDCEB",
+
+    -- Band C — secondary semantic structure
+    member = "#B5BDFC",
+    parameter = "#A6ADC8",
+    builtin = "#7393B7",
+    namespace = "#79A7DC",
+    constant = "#D6A0BA",
+    number = "#E09A7B",
+    string = "#C7B8A6",
+    meta = "#C395B9",
+    lifetime = "#7DA6C8",
+
+    -- Band D — structural and receding information
+    punctuation = "#9399B2",
+    label = "#8D91A4",
+    comment = "#6C7086",
+    doc = "#9399B2",
+  }
+
   return {
     -- 1. Normal Source Semantic Palette (Candidate C3 — CVD-aware, Hierarchy-First)
     -- Contrast against Mocha Base (#1E1E2E) strictly within 4.5:1 - 8.8:1
@@ -38,6 +67,12 @@ function M.resolve(c)
       operator = "#898FA6", -- 5.11:1 Scaffolding
       punctuation = "#858A9F", -- 4.79:1 Scaffolding
       comment = "#81869E", -- 4.56:1 Deepest normal prose
+    },
+
+    -- Independent candidate profiles. `code` remains the frozen C3.1 palette
+    -- until a later milestone adds an explicit runtime selector.
+    code_profiles = {
+      c4 = c4,
     },
 
     -- 2. State & Transient Palette (CVD-Aware Accents without Red/Green Dependency)

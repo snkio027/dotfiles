@@ -65,6 +65,11 @@ if not ok_visual or type(c3_1.roles) ~= "function" then
 	fail("theme.visual.c3_1 module could not be loaded or missing roles()")
 end
 
+local ok_c4, c4 = pcall(require, "theme.visual.c4")
+if not ok_c4 or type(c4.roles) ~= "function" then
+	fail("theme.visual.c4 module could not be loaded or missing roles()")
+end
+
 local ok_compose, compose = pcall(require, "theme.compose")
 if not ok_compose or type(compose.highlights) ~= "function" then
 	fail("theme.compose module could not be loaded or missing highlights()")
@@ -77,7 +82,9 @@ end
 
 local p = palette_mod.resolve(colors)
 local roles = c3_1.roles(p)
+local c4_roles = c4.roles(p)
 local full_hl = theme.highlights(colors)
+local c4_full_hl = compose.highlights(p, c4)
 local groups = {}
 for group, spec in pairs(full_hl) do
 	if not domain.roles[group] then
@@ -130,6 +137,9 @@ for _, role in ipairs(required_semantic_roles) do
 	if not roles[role] then
 		fail("C3.1 visual profile is missing required semantic role: " .. role)
 	end
+	if not c4_roles[role] then
+		fail("C4 visual profile is missing required semantic role: " .. role)
+	end
 	role_count = role_count + 1
 end
 
@@ -141,6 +151,11 @@ end
 for role in pairs(roles) do
 	if not domain.roles[role] then
 		fail("C3.1 visual profile defines role outside the domain closure: " .. role)
+	end
+end
+for role in pairs(c4_roles) do
+	if not domain.roles[role] then
+		fail("C4 visual profile defines role outside the domain closure: " .. role)
 	end
 end
 assert_eq(role_count, 23, "Expected exactly 23 semantic roles in DX-COLOR-003")
@@ -328,10 +343,30 @@ local ok_r, _ = pcall(verify_red_scarcity, bad_red_roles, bad_red)
 assert(not ok_r, "Negative control failure: verify_red_scarcity must fail when DxKeyword uses state.error")
 
 -- ==========================================================================
--- 6. No Raw Source Hex Outside Palette Gate & Namespace Disjointness Gate
+-- 5b. C4.0 Profile-Aware Visual Contract and Negative Controls
 -- ==========================================================================
 
 local repo_root = vim.fs.root(0, ".git") or vim.fn.getcwd()
+local c4_contract = dofile(repo_root .. "/tests/nvim/visual_contracts/c4.lua")
+c4_contract.verify({
+	palette = p,
+	roles = c4_roles,
+	graph = c4_full_hl,
+	domain = domain,
+	host_colors = colors,
+})
+c4_contract.verify_negative_controls({
+	palette = p,
+	visual = c4,
+	graph = c4_full_hl,
+	domain = domain,
+	host_colors = colors,
+})
+print("C4.0 profile-aware visual contract and four negative controls passed.")
+
+-- ==========================================================================
+-- 6. No Raw Source Hex Outside Palette Gate & Namespace Disjointness Gate
+-- ==========================================================================
 
 local theme_dir = repo_root .. "/home/dot_config/nvim/lua/theme"
 for name, type_str in vim.fs.dir(theme_dir, { depth = math.huge }) do
@@ -718,6 +753,9 @@ local M1_BASE_GRAPH_SHA256 = "05ff81df9019ace7bee14a494db1a9e39c7d18426f3b78bae1
 local M2B_BASE_SHA = "6d44ffe3108311396ceaedef527a24c6d3b1cebd"
 local M2B_GRAPH_COUNT = 225
 local M2B_GRAPH_SHA256 = "a2db03bf6a138c0784d74277adf6f7ee706a5398336305385ced7d3725c0dedf"
+local M3B_BASE_SHA = "6348cc2fd99457f2ecf0cb574c46a07db45d6e75"
+local C4_GRAPH_COUNT = 225
+local C4_GRAPH_SHA256 = "311ac3566f816d0fc03ad4ec92c74477d4ac82bf8cc2ab5cd82f95a12688c043"
 local M2B_AUTHORIZED_GRAPH_DELTA = {
 	"@lsp.typemod.variable.classScope.cpp",
 	"@lsp.typemod.variable.static.cpp",
@@ -789,6 +827,49 @@ print(
 	)
 )
 print(("M2B-B graph frozen: %d groups, sha256=%s"):format(graph_count, graph_digest))
+
+local function assert_profile_topology_equal(reference, candidate)
+	assert_eq(vim.tbl_count(candidate), vim.tbl_count(reference), "C4 changed the governed highlight-group count")
+	for group, reference_spec in pairs(reference) do
+		local candidate_spec = candidate[group]
+		if candidate_spec == nil then
+			fail("C4 removed governed highlight group: " .. group)
+		end
+		if domain.roles[group] then
+			assert_eq(candidate_spec.link, reference_spec.link, "C4 changed Domain role link topology: " .. group)
+		else
+			if not vim.deep_equal(candidate_spec, reference_spec) then
+				fail("C4 changed non-visual composition ownership or attributes: " .. group)
+			end
+		end
+	end
+	for group in pairs(candidate) do
+		if reference[group] == nil then
+			fail("C4 added unauthorized highlight group: " .. group)
+		end
+	end
+end
+
+assert_profile_topology_equal(full_hl, c4_full_hl)
+local c4_graph_count, c4_graph_digest = normalized_graph_digest(c4_full_hl)
+assert_eq(c4_graph_count, C4_GRAPH_COUNT, ("C4.0 graph count changed from %s"):format(M3B_BASE_SHA))
+assert_eq(c4_graph_digest, C4_GRAPH_SHA256, ("C4.0 resolved graph changed from %s"):format(M3B_BASE_SHA))
+print(("C4.0 resolved graph frozen: %d groups, sha256=%s"):format(c4_graph_count, c4_graph_digest))
+
+local bad_profile_extra = vim.deepcopy(c4_full_hl)
+bad_profile_extra.DxUnauthorized = { fg = p.code_profiles.c4.variable }
+assert(not pcall(assert_profile_topology_equal, full_hl, bad_profile_extra), "C4 topology must reject added groups")
+
+local bad_profile_link = vim.deepcopy(c4_full_hl)
+bad_profile_link["@lsp.type.variable"].link = "DxMember"
+assert(not pcall(assert_profile_topology_equal, full_hl, bad_profile_link), "C4 topology must reject link drift")
+
+local bad_profile_authority = vim.deepcopy(c4_full_hl)
+bad_profile_authority["@lsp.mod.deprecated"].strikethrough = false
+assert(
+	not pcall(assert_profile_topology_equal, full_hl, bad_profile_authority),
+	"C4 topology must reject style-authority drift"
+)
 
 local bad_graph_field = vim.deepcopy(full_hl)
 bad_graph_field.DxVariable.reverse = true
