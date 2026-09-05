@@ -101,6 +101,10 @@ assert_container_state() {
         cat "$nvim_log" >&2
         fail "M2B static-data-member classification evidence did not complete"
     }
+    grep -Fq "M2B-B static-data-member behavior correction passed: 13/13 cases; decision: RECLASSIFY STATIC DATA MEMBER TO DxMember" "$nvim_log" || {
+        cat "$nvim_log" >&2
+        fail "M2B-B static-data-member behavior correction did not complete"
+    }
     if grep -Eqi 'Package is already installing|^Installing tools:|^Updating tools:|MasonToolsUpdate' "$nvim_log"; then
         cat "$nvim_log" >&2
         fail "Neovim observation attempted a Mason install or update"

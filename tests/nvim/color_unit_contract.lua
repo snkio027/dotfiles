@@ -631,7 +631,9 @@ for index, expected_name in ipairs(expected_layers) do
 end
 
 local generic_lsp_groups = require("theme.bindings.lsp").groups()
+local clangd_groups = require("theme.adapters.clangd").groups()
 local rust_analyzer_groups = require("theme.adapters.rust_analyzer").groups()
+local authority = require("theme.authority")
 assert_eq(generic_lsp_groups["@lsp.type.label"].link, "DxLabel", "Audited cross-provider label ownership changed")
 assert_eq(generic_lsp_groups["@lsp.type.lifetime"], nil, "rust-analyzer lifetime leaked into generic LSP bindings")
 assert_eq(
@@ -641,6 +643,56 @@ assert_eq(
 )
 assert_eq(rust_analyzer_groups["@lsp.type.lifetime"].link, "DxLifetime", "rust-analyzer must own lifetime")
 assert_eq(rust_analyzer_groups["@lsp.type.builtinType"].link, "DxBuiltin", "rust-analyzer must own builtinType")
+assert_eq(
+	generic_lsp_groups["@lsp.typemod.variable.static"].link,
+	"DxVariable",
+	"M2B-B must not redefine provider-independent static semantics"
+)
+assert_eq(
+	generic_lsp_groups["@lsp.typemod.variable.readonly"].link,
+	"DxVariable",
+	"M2B-B must not redefine provider-independent readonly semantics"
+)
+assert_eq(
+	generic_lsp_groups["@lsp.typemod.variable.defaultLibrary"].link,
+	"DxVariable",
+	"M2B-B must not redefine provider-independent defaultLibrary semantics"
+)
+assert_eq(
+	clangd_groups["@lsp.typemod.variable.static"],
+	nil,
+	"clangd adapter must not own the generic variable.static group"
+)
+assert_eq(
+	clangd_groups["@lsp.typemod.variable.readonly"],
+	nil,
+	"clangd adapter must not own the generic variable.readonly group"
+)
+assert_eq(
+	clangd_groups["@lsp.typemod.variable.defaultLibrary"],
+	nil,
+	"clangd adapter must not own the generic variable.defaultLibrary group"
+)
+assert_eq(
+	clangd_groups["@lsp.typemod.variable.classScope.cpp"].link,
+	"DxMember",
+	"clangd/C++ classScope ownership must resolve to DxMember"
+)
+assert_eq(
+	clangd_groups["@lsp.typemod.variable.static.cpp"].link,
+	authority.foreground_passthrough,
+	"clangd/C++ static storage must suppress foreground authority"
+)
+assert_eq(
+	clangd_groups["@lsp.typemod.variable.readonly.cpp"].link,
+	authority.foreground_passthrough,
+	"clangd/C++ readonly mutability must suppress foreground authority"
+)
+assert_eq(
+	clangd_groups["@lsp.typemod.variable.defaultLibrary.cpp"].link,
+	authority.foreground_passthrough,
+	"clangd/C++ defaultLibrary provenance must suppress foreground authority"
+)
 
 local normalized_fields = {
 	"link",
@@ -663,6 +715,15 @@ end
 local M1_BASE_SHA = "19f0570ee33025832ff1d1d49269d303677d9c0f"
 local M1_BASE_GRAPH_COUNT = 221
 local M1_BASE_GRAPH_SHA256 = "05ff81df9019ace7bee14a494db1a9e39c7d18426f3b78bae1ef3012a068a276"
+local M2B_BASE_SHA = "6d44ffe3108311396ceaedef527a24c6d3b1cebd"
+local M2B_GRAPH_COUNT = 225
+local M2B_GRAPH_SHA256 = "a2db03bf6a138c0784d74277adf6f7ee706a5398336305385ced7d3725c0dedf"
+local M2B_AUTHORIZED_GRAPH_DELTA = {
+	"@lsp.typemod.variable.classScope.cpp",
+	"@lsp.typemod.variable.static.cpp",
+	"@lsp.typemod.variable.readonly.cpp",
+	"@lsp.typemod.variable.defaultLibrary.cpp",
+}
 
 local function assert_governed_graph_fields(graph)
 	for group, spec in pairs(graph) do
@@ -700,9 +761,34 @@ local function normalized_graph_digest(graph)
 end
 
 local graph_count, graph_digest = normalized_graph_digest(full_hl)
-assert_eq(graph_count, M1_BASE_GRAPH_COUNT, ("C3.1 highlight group count changed from %s"):format(M1_BASE_SHA))
-assert_eq(graph_digest, M1_BASE_GRAPH_SHA256, ("C3.1 normalized highlight graph changed from %s"):format(M1_BASE_SHA))
-print(("C3.1 graph equivalence verified: %d groups, sha256=%s"):format(graph_count, graph_digest))
+assert_eq(graph_count, M2B_GRAPH_COUNT, ("M2B-B highlight group count changed from %s"):format(M2B_BASE_SHA))
+assert_eq(graph_digest, M2B_GRAPH_SHA256, ("M2B-B normalized highlight graph changed from %s"):format(M2B_BASE_SHA))
+
+local historical_graph = vim.deepcopy(full_hl)
+for _, group in ipairs(M2B_AUTHORIZED_GRAPH_DELTA) do
+	if historical_graph[group] == nil then
+		fail("M2B-B authorized graph group is missing: " .. group)
+	end
+	historical_graph[group] = nil
+end
+local historical_count, historical_digest = normalized_graph_digest(historical_graph)
+assert_eq(
+	historical_count,
+	M1_BASE_GRAPH_COUNT,
+	("M2B-B authorized-delta removal did not restore the M1 graph count from %s"):format(M1_BASE_SHA)
+)
+assert_eq(
+	historical_digest,
+	M1_BASE_GRAPH_SHA256,
+	("M2B-B authorized-delta removal did not restore the M1 graph digest from %s"):format(M1_BASE_SHA)
+)
+print(
+	("M1 historical graph reconstructed after authorized M2B-B delta removal: %d groups, sha256=%s"):format(
+		historical_count,
+		historical_digest
+	)
+)
+print(("M2B-B graph frozen: %d groups, sha256=%s"):format(graph_count, graph_digest))
 
 local bad_graph_field = vim.deepcopy(full_hl)
 bad_graph_field.DxVariable.reverse = true
@@ -884,6 +970,7 @@ local cpp_filepath = repo_root .. "/" .. cpp_spec.path
 local cpp_buf = vim.fn.bufadd(cpp_filepath)
 vim.fn.bufload(cpp_buf)
 local classification_tags = {}
+local classification_cases_by_tag = {}
 local declared_classification_tags = {}
 local classification_identity_counts = { member = 0, variable = 0 }
 for _, tag in ipairs(static_member_review.case_tags) do
@@ -897,6 +984,7 @@ for _, case in ipairs(static_member_review.cases) do
 		fail("Duplicate M2B classification evidence tag: " .. case.tag)
 	end
 	classification_tags[case.tag] = true
+	classification_cases_by_tag[case.tag] = case
 	if not declared_classification_tags[case.tag] then
 		fail("M2B case is absent from the declared topology: " .. case.tag)
 	end
@@ -947,8 +1035,135 @@ for tag in pairs(declared_classification_tags) do
 		fail("Declared M2B classification tag has no case: " .. tag)
 	end
 end
-vim.api.nvim_buf_delete(cpp_buf, { force = true })
 print("Verified all 7/7 M2B C++ classification locators and applied-highlight schemas.")
+
+local static_member_correction = manifest.behavior_corrections and manifest.behavior_corrections.cpp_static_data_member
+if not static_member_correction then
+	fail("M2B-B C++ static data member behavior correction is missing")
+end
+assert_eq(
+	static_member_correction.decision,
+	static_member_review.decision,
+	"M2B-B behavior correction changed the approved classification decision"
+)
+assert_eq(#static_member_correction.authorized_graph_groups, 4, "M2B-B authorized graph delta changed")
+assert_eq(
+	static_member_correction.authorized_graph_groups[1],
+	"@lsp.typemod.variable.classScope.cpp",
+	"M2B-B classScope graph ownership changed"
+)
+assert_eq(
+	static_member_correction.authorized_graph_groups[2],
+	"@lsp.typemod.variable.static.cpp",
+	"M2B-B static suppression graph ownership changed"
+)
+assert_eq(
+	static_member_correction.authorized_graph_groups[3],
+	"@lsp.typemod.variable.readonly.cpp",
+	"M2B-B readonly suppression graph ownership changed"
+)
+assert_eq(
+	static_member_correction.authorized_graph_groups[4],
+	"@lsp.typemod.variable.defaultLibrary.cpp",
+	"M2B-B defaultLibrary suppression graph ownership changed"
+)
+assert_eq(#static_member_correction.positive_case_tags, 6, "Expected exactly 6 corrected static-member cases")
+assert_eq(#static_member_correction.preserved_member_case_tags, 2, "Expected exactly 2 preserved member controls")
+assert_eq(#static_member_correction.negative_control_tags, 5, "Expected exactly 5 variable negative controls")
+assert_eq(#static_member_correction.additional_cases, 6, "Expected exactly 6 additional M2B-B behavior cases")
+
+local behavior_cases_by_tag = vim.tbl_extend("error", {}, classification_cases_by_tag)
+for _, case in ipairs(static_member_correction.additional_cases) do
+	if behavior_cases_by_tag[case.tag] then
+		fail("Duplicate M2B-B behavior case: " .. case.tag)
+	end
+	if
+		type(case.semantic_description) ~= "string"
+		or case.semantic_description == ""
+		or (case.source_identity ~= "member" and case.source_identity ~= "variable")
+		or type(case.occurrence) ~= "string"
+		or case.occurrence == ""
+	then
+		fail("Invalid M2B-B behavior-case metadata: " .. case.tag)
+	end
+	local evidence = case.evidence
+	if
+		type(evidence) ~= "table"
+		or type(evidence.treesitter) ~= "table"
+		or type(evidence.lsp) ~= "table"
+		or type(evidence.applied_foregrounds) ~= "table"
+		or type(evidence.effective) ~= "table"
+	then
+		fail("M2B-B behavior case has incomplete evidence: " .. case.tag)
+	end
+	if evidence.lsp.provider ~= "clangd" or not domain.roles[evidence.effective.role] then
+		fail("M2B-B behavior case escaped clangd/Domain scope: " .. case.tag)
+	end
+	local r, _, line_text, comment_r = locate_symbolic_sentinel(cpp_buf, case.tag, case.token, "cpp")
+	if r <= comment_r or is_comment_line(vim.trim(line_text), "cpp") then
+		fail("M2B-B behavior-case locator matched its marker/comment line: " .. case.tag)
+	end
+	behavior_cases_by_tag[case.tag] = case
+end
+
+local categorized_behavior_tags = {}
+local behavior_categories = {
+	{ name = "corrected static member", tags = static_member_correction.positive_case_tags, role = "DxMember" },
+	{ name = "preserved member", tags = static_member_correction.preserved_member_case_tags, role = "DxMember" },
+	{ name = "variable negative control", tags = static_member_correction.negative_control_tags, role = "DxVariable" },
+}
+for _, category in ipairs(behavior_categories) do
+	for _, tag in ipairs(category.tags) do
+		if categorized_behavior_tags[tag] then
+			fail("M2B-B behavior case appears in multiple categories: " .. tag)
+		end
+		local case = behavior_cases_by_tag[tag]
+		if not case then
+			fail(("M2B-B %s category references an unknown case: %s"):format(category.name, tag))
+		end
+		assert_eq(case.evidence.effective.role, category.role, "M2B-B behavior role drift for " .. tag)
+		categorized_behavior_tags[tag] = true
+	end
+end
+assert_eq(vim.tbl_count(behavior_cases_by_tag), 13, "Expected exactly 13 M2B-B behavior cases")
+assert_eq(vim.tbl_count(categorized_behavior_tags), 13, "M2B-B behavior categories must cover all 13 cases")
+
+for _, tag in ipairs(static_member_correction.positive_case_tags) do
+	local evidence = behavior_cases_by_tag[tag].evidence
+	assert_eq(evidence.require_unique_top_foreground, true, "M2B-B top foreground must be unique for " .. tag)
+	assert_eq(
+		evidence.effective.group,
+		"@lsp.typemod.variable.classScope.cpp",
+		"M2B-B static-member authority drift for " .. tag
+	)
+	local foreground_groups = {}
+	for _, foreground in ipairs(evidence.applied_foregrounds) do
+		foreground_groups[foreground.group] = foreground.role
+	end
+	assert_eq(
+		foreground_groups["@lsp.typemod.variable.classScope.cpp"],
+		"DxMember",
+		"M2B-B classScope foreground missing for " .. tag
+	)
+	assert_eq(
+		foreground_groups["@lsp.typemod.variable.static.cpp"],
+		nil,
+		"M2B-B static suppression unexpectedly owns a foreground for " .. tag
+	)
+	assert_eq(
+		foreground_groups["@lsp.typemod.variable.readonly.cpp"],
+		nil,
+		"M2B-B readonly suppression unexpectedly owns a foreground for " .. tag
+	)
+	assert_eq(
+		foreground_groups["@lsp.typemod.variable.defaultLibrary.cpp"],
+		nil,
+		"M2B-B defaultLibrary suppression unexpectedly owns a foreground for " .. tag
+	)
+end
+
+vim.api.nvim_buf_delete(cpp_buf, { force = true })
+print("Verified M2B-B behavior closure: 6 corrected static members, 2 member controls, 5 variable controls.")
 
 assert(
 	verified_sentinels == expected_total and verified_sentinels > 0,

@@ -52,6 +52,9 @@ Milestone evidence records:
 - [`DX-COLOR-003-M2B-STATIC-MEMBER-CLASSIFICATION.md`](./DX-COLOR-003-M2B-STATIC-MEMBER-CLASSIFICATION.md)
   — C++ static data member evidence, modifier priority analysis, and the
   existing-role classification decision.
+- [`DX-COLOR-003-M2B-B-STATIC-MEMBER-CORRECTION.md`](./DX-COLOR-003-M2B-B-STATIC-MEMBER-CORRECTION.md)
+  — the narrow clangd/C++ behavior correction, positive and negative runtime
+  controls, and governed highlight-graph delta.
 
 The architecture and test specifications are normative. The C4 color values are candidate visual values and require runtime visual acceptance before becoming the default profile.
 
