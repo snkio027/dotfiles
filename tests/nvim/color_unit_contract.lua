@@ -1,7 +1,6 @@
---- DX Semantic Color System (DX-COLOR-002)
---- Tier-1 Unit Contract: Standalone, fast, isolated verification of semantic roles,
---- mappings, contrast budget, source-state separation, typemod governance,
---- assembly completeness, and sentinel locators.
+--- DX Semantic Color System (DX-COLOR-003)
+--- Tier-1 Unit Contract: standalone verification of the domain, composition graph,
+--- visual profile, bindings, authority, and sentinel locators.
 --- Runnable via:
 --- nvim -u NONE -i NONE --headless "+set rtp^=$PWD/home/dot_config/nvim" "+luafile tests/nvim/color_unit_contract.lua" +qa
 
@@ -56,14 +55,19 @@ if not ok_palette or type(palette_mod.resolve) ~= "function" then
 	fail("theme.palette module could not be loaded or missing resolve()")
 end
 
-local ok_semantic, semantic = pcall(require, "theme.semantic")
-if not ok_semantic or type(semantic.roles) ~= "function" then
-	fail("theme.semantic module could not be loaded or missing roles()")
+local ok_domain, domain = pcall(require, "theme.domain")
+if not ok_domain or type(domain.roles) ~= "table" then
+	fail("theme.domain module could not be loaded or missing role registry")
 end
 
-local ok_mappings, mappings = pcall(require, "theme.mappings")
-if not ok_mappings or type(mappings.groups) ~= "function" then
-	fail("theme.mappings module could not be loaded or missing groups()")
+local ok_visual, c3_1 = pcall(require, "theme.visual.c3_1")
+if not ok_visual or type(c3_1.roles) ~= "function" then
+	fail("theme.visual.c3_1 module could not be loaded or missing roles()")
+end
+
+local ok_compose, compose = pcall(require, "theme.compose")
+if not ok_compose or type(compose.highlights) ~= "function" then
+	fail("theme.compose module could not be loaded or missing highlights()")
 end
 
 local ok_theme, theme = pcall(require, "theme")
@@ -72,11 +76,17 @@ if not ok_theme or type(theme.highlights) ~= "function" then
 end
 
 local p = palette_mod.resolve(colors)
-local roles = semantic.roles(p)
-local groups = mappings.groups(p)
+local roles = c3_1.roles(p)
+local full_hl = theme.highlights(colors)
+local groups = {}
+for group, spec in pairs(full_hl) do
+	if not domain.roles[group] then
+		groups[group] = spec
+	end
+end
 
 -- ==========================================================================
--- 2. Validate 22 First-Class Semantic Roles
+-- 2. Validate 23 First-Class Semantic Roles and Domain Metadata
 -- ==========================================================================
 
 local required_semantic_roles = {
@@ -107,18 +117,33 @@ local required_semantic_roles = {
 
 local role_count = 0
 for _, role in ipairs(required_semantic_roles) do
+	local registration = domain.roles[role]
+	if not registration then
+		fail("Missing required domain role registration: " .. role)
+	end
+	if type(registration.family) ~= "string" or registration.family == "" then
+		fail("Domain role is missing family metadata: " .. role)
+	end
+	if type(registration.description) ~= "string" or registration.description == "" then
+		fail("Domain role is missing semantic description: " .. role)
+	end
 	if not roles[role] then
-		fail("Missing required semantic role: " .. role)
+		fail("C3.1 visual profile is missing required semantic role: " .. role)
 	end
 	role_count = role_count + 1
 end
 
-for role, _ in pairs(roles) do
+for role in pairs(domain.roles) do
 	if not vim.tbl_contains(required_semantic_roles, role) then
 		fail("Unexpected extra semantic role outside 23-role closure: " .. role)
 	end
 end
-assert_eq(role_count, 23, "Expected exactly 23 semantic roles in DX-COLOR-002")
+for role in pairs(roles) do
+	if not domain.roles[role] then
+		fail("C3.1 visual profile defines role outside the domain closure: " .. role)
+	end
+end
+assert_eq(role_count, 23, "Expected exactly 23 semantic roles in DX-COLOR-003")
 
 -- ==========================================================================
 -- 3. Source Contrast Budget Gate (Calculated Mathematically vs Mocha Base)
@@ -285,7 +310,7 @@ assert_eq(
 -- Negative Control 1: Yellow Scarcity Catch
 local bad_yellow = vim.deepcopy(p)
 bad_yellow.code.callable = bad_yellow.state.warn
-local bad_yellow_roles = semantic.roles(bad_yellow)
+local bad_yellow_roles = c3_1.roles(bad_yellow)
 local ok_y, _ = pcall(verify_yellow_scarcity, bad_yellow_roles, bad_yellow)
 assert(not ok_y, "Negative control failure: verify_yellow_scarcity must fail when code.callable uses yellow")
 
@@ -298,7 +323,7 @@ assert(not ok_s, "Negative control failure: verify_source_state_separation must 
 -- Negative Control 3: Red Scarcity Catch
 local bad_red = vim.deepcopy(p)
 bad_red.code.keyword = bad_red.state.error
-local bad_red_roles = semantic.roles(bad_red)
+local bad_red_roles = c3_1.roles(bad_red)
 local ok_r, _ = pcall(verify_red_scarcity, bad_red_roles, bad_red)
 assert(not ok_r, "Negative control failure: verify_red_scarcity must fail when DxKeyword uses state.error")
 
@@ -309,7 +334,7 @@ assert(not ok_r, "Negative control failure: verify_red_scarcity must fail when D
 local repo_root = vim.fs.root(0, ".git") or vim.fn.getcwd()
 
 local theme_dir = repo_root .. "/home/dot_config/nvim/lua/theme"
-for name, type_str in vim.fs.dir(theme_dir) do
+for name, type_str in vim.fs.dir(theme_dir, { depth = math.huge }) do
 	if type_str == "file" and name:match("%.lua$") and name ~= "palette.lua" then
 		local abspath = theme_dir .. "/" .. name
 		local f = io.open(abspath, "r")
@@ -572,7 +597,6 @@ for _, extra in ipairs(required_extras) do
 end
 
 -- Theme Highlights Final Assembly Completeness
-local full_hl = theme.highlights(colors)
 for role, _ in pairs(roles) do
 	if not full_hl[role] then
 		fail("Combined theme.highlights() is missing semantic role: " .. role)
@@ -585,7 +609,108 @@ for group, _ in pairs(groups) do
 end
 
 -- ==========================================================================
--- 8. Shared Manifest Symbolic Sentinel Locator Test across 5 Languages
+-- 8. M1 Architecture Topology and C3.1 Graph Equivalence
+-- ==========================================================================
+
+local expected_layers = {
+	"authority",
+	"visual",
+	"treesitter",
+	"lsp",
+	"zls",
+	"clangd",
+	"rust_analyzer",
+	"pyright",
+	"ui",
+	"plugins",
+}
+
+assert_eq(#compose.layers, #expected_layers, "Unexpected number of composition layers")
+for index, expected_name in ipairs(expected_layers) do
+	assert_eq(compose.layers[index].name, expected_name, ("Composition layer %d changed"):format(index))
+end
+
+local generic_lsp_groups = require("theme.bindings.lsp").groups()
+local rust_analyzer_groups = require("theme.adapters.rust_analyzer").groups()
+assert_eq(generic_lsp_groups["@lsp.type.label"].link, "DxLabel", "Audited cross-provider label ownership changed")
+assert_eq(generic_lsp_groups["@lsp.type.lifetime"], nil, "rust-analyzer lifetime leaked into generic LSP bindings")
+assert_eq(
+	generic_lsp_groups["@lsp.type.builtinType"],
+	nil,
+	"rust-analyzer builtinType leaked into generic LSP bindings"
+)
+assert_eq(rust_analyzer_groups["@lsp.type.lifetime"].link, "DxLifetime", "rust-analyzer must own lifetime")
+assert_eq(rust_analyzer_groups["@lsp.type.builtinType"].link, "DxBuiltin", "rust-analyzer must own builtinType")
+
+local normalized_fields = {
+	"link",
+	"fg",
+	"bg",
+	"sp",
+	"bold",
+	"italic",
+	"underline",
+	"undercurl",
+	"strikethrough",
+	"nocombine",
+}
+
+local normalized_field_set = {}
+for _, field in ipairs(normalized_fields) do
+	normalized_field_set[field] = true
+end
+
+local M1_BASE_SHA = "19f0570ee33025832ff1d1d49269d303677d9c0f"
+local M1_BASE_GRAPH_COUNT = 221
+local M1_BASE_GRAPH_SHA256 = "05ff81df9019ace7bee14a494db1a9e39c7d18426f3b78bae1ef3012a068a276"
+
+local function assert_governed_graph_fields(graph)
+	for group, spec in pairs(graph) do
+		for field in pairs(spec) do
+			if not normalized_field_set[field] then
+				fail(("C3.1 graph equivalence does not govern field %s on %s"):format(field, group))
+			end
+		end
+	end
+end
+
+local function normalized_graph_digest(graph)
+	assert_governed_graph_fields(graph)
+
+	local names = {}
+	for name in pairs(graph) do
+		table.insert(names, name)
+	end
+	table.sort(names)
+
+	local normalized = {}
+	for _, name in ipairs(names) do
+		local fields = { name }
+		for _, field in ipairs(normalized_fields) do
+			local value = graph[name][field]
+			if type(value) == "string" and value:match("^#") then
+				value = value:lower()
+			end
+			table.insert(fields, field .. "=" .. (value == nil and "<nil>" or tostring(value)))
+		end
+		table.insert(normalized, table.concat(fields, "|"))
+	end
+
+	return #names, vim.fn.sha256(table.concat(normalized, "\n"))
+end
+
+local graph_count, graph_digest = normalized_graph_digest(full_hl)
+assert_eq(graph_count, M1_BASE_GRAPH_COUNT, ("C3.1 highlight group count changed from %s"):format(M1_BASE_SHA))
+assert_eq(graph_digest, M1_BASE_GRAPH_SHA256, ("C3.1 normalized highlight graph changed from %s"):format(M1_BASE_SHA))
+print(("C3.1 graph equivalence verified: %d groups, sha256=%s"):format(graph_count, graph_digest))
+
+local bad_graph_field = vim.deepcopy(full_hl)
+bad_graph_field.DxVariable.reverse = true
+local ok_unknown_field = pcall(assert_governed_graph_fields, bad_graph_field)
+assert(not ok_unknown_field, "Negative control failure: unknown highlight attributes must fail closed")
+
+-- ==========================================================================
+-- 9. Shared Manifest Symbolic Sentinel Locator Test across 5 Languages
 -- ==========================================================================
 
 local ok_manifest, manifest = pcall(dofile, repo_root .. "/tests/nvim/color_manifest.lua")
