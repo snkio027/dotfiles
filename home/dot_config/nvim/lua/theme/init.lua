@@ -35,8 +35,8 @@ end
 ---@param colors table Catppuccin Mocha named palette table
 ---@return table<string, vim.api.keyset.highlight>
 function M.highlights(colors)
-  local p = palette_mod.resolve(colors)
-  local _, visual = M.active_profile()
+  local profile_name, visual = M.active_profile()
+  local p = palette_mod.resolve(colors, profile_name)
   return compose.highlights(p, visual)
 end
 
