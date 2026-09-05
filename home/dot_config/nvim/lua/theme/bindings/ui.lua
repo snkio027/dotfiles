@@ -6,7 +6,7 @@ local M = {}
 ---@param p table Unified palette returned by palette.resolve()
 ---@return table<string, vim.api.keyset.highlight>
 function M.groups(p)
-  return {
+  local groups = {
     ["CursorLine"] = { bg = "NONE" },
     ["CursorLineNr"] = { fg = p.code.member, bold = true },
     ["Visual"] = { bg = p.ui.surface2 },
@@ -44,6 +44,12 @@ function M.groups(p)
     ["diffChanged"] = { fg = p.state.warn },
     ["diffRemoved"] = { fg = p.state.error },
   }
+
+  if p.ui.normal_bg then
+    groups["Normal"] = { bg = p.ui.normal_bg }
+  end
+
+  return groups
 end
 
 return M

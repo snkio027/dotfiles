@@ -1,9 +1,9 @@
 # DX-COLOR-003 Development Documentation Set
 
-- **Status:** M2 Frozen / M3-C Explicit C4 Opt-In
+- **Status:** M4 / C4.4 High-Chroma Night Candidate
 - **Repository:** `snkio027/dotfiles`
 - **Initial M0 baseline:** `19f0570ee33025832ff1d1d49269d303677d9c0f`
-- **Current M3-C base:** `433a2b164fe4a6f4810fbf7c3c7f09b34bdb7c60`
+- **Current M4 base:** `9a7cea1579b6df1e8195be538beb0b1cb6bad901`
 - **Host theme:** Catppuccin Mocha
 - **Target editor:** Neovim / LazyVim
 - **Languages in current verification matrix:** Rust, C, C++23, Zig, Python
@@ -73,6 +73,12 @@ Milestone evidence records:
 - [`DX-COLOR-003-M3C-C4-SELECTOR.md`](./DX-COLOR-003-M3C-C4-SELECTOR.md)
   — the deterministic C3.1/C4 selector, fail-closed selection policy, and
   production runtime proof against the actual resolved `Normal.bg`.
+- [`DX-COLOR-003-M4-C4-3-HIGH-SEPARATION-GRAPHITE.md`](./DX-COLOR-003-M4-C4-3-HIGH-SEPARATION-GRAPHITE.md)
+  — the neutral Graphite experiment, its pairing contract, graph provenance,
+  and the final human A/B rejection that motivated the visual rebase.
+- [`DX-COLOR-003-M4-C4-4-HIGH-CHROMA-NIGHT.md`](./DX-COLOR-003-M4-C4-4-HIGH-CHROMA-NIGHT.md)
+  — the TokyoNight-informed perceptual rebase, softened body white, dark navy
+  canvas, full-color-wheel semantic axes, and C4.3-to-C4.4 provenance.
 
 The architecture and test specifications are normative. The C4 color values are candidate visual values and require runtime visual acceptance before becoming the default profile.
 
@@ -83,10 +89,14 @@ M1   Architecture extraction                    FROZEN
 M2   Evidence / authority / provider governance CLOSED / FROZEN
 M3-A C4 visual contract                         CLOSED / FROZEN
 M3-B C4.0 candidate visual profile              CLOSED / FROZEN
-M3-C Explicit C4 opt-in selector                CURRENT
+M3-C Explicit C4 opt-in selector                CLOSED / FROZEN
+M4   Human visual acceptance                    CURRENT
 
 C3.1                                            DEPRECATED / FROZEN
-C4.0                                            IMPLEMENTED / OPT-IN / NOT DEFAULT
+C4.0                                            PASS WITH CHANGES / SUPERSEDED
+C4.1 / C4.2                                     EXPERIMENTAL / SUPERSEDED
+C4.3                                            A/B REJECTED / SUPERSEDED
+C4.4                                            IMPLEMENTED / OPT-IN / NOT DEFAULT
 ```
 
 ---
