@@ -867,6 +867,89 @@ for _, comparison in ipairs(manifest.binding_comparisons) do
 end
 print("Verified all 28/28 M2A binding locators and 15/15 comparison schemas.")
 
+local static_member_review = manifest.classification_reviews and manifest.classification_reviews.cpp_static_data_member
+if not static_member_review then
+	fail("M2B C++ static data member classification review is missing")
+end
+assert_eq(
+	static_member_review.decision,
+	"RECLASSIFY STATIC DATA MEMBER TO DxMember",
+	"M2B classification decision drifted"
+)
+assert_eq(#static_member_review.cases, 7, "Expected exactly 7 M2B C++ classification evidence cases")
+assert_eq(#static_member_review.case_tags, 7, "Expected exactly 7 declared M2B C++ classification tags")
+
+local cpp_spec = manifest.languages.cpp
+local cpp_filepath = repo_root .. "/" .. cpp_spec.path
+local cpp_buf = vim.fn.bufadd(cpp_filepath)
+vim.fn.bufload(cpp_buf)
+local classification_tags = {}
+local declared_classification_tags = {}
+local classification_identity_counts = { member = 0, variable = 0 }
+for _, tag in ipairs(static_member_review.case_tags) do
+	if declared_classification_tags[tag] then
+		fail("Duplicate declared M2B classification tag: " .. tag)
+	end
+	declared_classification_tags[tag] = true
+end
+for _, case in ipairs(static_member_review.cases) do
+	if classification_tags[case.tag] then
+		fail("Duplicate M2B classification evidence tag: " .. case.tag)
+	end
+	classification_tags[case.tag] = true
+	if not declared_classification_tags[case.tag] then
+		fail("M2B case is absent from the declared topology: " .. case.tag)
+	end
+	if type(case.semantic_description) ~= "string" or case.semantic_description == "" then
+		fail("M2B case lacks a source semantic description: " .. case.tag)
+	end
+	if case.source_identity ~= "member" and case.source_identity ~= "variable" then
+		fail("M2B case has an invalid source identity: " .. case.tag)
+	end
+	classification_identity_counts[case.source_identity] = classification_identity_counts[case.source_identity] + 1
+	if type(case.occurrence) ~= "string" or case.occurrence == "" then
+		fail("M2B case lacks an occurrence kind: " .. case.tag)
+	end
+	local evidence = case.evidence
+	if
+		type(evidence) ~= "table"
+		or type(evidence.treesitter) ~= "table"
+		or type(evidence.lsp) ~= "table"
+		or type(evidence.applied_foregrounds) ~= "table"
+		or type(evidence.effective) ~= "table"
+	then
+		fail("M2B case has incomplete evidence schema: " .. case.tag)
+	end
+	if evidence.lsp.provider ~= "clangd" then
+		fail("M2B case must attribute protocol evidence to clangd: " .. case.tag)
+	end
+	if not domain.roles[evidence.effective.role] then
+		fail("M2B case resolves outside the 23-role domain: " .. case.tag)
+	end
+	for _, foreground in ipairs(evidence.applied_foregrounds) do
+		if
+			type(foreground.group) ~= "string"
+			or type(foreground.priority_delta) ~= "number"
+			or not domain.roles[foreground.role]
+		then
+			fail("M2B applied-foreground evidence is invalid: " .. case.tag)
+		end
+	end
+	local r, _, line_text, comment_r = locate_symbolic_sentinel(cpp_buf, case.tag, case.token, "cpp")
+	if r <= comment_r or is_comment_line(vim.trim(line_text), "cpp") then
+		fail("M2B locator matched its marker/comment line: " .. case.tag)
+	end
+end
+assert_eq(classification_identity_counts.member, 5, "M2B member occurrence control count changed")
+assert_eq(classification_identity_counts.variable, 2, "M2B namespace-variable control count changed")
+for tag in pairs(declared_classification_tags) do
+	if not classification_tags[tag] then
+		fail("Declared M2B classification tag has no case: " .. tag)
+	end
+end
+vim.api.nvim_buf_delete(cpp_buf, { force = true })
+print("Verified all 7/7 M2B C++ classification locators and applied-highlight schemas.")
+
 assert(
 	verified_sentinels == expected_total and verified_sentinels > 0,
 	("Sentinel count mismatch: verified %d, expected %d"):format(verified_sentinels, expected_total)

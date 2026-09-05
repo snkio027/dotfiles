@@ -19,17 +19,25 @@
 namespace dx::network {
 
 // DX:M2 cpp.binding.namespace_variable
+// DX:M2B cpp.classification.namespace_variable
 inline int namespace_counter = 1;
 
 // DX:M2 cpp.binding.namespace_static
+// DX:M2B cpp.classification.namespace_static_variable
 static int namespace_static_counter = 2;
 
 struct BindingProbe {
     // DX:M2 cpp.binding.static_data_member
+    // DX:M2B cpp.classification.inline_static_member_declaration
     static inline int shared_count = 3;
     // DX:M2 cpp.binding.instance_member
+    // DX:M2B cpp.classification.instance_member_declaration
     int instance_value = 4;
+    static int out_of_class_count;
 };
+
+// DX:M2B cpp.classification.out_of_class_static_definition
+int BindingProbe::out_of_class_count = 5;
 
 int observe_binding_topology(
     // DX:M2 cpp.binding.parameter
@@ -38,7 +46,12 @@ int observe_binding_topology(
     // DX:M2 cpp.binding.local_variable
     int local_value = parameter_value + namespace_counter + namespace_static_counter;
     const BindingProbe probe{};
-    return local_value + BindingProbe::shared_count + probe.instance_value;
+    int result = local_value;
+    // DX:M2B cpp.classification.qualified_static_member_access
+    result += BindingProbe::shared_count;
+    // DX:M2B cpp.classification.instance_member_access
+    result += probe.instance_value;
+    return result + BindingProbe::out_of_class_count;
 }
 
 // Constant definition using object macro

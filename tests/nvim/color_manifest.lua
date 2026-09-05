@@ -3,6 +3,159 @@
 --- Consumed identically by Tier-1 (Unit Contract), Tier-2A (Locked Neovim), and Tier-2B (DevContainer).
 
 local M = {
+	classification_reviews = {
+		cpp_static_data_member = {
+			question = "Should a C++ static data member be classified as DxMember or DxVariable?",
+			decision = "RECLASSIFY STATIC DATA MEMBER TO DxMember",
+			case_tags = {
+				"cpp.classification.instance_member_declaration",
+				"cpp.classification.instance_member_access",
+				"cpp.classification.inline_static_member_declaration",
+				"cpp.classification.qualified_static_member_access",
+				"cpp.classification.out_of_class_static_definition",
+				"cpp.classification.namespace_variable",
+				"cpp.classification.namespace_static_variable",
+			},
+			cases = {
+				{
+					tag = "cpp.classification.instance_member_declaration",
+					token = "instance_value",
+					semantic_description = "declaration of an instance-owned C++ data member",
+					source_identity = "member",
+					occurrence = "declaration",
+					evidence = {
+						treesitter = { "property", "variable.member" },
+						lsp = { provider = "clangd", type = "property", modifiers = { "classScope", "declaration" } },
+						applied_foregrounds = {
+							{ group = "@lsp.type.property.cpp", priority_delta = 0, role = "DxMember" },
+						},
+						effective = { group = "@lsp.type.property.cpp", source = "lsp", role = "DxMember" },
+					},
+				},
+				{
+					tag = "cpp.classification.instance_member_access",
+					token = "instance_value",
+					semantic_description = "member access through a C++ object instance",
+					source_identity = "member",
+					occurrence = "reference",
+					evidence = {
+						treesitter = { "_parent", "property" },
+						lsp = { provider = "clangd", type = "property", modifiers = { "classScope" } },
+						applied_foregrounds = {
+							{ group = "@lsp.type.property.cpp", priority_delta = 0, role = "DxMember" },
+						},
+						effective = { group = "@lsp.type.property.cpp", source = "lsp", role = "DxMember" },
+					},
+				},
+				{
+					tag = "cpp.classification.inline_static_member_declaration",
+					token = "shared_count",
+					semantic_description = "inline declaration and definition of a type-owned C++ static data member",
+					source_identity = "member",
+					occurrence = "declaration-definition",
+					evidence = {
+						treesitter = { "property", "variable.member" },
+						lsp = {
+							provider = "clangd",
+							type = "variable",
+							modifiers = { "classScope", "declaration", "definition", "static" },
+						},
+						applied_foregrounds = {
+							{ group = "@lsp.type.variable.cpp", priority_delta = 0, role = "DxVariable" },
+							{ group = "@lsp.typemod.variable.static.cpp", priority_delta = 2, role = "DxVariable" },
+						},
+						effective = {
+							group = "@lsp.typemod.variable.static.cpp",
+							source = "lsp",
+							role = "DxVariable",
+						},
+					},
+				},
+				{
+					tag = "cpp.classification.qualified_static_member_access",
+					token = "shared_count",
+					semantic_description = "class-qualified access to a type-owned C++ static data member",
+					source_identity = "member",
+					occurrence = "reference",
+					evidence = {
+						treesitter = { "variable" },
+						lsp = { provider = "clangd", type = "variable", modifiers = { "classScope", "static" } },
+						applied_foregrounds = {
+							{ group = "@lsp.type.variable.cpp", priority_delta = 0, role = "DxVariable" },
+							{ group = "@lsp.typemod.variable.static.cpp", priority_delta = 2, role = "DxVariable" },
+						},
+						effective = {
+							group = "@lsp.typemod.variable.static.cpp",
+							source = "lsp",
+							role = "DxVariable",
+						},
+					},
+				},
+				{
+					tag = "cpp.classification.out_of_class_static_definition",
+					token = "out_of_class_count",
+					semantic_description = "out-of-class definition of a type-owned C++ static data member",
+					source_identity = "member",
+					occurrence = "definition",
+					evidence = {
+						treesitter = { "variable" },
+						lsp = {
+							provider = "clangd",
+							type = "variable",
+							modifiers = { "classScope", "declaration", "definition", "static" },
+						},
+						applied_foregrounds = {
+							{ group = "@lsp.type.variable.cpp", priority_delta = 0, role = "DxVariable" },
+							{ group = "@lsp.typemod.variable.static.cpp", priority_delta = 2, role = "DxVariable" },
+						},
+						effective = {
+							group = "@lsp.typemod.variable.static.cpp",
+							source = "lsp",
+							role = "DxVariable",
+						},
+					},
+				},
+				{
+					tag = "cpp.classification.namespace_variable",
+					token = "namespace_counter",
+					semantic_description = "externally linked namespace-scope C++ variable declaration",
+					source_identity = "variable",
+					occurrence = "declaration-definition",
+					evidence = {
+						treesitter = { "variable" },
+						lsp = {
+							provider = "clangd",
+							type = "variable",
+							modifiers = { "declaration", "definition", "globalScope" },
+						},
+						applied_foregrounds = {
+							{ group = "@lsp.type.variable.cpp", priority_delta = 0, role = "DxVariable" },
+						},
+						effective = { group = "@lsp.type.variable.cpp", source = "lsp", role = "DxVariable" },
+					},
+				},
+				{
+					tag = "cpp.classification.namespace_static_variable",
+					token = "namespace_static_counter",
+					semantic_description = "internally linked namespace-scope C++ static variable declaration",
+					source_identity = "variable",
+					occurrence = "declaration-definition",
+					evidence = {
+						treesitter = { "variable" },
+						lsp = {
+							provider = "clangd",
+							type = "variable",
+							modifiers = { "declaration", "definition", "fileScope" },
+						},
+						applied_foregrounds = {
+							{ group = "@lsp.type.variable.cpp", priority_delta = 0, role = "DxVariable" },
+						},
+						effective = { group = "@lsp.type.variable.cpp", source = "lsp", role = "DxVariable" },
+					},
+				},
+			},
+		},
+	},
 	binding_comparisons = {
 		{
 			axis = "Zig module versus local immutable binding",
