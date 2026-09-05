@@ -6,6 +6,27 @@
 // DX:SENTINEL c.buffer_capacity.macro
 #define BUFFER_CAPACITY 4096
 
+// DX:M2 c.binding.file_global
+int c_global_counter = 1;
+
+// DX:M2 c.binding.file_static
+static int c_static_counter = 2;
+
+struct BindingProbe {
+    // DX:M2 c.binding.struct_member
+    int member_value;
+};
+
+static int observe_binding_topology(
+    // DX:M2 c.binding.parameter
+    int parameter_value
+) {
+    // DX:M2 c.binding.local_variable
+    int local_value = parameter_value + c_global_counter + c_static_counter;
+    struct BindingProbe probe = { .member_value = local_value };
+    return probe.member_value;
+}
+
 // Sentinel: struct type declaration (Type = Muted Teal)
 // DX:SENTINEL c.buffer.struct
 struct Buffer {
@@ -49,7 +70,7 @@ int main(void) {
         .data = { 0 },
     };
 
-    int result = decode(&buf);
+    int result = decode(&buf) + observe_binding_topology(1);
     if (result > 0) {
         printf("Decoded size: %d\n", result);
     }

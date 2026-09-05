@@ -2,6 +2,30 @@
 
 const std = @import("std");
 
+// DX:M2 zig.binding.top_level_const
+pub const module_limit: usize = 64;
+
+// DX:M2 zig.binding.top_level_var
+pub var module_counter: usize = 1;
+
+pub const BindingProbe = struct {
+    // DX:M2 zig.binding.struct_field
+    field_value: usize,
+};
+
+pub fn observeBindings(
+    // DX:M2 zig.binding.parameter
+    parameter_value: usize,
+) usize {
+    // DX:M2 zig.binding.local_const
+    const local_offset = parameter_value + module_limit;
+    // DX:M2 zig.binding.local_var
+    var local_total = module_counter;
+    local_total += local_offset;
+    const sample = BindingProbe{ .field_value = 1 };
+    return local_total + sample.field_value;
+}
+
 /// Protocol connection state.
 pub const ProtocolState = enum(u8) {
     idle = 0,
@@ -96,5 +120,6 @@ pub fn main() !void {
     }
 
     const size = try processMessage(u64, 42);
-    std.debug.print("Bytes: {d}, Item size: {d}, Counter: {d}\n", .{ written, size, counter });
+    const binding_total = observeBindings(counter);
+    std.debug.print("Bytes: {d}, Item size: {d}, Counter: {d}, Binding: {d}\n", .{ written, size, counter, binding_total });
 }

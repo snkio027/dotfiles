@@ -846,6 +846,17 @@ local function main()
 	-- Ensure LSP configuration plugin is loaded
 	pcall(require("lazy").load, { plugins = { "nvim-lspconfig" } })
 
+	-- Immutable color fixtures do not need recursive file watching. Disabling
+	-- only this client capability keeps the multi-provider contract below the
+	-- macOS per-process kqueue budget without changing production behavior.
+	for _, server in ipairs({ "lua_ls", "zls", "clangd", "rust_analyzer", "pyright", "ruff", "ty" }) do
+		vim.lsp.config(server, {
+			capabilities = {
+				workspace = { didChangeWatchedFiles = { dynamicRegistration = false } },
+			},
+		})
+	end
+
 	for _, lang_key in ipairs(lang_order) do
 		local spec = manifest.languages[lang_key]
 		if not spec then
@@ -900,7 +911,20 @@ local function main()
 				probe_sentinel_at(bufnr, s, lang_key, client)
 			end
 
+			local attached_clients = vim.lsp.get_clients({ bufnr = bufnr })
 			vim.cmd.bdelete({ bang = true })
+			vim.lsp.stop_client(attached_clients, false)
+			local stopped = vim.wait(5000, function()
+				for _, attached in ipairs(attached_clients) do
+					if vim.lsp.get_client_by_id(attached.id) then
+						return false
+					end
+				end
+				return true
+			end, 50)
+			if not stopped then
+				fail("LSP clients did not stop cleanly after fixture: " .. lang_key)
+			end
 		else
 			fail(("Fixture file not found: %s"):format(fixture_path))
 		end

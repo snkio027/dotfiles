@@ -65,8 +65,8 @@ nvim -u NONE -i NONE --headless \
 bash tests/nvim/color/validate_fixtures.sh
 
 nvim -n --headless \
-  "+luafile tests/nvim/run_contract.lua" \
-  "tests/nvim/color_contract.lua"
+  "+luafile tests/nvim/color_contract.lua" \
+  +qa
 ```
 
 Use strict LSP lane where the current project requires it.

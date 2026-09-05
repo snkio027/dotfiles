@@ -1,8 +1,30 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
+// DX:M2 rust.binding.static_item
+pub static MODULE_COUNTER: u32 = 7;
+
 /// Constant limit value for buffer allocation.
+// DX:M2 rust.binding.const_item
 pub const MAX_CAPACITY: usize = 65536;
+
+pub struct BindingProbe {
+    // DX:M2 rust.binding.struct_field
+    pub field_value: u32,
+}
+
+pub fn observe_binding_topology(
+    // DX:M2 rust.binding.parameter
+    parameter_value: u32,
+) -> u32 {
+    // DX:M2 rust.binding.local_let
+    let local_value = parameter_value + MODULE_COUNTER;
+    // DX:M2 rust.binding.local_let_mut
+    let mut mutable_value = local_value;
+    mutable_value += 1;
+    let probe = BindingProbe { field_value: 2 };
+    mutable_value + probe.field_value
+}
 
 /// An operational state classification.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -111,5 +133,6 @@ fn main() {
 
     let _future = fetch_stream(target_uri, count);
     let summary = DownloadSummary::with_capacity(1024u64);
-    println!("Initial summary size: {}", summary.size());
+    let binding_total = observe_binding_topology(count);
+    println!("Initial summary size: {}, binding total: {}", summary.size(), binding_total);
 }

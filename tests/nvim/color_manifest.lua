@@ -1,13 +1,212 @@
---- DX Semantic Color System (DX-COLOR-002)
+--- DX Semantic Color System (DX-COLOR-003)
 --- Shared Color Manifest: Single Source of Truth for Language Fixtures & Sentinels.
 --- Consumed identically by Tier-1 (Unit Contract), Tier-2A (Locked Neovim), and Tier-2B (DevContainer).
 
 local M = {
+	binding_comparisons = {
+		{
+			axis = "Zig module versus local immutable binding",
+			left = "zig.binding.top_level_const",
+			right = "zig.binding.local_const",
+			treesitter_distinguishes = false,
+			lsp_distinguishes = true,
+		},
+		{
+			axis = "Zig module versus local mutable binding",
+			left = "zig.binding.top_level_var",
+			right = "zig.binding.local_var",
+			treesitter_distinguishes = false,
+			lsp_distinguishes = true,
+		},
+		{
+			axis = "Zig module const versus var",
+			left = "zig.binding.top_level_const",
+			right = "zig.binding.top_level_var",
+			treesitter_distinguishes = false,
+			lsp_distinguishes = true,
+		},
+		{
+			axis = "C file-global versus function-local binding",
+			left = "c.binding.file_global",
+			right = "c.binding.local_variable",
+			treesitter_distinguishes = false,
+			lsp_distinguishes = true,
+		},
+		{
+			axis = "C external versus internal file binding",
+			left = "c.binding.file_global",
+			right = "c.binding.file_static",
+			treesitter_distinguishes = false,
+			lsp_distinguishes = true,
+		},
+		{
+			axis = "C++ namespace versus function-local binding",
+			left = "cpp.binding.namespace_variable",
+			right = "cpp.binding.local_variable",
+			treesitter_distinguishes = false,
+			lsp_distinguishes = true,
+		},
+		{
+			axis = "C++ external versus file-static namespace binding",
+			left = "cpp.binding.namespace_variable",
+			right = "cpp.binding.namespace_static",
+			treesitter_distinguishes = false,
+			lsp_distinguishes = true,
+		},
+		{
+			axis = "C++ static versus instance data member",
+			left = "cpp.binding.static_data_member",
+			right = "cpp.binding.instance_member",
+			treesitter_distinguishes = false,
+			lsp_distinguishes = true,
+		},
+		{
+			axis = "Rust static versus const item",
+			left = "rust.binding.static_item",
+			right = "rust.binding.const_item",
+			treesitter_distinguishes = false,
+			lsp_distinguishes = true,
+		},
+		{
+			axis = "Rust immutable versus mutable local binding",
+			left = "rust.binding.local_let",
+			right = "rust.binding.local_let_mut",
+			treesitter_distinguishes = false,
+			lsp_distinguishes = false,
+		},
+		{
+			axis = "Rust parameter versus local binding",
+			left = "rust.binding.parameter",
+			right = "rust.binding.local_let",
+			treesitter_distinguishes = true,
+			lsp_distinguishes = false,
+		},
+		{
+			axis = "Python module versus local binding",
+			left = "python.binding.module_binding",
+			right = "python.binding.local_binding",
+			treesitter_distinguishes = false,
+			lsp_distinguishes = false,
+		},
+		{
+			axis = "Python class attribute versus local binding",
+			left = "python.binding.class_attribute",
+			right = "python.binding.local_binding",
+			treesitter_distinguishes = true,
+			lsp_distinguishes = false,
+		},
+		{
+			axis = "Python class versus instance attribute",
+			left = "python.binding.class_attribute",
+			right = "python.binding.instance_attribute",
+			treesitter_distinguishes = false,
+			lsp_distinguishes = true,
+		},
+		{
+			axis = "Python parameter versus local binding",
+			left = "python.binding.parameter",
+			right = "python.binding.local_binding",
+			treesitter_distinguishes = true,
+			lsp_distinguishes = true,
+		},
+	},
 	languages = {
 		rust = {
 			filetype = "rust",
 			path = "tests/nvim/color/rust/src/main.rs",
 			lsp = { "rust-analyzer", "rust_analyzer" },
+			evidence_client = "rust-analyzer",
+			evidence_clients = {
+				{
+					name = "rust-analyzer",
+					semantic_tokens = true,
+					legend = { token_types = { "parameter" }, token_modifiers = { "mutable" } },
+				},
+			},
+			binding_cases = {
+				{
+					tag = "rust.binding.static_item",
+					token = "MODULE_COUNTER",
+					semantic_description = "immutable process-lifetime value binding declared as a Rust static item",
+					topology = { scope = "module", mutability = "immutable", storage = "static", owner = "module" },
+					evidence = {
+						treesitter = { "constant", "type", "variable" },
+						lsp = { provider = "rust-analyzer", type = "static", modifiers = { "declaration" } },
+						effective = { group = "@constant.rust", source = "treesitter", role = "DxConstant" },
+						producer_delta = { lsp_only = { "static-item vs const-item" }, treesitter_only = {} },
+					},
+				},
+				{
+					tag = "rust.binding.const_item",
+					token = "MAX_CAPACITY",
+					semantic_description = "compile-time constant value item declared at Rust module scope",
+					topology = {
+						scope = "module",
+						mutability = "immutable",
+						storage = "constant-item",
+						owner = "module",
+					},
+					evidence = {
+						treesitter = { "constant", "type", "variable" },
+						lsp = { provider = "rust-analyzer", type = "const", modifiers = { "declaration" } },
+						effective = { group = "@constant.rust", source = "treesitter", role = "DxConstant" },
+						producer_delta = { lsp_only = { "const-item vs static-item" }, treesitter_only = {} },
+					},
+				},
+				{
+					tag = "rust.binding.local_let",
+					token = "local_value",
+					semantic_description = "immutable Rust function-local let binding",
+					topology = { scope = "local", mutability = "immutable", storage = "automatic", owner = "function" },
+					evidence = {
+						treesitter = { "variable" },
+						lsp = { provider = "rust-analyzer", type = "variable", modifiers = { "declaration" } },
+						effective = { group = "@lsp.type.variable.rust", source = "lsp", role = "DxVariable" },
+						producer_delta = { lsp_only = {}, treesitter_only = {} },
+					},
+				},
+				{
+					tag = "rust.binding.local_let_mut",
+					token = "mutable_value",
+					semantic_description = "mutable Rust function-local let binding",
+					topology = { scope = "local", mutability = "mutable", storage = "automatic", owner = "function" },
+					evidence = {
+						treesitter = { "variable" },
+						lsp = { provider = "rust-analyzer", type = "variable", modifiers = { "declaration" } },
+						effective = { group = "@lsp.type.variable.rust", source = "lsp", role = "DxVariable" },
+						producer_delta = { lsp_only = {}, treesitter_only = {} },
+					},
+				},
+				{
+					tag = "rust.binding.parameter",
+					token = "parameter_value",
+					semantic_description = "Rust function parameter binding",
+					topology = { scope = "parameter", mutability = "immutable", storage = "call", owner = "function" },
+					evidence = {
+						treesitter = { "variable", "variable.parameter" },
+						lsp = { provider = "rust-analyzer", type = "variable", modifiers = { "declaration" } },
+						effective = { group = "@lsp.type.variable.rust", source = "lsp", role = "DxVariable" },
+						producer_delta = { lsp_only = {}, treesitter_only = { "parameter vs local binding" } },
+					},
+				},
+				{
+					tag = "rust.binding.struct_field",
+					token = "field_value",
+					semantic_description = "Rust struct field binding",
+					topology = {
+						scope = "member",
+						mutability = "instance-dependent",
+						storage = "aggregate",
+						owner = "type",
+					},
+					evidence = {
+						treesitter = { "variable.member" },
+						lsp = { provider = "rust-analyzer", type = "property", modifiers = { "declaration" } },
+						effective = { group = "@lsp.type.property.rust", source = "lsp", role = "DxMember" },
+						producer_delta = { lsp_only = {}, treesitter_only = {} },
+					},
+				},
+			},
 			sentinels = {
 				{
 					tag = "rust.download_summary.type",
@@ -84,6 +283,107 @@ local M = {
 			filetype = "c",
 			path = "tests/nvim/color/c/main.c",
 			lsp = { "clangd" },
+			evidence_client = "clangd",
+			evidence_clients = { { name = "clangd", semantic_tokens = true } },
+			binding_cases = {
+				{
+					tag = "c.binding.file_global",
+					token = "c_global_counter",
+					semantic_description = "externally linked C file-scope value binding",
+					topology = {
+						scope = "file",
+						mutability = "mutable",
+						storage = "static-duration",
+						owner = "translation-unit",
+					},
+					evidence = {
+						treesitter = { "variable" },
+						lsp = {
+							provider = "clangd",
+							type = "variable",
+							modifiers = { "declaration", "definition", "globalScope" },
+						},
+						effective = { group = "@lsp.type.variable.c", source = "lsp", role = "DxVariable" },
+						producer_delta = {
+							lsp_only = { "file/global vs local scope", "external vs internal linkage" },
+							treesitter_only = {},
+						},
+					},
+				},
+				{
+					tag = "c.binding.file_static",
+					token = "c_static_counter",
+					semantic_description = "internally linked C file-scope static value binding",
+					topology = {
+						scope = "file",
+						mutability = "mutable",
+						storage = "static-duration",
+						owner = "translation-unit",
+					},
+					evidence = {
+						treesitter = { "variable" },
+						lsp = {
+							provider = "clangd",
+							type = "variable",
+							modifiers = { "declaration", "definition", "fileScope" },
+						},
+						effective = { group = "@lsp.type.variable.c", source = "lsp", role = "DxVariable" },
+						producer_delta = {
+							lsp_only = { "file/static vs global and local scope" },
+							treesitter_only = {},
+						},
+					},
+				},
+				{
+					tag = "c.binding.local_variable",
+					token = "local_value",
+					semantic_description = "C function-local automatic value binding",
+					topology = { scope = "local", mutability = "mutable", storage = "automatic", owner = "function" },
+					evidence = {
+						treesitter = { "variable" },
+						lsp = {
+							provider = "clangd",
+							type = "variable",
+							modifiers = { "declaration", "definition", "functionScope" },
+						},
+						effective = { group = "@lsp.type.variable.c", source = "lsp", role = "DxVariable" },
+						producer_delta = { lsp_only = { "local vs file scope" }, treesitter_only = {} },
+					},
+				},
+				{
+					tag = "c.binding.parameter",
+					token = "parameter_value",
+					semantic_description = "C function parameter binding",
+					topology = { scope = "parameter", mutability = "mutable", storage = "call", owner = "function" },
+					evidence = {
+						treesitter = { "variable", "variable.parameter" },
+						lsp = {
+							provider = "clangd",
+							type = "parameter",
+							modifiers = { "declaration", "definition", "functionScope" },
+						},
+						effective = { group = "@lsp.type.parameter.c", source = "lsp", role = "DxParameter" },
+						producer_delta = { lsp_only = {}, treesitter_only = {} },
+					},
+				},
+				{
+					tag = "c.binding.struct_member",
+					token = "member_value",
+					semantic_description = "C struct member binding",
+					topology = {
+						scope = "member",
+						mutability = "instance-dependent",
+						storage = "aggregate",
+						owner = "type",
+					},
+					evidence = {
+						treesitter = { "property" },
+						lsp = { provider = "clangd", type = "property", modifiers = { "classScope", "declaration" } },
+						effective = { group = "@lsp.type.property.c", source = "lsp", role = "DxMember" },
+						producer_delta = { lsp_only = {}, treesitter_only = {} },
+					},
+				},
+			},
 			sentinels = {
 				{
 					tag = "c.buffer_capacity.macro",
@@ -150,6 +450,120 @@ local M = {
 			filetype = "cpp",
 			path = "tests/nvim/color/cpp/src/main.cpp",
 			lsp = { "clangd" },
+			evidence_client = "clangd",
+			evidence_clients = { { name = "clangd", semantic_tokens = true } },
+			binding_cases = {
+				{
+					tag = "cpp.binding.namespace_variable",
+					token = "namespace_counter",
+					semantic_description = "externally linked C++ namespace-scope value binding",
+					topology = {
+						scope = "namespace",
+						mutability = "mutable",
+						storage = "static-duration",
+						owner = "namespace",
+					},
+					evidence = {
+						treesitter = { "variable" },
+						lsp = {
+							provider = "clangd",
+							type = "variable",
+							modifiers = { "declaration", "definition", "globalScope" },
+						},
+						effective = { group = "@lsp.type.variable.cpp", source = "lsp", role = "DxVariable" },
+						producer_delta = { lsp_only = { "namespace/global vs local scope" }, treesitter_only = {} },
+					},
+				},
+				{
+					tag = "cpp.binding.namespace_static",
+					token = "namespace_static_counter",
+					semantic_description = "internally linked C++ namespace-scope static value binding",
+					topology = {
+						scope = "namespace",
+						mutability = "mutable",
+						storage = "static-duration",
+						owner = "translation-unit",
+					},
+					evidence = {
+						treesitter = { "variable" },
+						lsp = {
+							provider = "clangd",
+							type = "variable",
+							modifiers = { "declaration", "definition", "fileScope" },
+						},
+						effective = { group = "@lsp.type.variable.cpp", source = "lsp", role = "DxVariable" },
+						producer_delta = {
+							lsp_only = { "namespace/file-static vs global and local scope" },
+							treesitter_only = {},
+						},
+					},
+				},
+				{
+					tag = "cpp.binding.static_data_member",
+					token = "shared_count",
+					semantic_description = "C++ static data member owned by a class rather than an instance",
+					topology = { scope = "member", mutability = "mutable", storage = "static-duration", owner = "type" },
+					evidence = {
+						treesitter = { "property", "variable.member" },
+						lsp = {
+							provider = "clangd",
+							type = "variable",
+							modifiers = { "classScope", "declaration", "definition", "static" },
+						},
+						effective = { group = "@lsp.typemod.variable.static.cpp", source = "lsp", role = "DxVariable" },
+						producer_delta = { lsp_only = { "static vs instance data member" }, treesitter_only = {} },
+					},
+				},
+				{
+					tag = "cpp.binding.instance_member",
+					token = "instance_value",
+					semantic_description = "C++ instance data member binding",
+					topology = {
+						scope = "member",
+						mutability = "instance-dependent",
+						storage = "aggregate",
+						owner = "instance",
+					},
+					evidence = {
+						treesitter = { "property", "variable.member" },
+						lsp = { provider = "clangd", type = "property", modifiers = { "classScope", "declaration" } },
+						effective = { group = "@lsp.type.property.cpp", source = "lsp", role = "DxMember" },
+						producer_delta = { lsp_only = { "instance vs static data member" }, treesitter_only = {} },
+					},
+				},
+				{
+					tag = "cpp.binding.local_variable",
+					token = "local_value",
+					semantic_description = "C++ function-local automatic value binding",
+					topology = { scope = "local", mutability = "mutable", storage = "automatic", owner = "function" },
+					evidence = {
+						treesitter = { "variable" },
+						lsp = {
+							provider = "clangd",
+							type = "variable",
+							modifiers = { "declaration", "definition", "functionScope" },
+						},
+						effective = { group = "@lsp.type.variable.cpp", source = "lsp", role = "DxVariable" },
+						producer_delta = { lsp_only = { "local vs namespace scope" }, treesitter_only = {} },
+					},
+				},
+				{
+					tag = "cpp.binding.parameter",
+					token = "parameter_value",
+					semantic_description = "C++ function parameter binding",
+					topology = { scope = "parameter", mutability = "mutable", storage = "call", owner = "function" },
+					evidence = {
+						treesitter = { "variable", "variable.parameter" },
+						lsp = {
+							provider = "clangd",
+							type = "parameter",
+							modifiers = { "declaration", "definition", "functionScope" },
+						},
+						effective = { group = "@lsp.type.parameter.cpp", source = "lsp", role = "DxParameter" },
+						producer_delta = { lsp_only = {}, treesitter_only = {} },
+					},
+				},
+			},
 			sentinels = {
 				{
 					tag = "cpp.buffer_capacity.macro",
@@ -225,6 +639,103 @@ local M = {
 			filetype = "zig",
 			path = "tests/nvim/color/zig/src/main.zig",
 			lsp = { "zls" },
+			evidence_client = "zls",
+			evidence_clients = { { name = "zls", semantic_tokens = true } },
+			binding_cases = {
+				{
+					tag = "zig.binding.top_level_const",
+					token = "module_limit",
+					semantic_description = "immutable Zig value binding declared at container scope",
+					topology = { scope = "module", mutability = "immutable", storage = "container", owner = "module" },
+					evidence = {
+						treesitter = { "variable" },
+						lsp = { provider = "zls", type = "variable", modifiers = { "declaration", "static" } },
+						effective = { group = "@lsp.typemod.variable.static.zig", source = "lsp", role = "DxVariable" },
+						producer_delta = {
+							lsp_only = { "module vs local scope", "const vs var mutability" },
+							treesitter_only = {},
+						},
+					},
+				},
+				{
+					tag = "zig.binding.top_level_var",
+					token = "module_counter",
+					semantic_description = "mutable Zig value binding declared at container scope",
+					topology = { scope = "module", mutability = "mutable", storage = "container", owner = "module" },
+					evidence = {
+						treesitter = { "variable" },
+						lsp = {
+							provider = "zls",
+							type = "variable",
+							modifiers = { "declaration", "mutable", "static" },
+						},
+						effective = { group = "@lsp.typemod.variable.static.zig", source = "lsp", role = "DxVariable" },
+						producer_delta = {
+							lsp_only = { "module vs local scope", "var vs const mutability" },
+							treesitter_only = {},
+						},
+					},
+				},
+				{
+					tag = "zig.binding.local_const",
+					token = "local_offset",
+					semantic_description = "immutable Zig function-local value binding",
+					topology = { scope = "local", mutability = "immutable", storage = "automatic", owner = "function" },
+					evidence = {
+						treesitter = { "variable" },
+						lsp = { provider = "zls", type = "variable", modifiers = { "declaration" } },
+						effective = { group = "@lsp.type.variable.zig", source = "lsp", role = "DxVariable" },
+						producer_delta = {
+							lsp_only = { "local vs module scope", "const vs var mutability" },
+							treesitter_only = {},
+						},
+					},
+				},
+				{
+					tag = "zig.binding.local_var",
+					token = "local_total",
+					semantic_description = "mutable Zig function-local value binding",
+					topology = { scope = "local", mutability = "mutable", storage = "automatic", owner = "function" },
+					evidence = {
+						treesitter = { "variable" },
+						lsp = { provider = "zls", type = "variable", modifiers = { "declaration", "mutable" } },
+						effective = { group = "@lsp.type.variable.zig", source = "lsp", role = "DxVariable" },
+						producer_delta = {
+							lsp_only = { "local vs module scope", "var vs const mutability" },
+							treesitter_only = {},
+						},
+					},
+				},
+				{
+					tag = "zig.binding.parameter",
+					token = "parameter_value",
+					semantic_description = "Zig function parameter binding",
+					topology = { scope = "parameter", mutability = "immutable", storage = "call", owner = "function" },
+					evidence = {
+						treesitter = { "variable", "variable.parameter" },
+						lsp = { provider = "zls", type = "parameter", modifiers = { "declaration" } },
+						effective = { group = "@lsp.type.parameter.zig", source = "lsp", role = "DxParameter" },
+						producer_delta = { lsp_only = {}, treesitter_only = {} },
+					},
+				},
+				{
+					tag = "zig.binding.struct_field",
+					token = "field_value",
+					semantic_description = "Zig struct field binding",
+					topology = {
+						scope = "member",
+						mutability = "instance-dependent",
+						storage = "aggregate",
+						owner = "type",
+					},
+					evidence = {
+						treesitter = { "variable", "variable.member" },
+						lsp = { provider = "zls", type = "property", modifiers = { "declaration" } },
+						effective = { group = "@lsp.type.property.zig", source = "lsp", role = "DxMember" },
+						producer_delta = { lsp_only = {}, treesitter_only = {} },
+					},
+				},
+			},
 			sentinels = {
 				{
 					tag = "zig.network_buffer.type",
@@ -310,6 +821,89 @@ local M = {
 			filetype = "python",
 			path = "tests/nvim/color/python/main.py",
 			lsp = { "pyright" },
+			evidence_client = "pyright",
+			evidence_clients = {
+				{ name = "pyright", semantic_tokens = false },
+				{ name = "ruff", semantic_tokens = false },
+				{ name = "ty", semantic_tokens = true },
+			},
+			binding_cases = {
+				{
+					tag = "python.binding.module_binding",
+					token = "module_retry_limit",
+					semantic_description = "Python name binding assigned at module scope",
+					topology = {
+						scope = "module",
+						mutability = "dynamic",
+						storage = "module-namespace",
+						owner = "module",
+					},
+					evidence = {
+						treesitter = { "variable" },
+						lsp = { provider = "ty", type = "variable", modifiers = { "definition" } },
+						effective = { group = "@lsp.type.variable.python", source = "lsp", role = "DxVariable" },
+						producer_delta = { lsp_only = {}, treesitter_only = {} },
+					},
+				},
+				{
+					tag = "python.binding.class_attribute",
+					token = "class_label",
+					semantic_description = "Python attribute binding stored on a class",
+					topology = { scope = "member", mutability = "dynamic", storage = "class-namespace", owner = "type" },
+					evidence = {
+						treesitter = { "variable", "variable.member" },
+						lsp = { provider = "ty", type = "variable", modifiers = { "definition" } },
+						effective = { group = "@lsp.type.variable.python", source = "lsp", role = "DxVariable" },
+						producer_delta = { lsp_only = {}, treesitter_only = { "member vs local binding" } },
+					},
+				},
+				{
+					tag = "python.binding.instance_attribute",
+					token = "instance_value",
+					semantic_description = "Python attribute binding stored on an instance",
+					topology = {
+						scope = "member",
+						mutability = "dynamic",
+						storage = "instance-namespace",
+						owner = "instance",
+					},
+					evidence = {
+						treesitter = { "variable", "variable.member" },
+						lsp = { provider = "ty", type = "variable", modifiers = {} },
+						effective = { group = "@lsp.type.variable.python", source = "lsp", role = "DxVariable" },
+						producer_delta = { lsp_only = {}, treesitter_only = { "member vs local binding" } },
+					},
+				},
+				{
+					tag = "python.binding.local_binding",
+					token = "local_value",
+					semantic_description = "Python function-local name binding",
+					topology = {
+						scope = "local",
+						mutability = "dynamic",
+						storage = "function-namespace",
+						owner = "function",
+					},
+					evidence = {
+						treesitter = { "variable" },
+						lsp = { provider = "ty", type = "variable", modifiers = { "definition" } },
+						effective = { group = "@lsp.type.variable.python", source = "lsp", role = "DxVariable" },
+						producer_delta = { lsp_only = {}, treesitter_only = { "local vs member binding" } },
+					},
+				},
+				{
+					tag = "python.binding.parameter",
+					token = "parameter_value",
+					semantic_description = "Python function parameter binding",
+					topology = { scope = "parameter", mutability = "dynamic", storage = "call", owner = "function" },
+					evidence = {
+						treesitter = { "variable", "variable.parameter" },
+						lsp = { provider = "ty", type = "parameter", modifiers = { "definition" } },
+						effective = { group = "@lsp.type.parameter.python", source = "lsp", role = "DxParameter" },
+						producer_delta = { lsp_only = {}, treesitter_only = {} },
+					},
+				},
+			},
 			sentinels = {
 				{
 					tag = "python.download_summary.class",

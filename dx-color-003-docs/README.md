@@ -45,6 +45,11 @@ Architecture extraction and visual redesign MUST be delivered separately.
 4. [`DX-COLOR-003-C4-VISUAL-SPEC.md`](./DX-COLOR-003-C4-VISUAL-SPEC.md)
 5. [`DX-COLOR-003-CODEX-EXECUTION-CONTRACT.md`](./DX-COLOR-003-CODEX-EXECUTION-CONTRACT.md)
 
+Milestone evidence records:
+
+- [`DX-COLOR-003-M2A-BINDING-EVIDENCE.md`](./DX-COLOR-003-M2A-BINDING-EVIDENCE.md)
+  — reproducible binding-topology observations and the M2A domain decision.
+
 The architecture and test specifications are normative. The C4 color values are candidate visual values and require runtime visual acceptance before becoming the default profile.
 
 ---
@@ -100,6 +105,7 @@ tests/nvim/
   color_manifest.lua
   color_unit_contract.lua
   color_contract.lua
+  binding_evidence.lua
   color/
 ```
 

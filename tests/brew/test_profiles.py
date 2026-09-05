@@ -100,6 +100,7 @@ QUALITY_BREWS = {
     "ninja",
     "python",
     "ripgrep",
+    "rust-analyzer",
     "shellcheck",
     "shfmt",
     "starship",
