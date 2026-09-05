@@ -1,10 +1,15 @@
 # DX-COLOR-003 — C4 Airy Visual Profile
 
 - **Document ID:** DX-COLOR-003-C4
-- **Status:** Candidate Visual Specification
+- **Status:** Non-Normative Research Input / Candidate Palette
 - **Host theme:** Catppuccin Mocha
 - **Reference study:** TokyoNight Night visual-energy distribution
 - **Important:** TokyoNight is a research reference, not a dependency.
+
+The normative C4 visual relationships are defined by the
+[M3-A visual contract](./DX-COLOR-003-M3A-C4-VISUAL-CONTRACT.md).
+The values in this document remain candidates for M3-B and M4; they are not the
+final C4 palette and do not override the M3-A contract.
 
 ---
 
@@ -219,18 +224,23 @@ Do not add module/static binding color in the same experiment.
 
 ## 5. Object/binding topology
 
-Long-term desired model:
+Historical research model:
 
 ```text
 local binding        -> bright neutral
 parameter            -> secondary distinct neutral
 member/property      -> lavender / structural color
-module/non-local     -> reserved warm/orange candidate
 ```
 
-The module/non-local distinction is not approved until the semantic-domain evidence gate passes.
+M2 investigated the module/non-local candidate and reached the final decision:
 
-Reserve an orange visual token for a future `DxModuleBinding` candidate, but do not map it speculatively.
+```text
+DxModuleBinding = DEFERRED / FROZEN
+```
+
+M3 must not admit this role, reserve palette capacity for it, design a C4 token
+around it, or reopen the classification. New evidence would require a separately
+governed M2 regression/decision process.
 
 ---
 

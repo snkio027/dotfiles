@@ -8,7 +8,8 @@
 
 ## 1. Mission
 
-Implement DX-COLOR-003 exactly as specified by the architecture, implementation, test, and C4 visual documents.
+Implement DX-COLOR-003 exactly as specified by the architecture,
+implementation, test, and normative M3-A visual-contract documents.
 
 The goal is not to “make the theme prettier”.
 
@@ -29,8 +30,12 @@ Before editing:
 DX-COLOR-003-ARCHITECTURE.md
 DX-COLOR-003-IMPLEMENTATION-PLAN.md
 DX-COLOR-003-TEST-EVIDENCE-SPEC.md
+DX-COLOR-003-M3A-C4-VISUAL-CONTRACT.md
 DX-COLOR-003-C4-VISUAL-SPEC.md
 ```
+
+The M3-A contract owns C4 visual relationships. The older C4 visual
+specification supplies research and candidate values only.
 
 Then inspect the actual repository baseline.
 
@@ -124,14 +129,24 @@ DxStaticVariable:
 "a variable with LSP static modifier"
 ```
 
-Potentially acceptable definition:
+Historical provider-independent candidate definition:
 
 ```text
 DxModuleBinding:
 "a value binding whose scope/storage is non-local to the current function/block and belongs to a module, namespace, type, or persistent storage domain"
 ```
 
-Even an acceptable definition still requires evidence before implementation.
+M2 proved that definability alone is insufficient: runtime evidence did not
+support a stable cross-language role or independent visual value. The final
+decision is:
+
+```text
+DxModuleBinding = DEFERRED / FROZEN
+```
+
+M3 must not admit the role, reserve palette capacity for it, or reopen the
+classification. Reopening requires new evidence and a separately governed M2
+regression/decision process.
 
 ---
 
@@ -213,9 +228,15 @@ If that requirement actually appears, stop and request a new architecture decisi
 
 ## 12. C4 implementation rule
 
-C4 starts opt-in.
+C4 begins with the reviewed M3-A visual contract.
 
-Default remains C3.1.
+M3-A changes documentation only and does not select final HEX values.
+
+C4 runtime starts opt-in in M3-C.
+
+C3.1 remains the runtime default through M4 as the compatibility baseline. It
+is deprecated/frozen because it receives no further design investment. It is
+also retained for controlled A/B and deterministic rollback.
 
 C4 changes visual projection only.
 
@@ -248,8 +269,11 @@ Preferred commits:
 ```text
 refactor(theme): extract semantic bindings and provider adapters
 test(theme): expand binding-topology evidence
-feat(theme): add opt-in C4 airy visual profile
-style(theme): make C4 airy the default profile
+docs(theme): define C4 visual contract
+feat(theme): add C4 candidate visual profile
+feat(theme): add explicit C4 opt-in selector
+style(theme): make C4 the default profile
+refactor(theme): retire C3.1 runtime profile
 ```
 
 Do not squash unrelated concerns locally before review if that hides implementation history needed for inspection.

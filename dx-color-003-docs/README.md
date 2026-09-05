@@ -1,8 +1,9 @@
 # DX-COLOR-003 Development Documentation Set
 
-- **Status:** Development Specification
+- **Status:** M2 Frozen / M3-A Visual Contract
 - **Repository:** `snkio027/dotfiles`
-- **Baseline:** `19f0570ee33025832ff1d1d49269d303677d9c0f`
+- **Initial M0 baseline:** `19f0570ee33025832ff1d1d49269d303677d9c0f`
+- **Current M3 base:** `c930a0330bfd4a19921985c6c24a33ce1c6f4aee`
 - **Host theme:** Catppuccin Mocha
 - **Target editor:** Neovim / LazyVim
 - **Languages in current verification matrix:** Rust, C, C++23, Zig, Python
@@ -28,7 +29,7 @@ DX-COLOR-003 introduces two changes:
    - semantic authority becomes an explicit architectural concern;
    - visual projection is separated from the semantic domain.
 
-2. **C4 visual profile**
+2. **C4 visual system**
    - redesign visual weight distribution using lessons observed from TokyoNight Night;
    - preserve the user's preferred hue region while avoiding red/green dependency;
    - use a larger luminance dynamic range rather than placing almost all roles in one muted middle band.
@@ -42,8 +43,13 @@ Architecture extraction and visual redesign MUST be delivered separately.
 1. [`DX-COLOR-003-ARCHITECTURE.md`](./DX-COLOR-003-ARCHITECTURE.md)
 2. [`DX-COLOR-003-IMPLEMENTATION-PLAN.md`](./DX-COLOR-003-IMPLEMENTATION-PLAN.md)
 3. [`DX-COLOR-003-TEST-EVIDENCE-SPEC.md`](./DX-COLOR-003-TEST-EVIDENCE-SPEC.md)
-4. [`DX-COLOR-003-C4-VISUAL-SPEC.md`](./DX-COLOR-003-C4-VISUAL-SPEC.md)
-5. [`DX-COLOR-003-CODEX-EXECUTION-CONTRACT.md`](./DX-COLOR-003-CODEX-EXECUTION-CONTRACT.md)
+4. [M3-A visual contract](./DX-COLOR-003-M3A-C4-VISUAL-CONTRACT.md)
+5. [`DX-COLOR-003-C4-VISUAL-SPEC.md`](./DX-COLOR-003-C4-VISUAL-SPEC.md)
+6. [Codex execution contract](./DX-COLOR-003-CODEX-EXECUTION-CONTRACT.md)
+
+The M3-A contract is normative for visual relationships. The older C4 visual
+specification is research input and contains candidate values; it does not
+select the final C4 palette.
 
 Milestone evidence records:
 
@@ -63,6 +69,17 @@ Milestone evidence records:
   boundary, capability matrix, and semantic-token provenance contract.
 
 The architecture and test specifications are normative. The C4 color values are candidate visual values and require runtime visual acceptance before becoming the default profile.
+
+Current milestone status:
+
+```text
+M1   Architecture extraction                    FROZEN
+M2   Evidence / authority / provider governance CLOSED / FROZEN
+M3-A C4 visual contract                         CURRENT
+
+C3.1                                            DEPRECATED / FROZEN
+C4                                              NOT IMPLEMENTED
+```
 
 ---
 
@@ -88,14 +105,18 @@ Color encodes meaning; visual weight encodes importance.
 M0  Freeze and record baseline
 M1  Behavior-preserving architecture extraction
 M2  Expand evidence for language/provider distinctions
-M3  Add C4 visual profile as opt-in
+M3-A Define the C4 visual contract
+M3-B Implement an independent C4 visual profile
+M3-C Expose C4 as an explicit opt-in
 M4  Human visual acceptance
-M5  Switch default profile only after acceptance
+M5  Switch C4 to default and retire the C3.1 runtime path
 ```
 
 M1 MUST NOT change rendered semantic output.
 
-M3 MUST NOT silently change the default profile.
+M3-A MUST NOT change runtime code or select final HEX values.
+
+M3-B and M3-C MUST NOT silently change the default profile.
 
 ---
 
@@ -106,9 +127,22 @@ Current core:
 ```text
 home/dot_config/nvim/lua/theme/
   init.lua
+  compose.lua
+  domain.lua
   palette.lua
-  semantic.lua
-  mappings.lua
+  authority.lua
+  visual/
+    c3_1.lua
+  bindings/
+    treesitter.lua
+    lsp.lua
+    ui.lua
+    plugins.lua
+  adapters/
+    zls.lua
+    clangd.lua
+    rust_analyzer.lua
+    pyright.lua
 
 home/dot_config/nvim/after/queries/
   rust/highlights.scm
