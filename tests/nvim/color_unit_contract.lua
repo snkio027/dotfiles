@@ -93,10 +93,11 @@ assert_eq(default_profile_name, "c3_1", "unset M3-C selector must use C3.1")
 assert_eq(default_visual, c3_1, "unset M3-C selector resolved the wrong visual module")
 
 local p = palette_mod.resolve(colors)
+local c4_p = palette_mod.resolve(colors, "c4")
 local roles = c3_1.roles(p)
-local c4_roles = c4.roles(p)
+local c4_roles = c4.roles(c4_p)
 local full_hl = theme.highlights(colors)
-local c4_full_hl = compose.highlights(p, c4)
+local c4_full_hl = compose.highlights(c4_p, c4)
 
 vim.g.dx_color_profile = "c3_1"
 local opt_out_name, opt_out_visual = theme.active_profile()
@@ -390,26 +391,26 @@ local ok_r, _ = pcall(verify_red_scarcity, bad_red_roles, bad_red)
 assert(not ok_r, "Negative control failure: verify_red_scarcity must fail when DxKeyword uses state.error")
 
 -- ==========================================================================
--- 5b. C4.0 Profile-Aware Visual Contract and Negative Controls
+-- 5b. C4.4 Profile-Aware Visual Contract and Negative Controls
 -- ==========================================================================
 
 local repo_root = vim.fs.root(0, ".git") or vim.fn.getcwd()
 local c4_contract = dofile(repo_root .. "/tests/nvim/visual_contracts/c4.lua")
 c4_contract.verify({
-	palette = p,
+	palette = c4_p,
 	roles = c4_roles,
 	graph = c4_full_hl,
 	domain = domain,
 	host_colors = colors,
 })
 c4_contract.verify_negative_controls({
-	palette = p,
+	palette = c4_p,
 	visual = c4,
 	graph = c4_full_hl,
 	domain = domain,
 	host_colors = colors,
 })
-print("C4.0 profile-aware visual contract and four negative controls passed.")
+print("C4.4 High-Chroma Night visual contract and negative controls passed.")
 
 -- ==========================================================================
 -- 6. No Raw Source Hex Outside Palette Gate & Namespace Disjointness Gate
@@ -801,8 +802,49 @@ local M2B_BASE_SHA = "6d44ffe3108311396ceaedef527a24c6d3b1cebd"
 local M2B_GRAPH_COUNT = 225
 local M2B_GRAPH_SHA256 = "a2db03bf6a138c0784d74277adf6f7ee706a5398336305385ced7d3725c0dedf"
 local M3B_BASE_SHA = "6348cc2fd99457f2ecf0cb574c46a07db45d6e75"
-local C4_GRAPH_COUNT = 225
-local C4_GRAPH_SHA256 = "311ac3566f816d0fc03ad4ec92c74477d4ac82bf8cc2ab5cd82f95a12688c043"
+local C4_0_GRAPH_COUNT = 225
+local C4_0_GRAPH_SHA256 = "311ac3566f816d0fc03ad4ec92c74477d4ac82bf8cc2ab5cd82f95a12688c043"
+local M4_C4_3_HEAD_SHA = "86d10b4fa938d377840d2b46c49b6da195ff9080"
+local C4_3_GRAPH_COUNT = 226
+local C4_3_GRAPH_SHA256 = "12d9299d27f50cc96bc056662ce13eed1bb1e46d7fc154f7bd5655216c7a8cc8"
+local M4_C4_4_BASE_SHA = M4_C4_3_HEAD_SHA
+local C4_4_GRAPH_COUNT = 226
+local C4_4_GRAPH_SHA256 = "1ac13a349234d5926a250a82c6beb1135fe4483bfe1208f0e24245d4f0022fc8"
+local C4_4_AUTHORIZED_FOREGROUND_DELTA = {
+	DxVariable = "#C9D4F2",
+	DxKeyword = "#C08CFF",
+	DxFunctionKeyword = "#9BCBFF",
+	DxType = "#79D2F2",
+	DxBuiltin = "#82D887",
+	DxParameter = "#D7B3E8",
+	DxMeta = "#D98FD6",
+	DxNamespace = "#5C96FF",
+	DxLabel = "#9AA3BA",
+	DxComment = "#7D8496",
+	DxDocComment = "#969EB4",
+}
+local C4_0_FOREGROUND_BASELINE = {
+	DxKeyword = "#B298CE",
+	DxFunctionKeyword = "#86B7F7",
+	DxCallable = "#D8A972",
+	DxType = "#74C7EC",
+	DxBuiltin = "#7393B7",
+	DxLifetime = "#7DA6C8",
+	DxMember = "#B5BDFC",
+	DxParameter = "#A6ADC8",
+	DxVariable = "#CDD6F4",
+	DxMeta = "#C395B9",
+	DxNamespace = "#79A7DC",
+	DxString = "#C7B8A6",
+	DxNumber = "#E09A7B",
+	DxConstant = "#D6A0BA",
+	DxLabel = "#8D91A4",
+	DxOperator = "#8BDCEB",
+	DxPunctuation = "#9399B2",
+	DxComment = "#6C7086",
+	DxDocComment = "#9399B2",
+}
+local C4_PROFILE_AUTHORIZED_GROUP_DELTA = { "Normal" }
 local M2B_AUTHORIZED_GRAPH_DELTA = {
 	"@lsp.typemod.variable.classScope.cpp",
 	"@lsp.typemod.variable.static.cpp",
@@ -876,7 +918,11 @@ print(
 print(("M2B-B graph frozen: %d groups, sha256=%s"):format(graph_count, graph_digest))
 
 local function assert_profile_topology_equal(reference, candidate)
-	assert_eq(vim.tbl_count(candidate), vim.tbl_count(reference), "C4 changed the governed highlight-group count")
+	assert_eq(
+		vim.tbl_count(candidate),
+		vim.tbl_count(reference) + #C4_PROFILE_AUTHORIZED_GROUP_DELTA,
+		"C4.4 changed the governed highlight-group count outside its authorized canvas group"
+	)
 	for group, reference_spec in pairs(reference) do
 		local candidate_spec = candidate[group]
 		if candidate_spec == nil then
@@ -891,20 +937,69 @@ local function assert_profile_topology_equal(reference, candidate)
 		end
 	end
 	for group in pairs(candidate) do
-		if reference[group] == nil then
+		if reference[group] == nil and not vim.list_contains(C4_PROFILE_AUTHORIZED_GROUP_DELTA, group) then
 			fail("C4 added unauthorized highlight group: " .. group)
 		end
 	end
+	assert_eq(candidate.Normal.bg, c4_p.ui.normal_bg, "C4.4 Normal background does not use its owned canvas token")
+	assert_eq(vim.tbl_count(candidate.Normal), 1, "C4.4 Normal override must own only the canvas background")
 end
 
 assert_profile_topology_equal(full_hl, c4_full_hl)
 local c4_graph_count, c4_graph_digest = normalized_graph_digest(c4_full_hl)
-assert_eq(c4_graph_count, C4_GRAPH_COUNT, ("C4.0 graph count changed from %s"):format(M3B_BASE_SHA))
-assert_eq(c4_graph_digest, C4_GRAPH_SHA256, ("C4.0 resolved graph changed from %s"):format(M3B_BASE_SHA))
-print(("C4.0 resolved graph frozen: %d groups, sha256=%s"):format(c4_graph_count, c4_graph_digest))
+assert_eq(c4_graph_count, C4_4_GRAPH_COUNT, ("C4.4 graph count changed from %s"):format(M4_C4_4_BASE_SHA))
+assert_eq(c4_graph_digest, C4_4_GRAPH_SHA256, ("C4.4 resolved graph changed from %s"):format(M4_C4_4_BASE_SHA))
+print(("C4.4 resolved graph frozen: %d groups, sha256=%s"):format(c4_graph_count, c4_graph_digest))
+
+local historical_c4_3_graph = vim.deepcopy(c4_full_hl)
+for role, old_foreground in pairs(C4_4_AUTHORIZED_FOREGROUND_DELTA) do
+	local spec = historical_c4_3_graph[role]
+	if spec == nil or spec.fg == nil then
+		fail("C4.4 authorized foreground role is missing: " .. role)
+	end
+	if spec.fg:lower() == old_foreground:lower() then
+		fail("C4.4 authorized foreground did not change: " .. role)
+	end
+	spec.fg = old_foreground
+end
+historical_c4_3_graph.Normal.bg = "#181A1F"
+local c4_3_count, c4_3_digest = normalized_graph_digest(historical_c4_3_graph)
+assert_eq(c4_3_count, C4_3_GRAPH_COUNT, ("C4.4 reconstruction changed C4.3 count from %s"):format(M4_C4_3_HEAD_SHA))
+assert_eq(
+	c4_3_digest,
+	C4_3_GRAPH_SHA256,
+	("C4.4 authorized visual rollback did not reconstruct C4.3 from %s"):format(M4_C4_3_HEAD_SHA)
+)
+print(("C4.3 graph reconstructed after C4.4 visual rollback: %d groups, sha256=%s"):format(c4_3_count, c4_3_digest))
+
+local historical_c4_graph = vim.deepcopy(c4_full_hl)
+for role, old_foreground in pairs(C4_0_FOREGROUND_BASELINE) do
+	local spec = historical_c4_graph[role]
+	if spec == nil or spec.fg == nil then
+		fail("C4.4 authorized foreground role is missing: " .. role)
+	end
+	if spec.fg:lower() == old_foreground:lower() then
+		fail("C4.4 authorized foreground did not change: " .. role)
+	end
+	spec.fg = old_foreground
+end
+for _, group in ipairs(C4_PROFILE_AUTHORIZED_GROUP_DELTA) do
+	if historical_c4_graph[group] == nil then
+		fail("C4.4 authorized graph group is missing: " .. group)
+	end
+	historical_c4_graph[group] = nil
+end
+local c4_0_count, c4_0_digest = normalized_graph_digest(historical_c4_graph)
+assert_eq(c4_0_count, C4_0_GRAPH_COUNT, ("C4.4 reconstruction changed C4.0 count from %s"):format(M3B_BASE_SHA))
+assert_eq(
+	c4_0_digest,
+	C4_0_GRAPH_SHA256,
+	("C4.4 authorized visual rollback did not reconstruct C4.0 from %s"):format(M3B_BASE_SHA)
+)
+print(("C4.0 graph reconstructed after C4.4 visual rollback: %d groups, sha256=%s"):format(c4_0_count, c4_0_digest))
 
 local bad_profile_extra = vim.deepcopy(c4_full_hl)
-bad_profile_extra.DxUnauthorized = { fg = p.code_profiles.c4.variable }
+bad_profile_extra.DxUnauthorized = { fg = c4_p.code_profiles.c4.variable }
 assert(not pcall(assert_profile_topology_equal, full_hl, bad_profile_extra), "C4 topology must reject added groups")
 
 local bad_profile_link = vim.deepcopy(c4_full_hl)

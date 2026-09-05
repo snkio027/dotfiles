@@ -67,7 +67,7 @@ local function main()
 	if type(catppuccin) ~= "table" then
 		fail("Catppuccin Mocha palette is unavailable")
 	end
-	local palette = require("theme.palette").resolve(catppuccin)
+	local palette = require("theme.palette").resolve(catppuccin, selected_profile)
 	local domain = require("theme.domain")
 	local expected_roles = visual.roles(palette)
 	local actual_roles = {}
@@ -116,6 +116,12 @@ local function main()
 
 	local normal = vim.api.nvim_get_hl(0, { name = "Normal", link = false })
 	local resolved_background = rgb_to_hex(normal.bg)
+	local expected_background = palette.ui.normal_bg or palette.ui.base
+	assert_eq(
+		resolved_background:lower(),
+		expected_background:lower(),
+		"runtime selected profile resolved the wrong Normal background"
+	)
 	if selected_profile == "c4" then
 		local c4_contract = dofile((vim.fs.root(0, ".git") or vim.fn.getcwd()) .. "/tests/nvim/visual_contracts/c4.lua")
 		c4_contract.verify({

@@ -1,5 +1,6 @@
 --- DX Semantic Color System (DX-COLOR-003)
---- C4.0 candidate visual projection. This profile is not selected at runtime.
+--- C4.4 High-Chroma Night visual projection.
+--- Palette iteration is owned by palette.code_profiles.c4.
 
 local M = {}
 
