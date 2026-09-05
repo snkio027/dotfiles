@@ -76,15 +76,62 @@ if not ok_compose or type(compose.highlights) ~= "function" then
 end
 
 local ok_theme, theme = pcall(require, "theme")
-if not ok_theme or type(theme.highlights) ~= "function" then
-	fail("theme module could not be loaded or missing highlights()")
+if
+	not ok_theme
+	or type(theme.highlights) ~= "function"
+	or type(theme.resolve_profile) ~= "function"
+	or type(theme.active_profile) ~= "function"
+then
+	fail("theme module could not be loaded or missing profile-selection entrypoints")
 end
+
+local previous_profile = vim.g.dx_color_profile
+vim.g.dx_color_profile = nil
+local default_profile_name, default_visual = theme.active_profile()
+assert_eq(theme.default_profile, "c3_1", "M3-C default profile changed")
+assert_eq(default_profile_name, "c3_1", "unset M3-C selector must use C3.1")
+assert_eq(default_visual, c3_1, "unset M3-C selector resolved the wrong visual module")
 
 local p = palette_mod.resolve(colors)
 local roles = c3_1.roles(p)
 local c4_roles = c4.roles(p)
 local full_hl = theme.highlights(colors)
 local c4_full_hl = compose.highlights(p, c4)
+
+vim.g.dx_color_profile = "c3_1"
+local opt_out_name, opt_out_visual = theme.active_profile()
+assert_eq(opt_out_name, "c3_1", "explicit M3-C opt-out must select C3.1")
+assert_eq(opt_out_visual, c3_1, "explicit M3-C opt-out resolved the wrong visual module")
+assert(vim.deep_equal(theme.highlights(colors), full_hl), "explicit C3.1 opt-out changed the frozen graph")
+
+vim.g.dx_color_profile = "c4"
+local opt_in_name, opt_in_visual = theme.active_profile()
+assert_eq(opt_in_name, "c4", "explicit M3-C opt-in must select C4")
+assert_eq(opt_in_visual, c4, "explicit M3-C opt-in resolved the wrong visual module")
+assert(vim.deep_equal(theme.highlights(colors), c4_full_hl), "explicit C4 opt-in did not select the C4.0 graph")
+
+local invalid_profiles = {
+	{ label = "empty", value = "" },
+	{ label = "case-mismatched", value = "C4" },
+	{ label = "unknown", value = "unknown" },
+	{ label = "number", value = 42 },
+	{ label = "false", value = false },
+	{ label = "true", value = true },
+}
+for _, invalid in ipairs(invalid_profiles) do
+	local ok_invalid, invalid_error = pcall(theme.resolve_profile, invalid.value)
+	assert(
+		not ok_invalid,
+		("invalid M3-C profile %s (%s) must fail closed"):format(invalid.label, vim.inspect(invalid.value))
+	)
+	assert(
+		tostring(invalid_error):find("expected one of: c3_1, c4", 1, true),
+		"invalid M3-C profile error must name the accepted profiles"
+	)
+end
+vim.g.dx_color_profile = previous_profile
+print("M3-C selector contract passed: default/opt-out=c3_1, opt-in=c4, invalid values fail closed.")
+
 local groups = {}
 for group, spec in pairs(full_hl) do
 	if not domain.roles[group] then

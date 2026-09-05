@@ -14,6 +14,15 @@ local function assert_eq(actual, expected, msg)
 	end
 end
 
+local function assert_hex_eq(actual, expected, msg)
+	if type(actual) ~= "string" or type(expected) ~= "string" or actual:lower() ~= expected:lower() then
+		fail(
+			(msg or "hex assertion failed")
+				.. (" (expected %s, got %s)"):format(vim.inspect(expected), vim.inspect(actual))
+		)
+	end
+end
+
 local function hex_to_rgb(hex)
 	local clean = hex:gsub("^#", "")
 	return tonumber(clean:sub(1, 2), 16), tonumber(clean:sub(3, 4), 16), tonumber(clean:sub(5, 6), 16)
@@ -130,10 +139,10 @@ function M.verify(context)
 		if not roles[role] then
 			fail("C4 profile is missing role: " .. role)
 		end
-		assert_eq(roles[role].fg, code[token], ("C4 role %s does not use palette token %s"):format(role, token))
+		assert_hex_eq(roles[role].fg, code[token], ("C4 role %s does not use palette token %s"):format(role, token))
 	end
 	for role, token in pairs(state_roles) do
-		assert_eq(roles[role].fg, palette.state[token], "C4 state role changed ownership: " .. role)
+		assert_hex_eq(roles[role].fg, palette.state[token], "C4 state role changed ownership: " .. role)
 	end
 	assert_eq(vim.tbl_count(roles), vim.tbl_count(domain.roles), "C4 role closure changed")
 
@@ -155,7 +164,7 @@ function M.verify(context)
 	assert_eq(graph.DiagnosticUnderlineError.undercurl, true, "C4 must preserve the diagnostic error undercurl")
 	assert_eq(graph.DiagnosticUnderlineWarn.undercurl, true, "C4 must preserve the diagnostic warning undercurl")
 
-	local background = palette.ui.base
+	local background = context.resolved_background or palette.ui.base
 	local ratios = {}
 	for name, hex in pairs(code) do
 		ratios[name] = contrast_ratio(hex, background)

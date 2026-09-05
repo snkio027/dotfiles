@@ -1,9 +1,9 @@
 # DX-COLOR-003 Development Documentation Set
 
-- **Status:** M2 Frozen / M3-B C4.0 Candidate
+- **Status:** M2 Frozen / M3-C Explicit C4 Opt-In
 - **Repository:** `snkio027/dotfiles`
 - **Initial M0 baseline:** `19f0570ee33025832ff1d1d49269d303677d9c0f`
-- **Current M3-B base:** `6348cc2fd99457f2ecf0cb574c46a07db45d6e75`
+- **Current M3-C base:** `433a2b164fe4a6f4810fbf7c3c7f09b34bdb7c60`
 - **Host theme:** Catppuccin Mocha
 - **Target editor:** Neovim / LazyVim
 - **Languages in current verification matrix:** Rust, C, C++23, Zig, Python
@@ -70,6 +70,9 @@ Milestone evidence records:
 - [`DX-COLOR-003-M3B-C4-CANDIDATE.md`](./DX-COLOR-003-M3B-C4-CANDIDATE.md)
   — the first independently composable C4.0 palette and visual profile,
   profile-aware contracts, and resolved-graph governance.
+- [`DX-COLOR-003-M3C-C4-SELECTOR.md`](./DX-COLOR-003-M3C-C4-SELECTOR.md)
+  — the deterministic C3.1/C4 selector, fail-closed selection policy, and
+  production runtime proof against the actual resolved `Normal.bg`.
 
 The architecture and test specifications are normative. The C4 color values are candidate visual values and require runtime visual acceptance before becoming the default profile.
 
@@ -79,10 +82,11 @@ Current milestone status:
 M1   Architecture extraction                    FROZEN
 M2   Evidence / authority / provider governance CLOSED / FROZEN
 M3-A C4 visual contract                         CLOSED / FROZEN
-M3-B C4.0 candidate visual profile              CURRENT
+M3-B C4.0 candidate visual profile              CLOSED / FROZEN
+M3-C Explicit C4 opt-in selector                CURRENT
 
 C3.1                                            DEPRECATED / FROZEN
-C4.0                                            IMPLEMENTED / NOT SELECTABLE
+C4.0                                            IMPLEMENTED / OPT-IN / NOT DEFAULT
 ```
 
 ---
