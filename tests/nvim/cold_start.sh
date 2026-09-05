@@ -34,45 +34,12 @@ run_nvim() {
     printf 'completed (log: %s)\n' "$LOG_DIR/$label.log"
 }
 
-run_nvim_expect_failure() {
-    local label="$1"
-    shift
-    printf '\n==> %s (expected failure)\n' "$label"
-    if nvim --headless "$@" >"$LOG_DIR/$label.log" 2>&1; then
-        cat "$LOG_DIR/$label.log" >&2
-        echo "Expected Neovim failure succeeded: $label" >&2
-        return 1
-    fi
-    grep -Fq "expected one of: c3_1, c4" "$LOG_DIR/$label.log" || {
-        cat "$LOG_DIR/$label.log" >&2
-        echo "Expected selector validation error was not reported: $label" >&2
-        return 1
-    }
-    grep -Fq "M3-C invalid false selector rejected by production runtime." "$LOG_DIR/$label.log" || {
-        cat "$LOG_DIR/$label.log" >&2
-        echo "Expected selector rejection marker was not reported: $label" >&2
-        return 1
-    }
-    printf 'rejected as expected (log: %s)\n' "$LOG_DIR/$label.log"
-}
-
 cd "$REPO_ROOT"
 run_nvim lazy-restore "+luafile tests/nvim/restore_lock.lua" "+Lazy! restore" \
     "+luafile tests/nvim/provision.lua" +qa
 run_nvim startup-policy "+luafile tests/nvim/startup_policy.lua" +qa
 run_nvim color-unit "-n" "+set rtp^=$PWD/home/dot_config/nvim" "+luafile tests/nvim/run_contract.lua" "tests/nvim/color_unit_contract.lua"
-run_nvim profile-default "-n" \
-    "--cmd" "lua vim.g.dx_color_expected_profile = 'c3_1'; vim.g.dx_color_profile_case = 'default'" \
-    "+luafile tests/nvim/profile_runtime.lua" +qa
-run_nvim profile-c4-opt-in "-n" \
-    "--cmd" "lua vim.g.dx_color_profile = 'c4'; vim.g.dx_color_expected_profile = 'c4'; vim.g.dx_color_profile_case = 'opt-in'" \
-    "+luafile tests/nvim/profile_runtime.lua" +qa
-run_nvim profile-c3-opt-out "-n" \
-    "--cmd" "lua vim.g.dx_color_profile = 'c3_1'; vim.g.dx_color_expected_profile = 'c3_1'; vim.g.dx_color_profile_case = 'opt-out'" \
-    "+luafile tests/nvim/profile_runtime.lua" +qa
-run_nvim_expect_failure profile-invalid-false "-n" \
-    "--cmd" "lua vim.g.dx_color_profile = false; vim.g.dx_color_profile_case = 'invalid-false'" \
-    "+luafile tests/nvim/profile_runtime.lua" +qa
+run_nvim production-visual "-n" "+luafile tests/nvim/production_visual_runtime.lua" +qa
 run_nvim python-provider-unit "-n" "+set rtp^=$PWD/home/dot_config/nvim" \
     "+luafile tests/nvim/run_contract.lua" "tests/nvim/python_provider_ownership_contract.lua"
 run_nvim smoke "+luafile tests/nvim/smoke.lua" +qa
@@ -83,8 +50,7 @@ DOTFILES_M2C_CONFIG_HOME="$CONFIG_HOME" DOTFILES_M2C_LOG_DIR="$LOG_DIR" \
 
 if grep -ERni 'Package is already installing|MasonToolsStartingInstall|MasonToolsUpdateCompleted|^Installing tools:|^Updating tools:' \
     "$LOG_DIR/lazy-restore.log" "$LOG_DIR/startup-policy.log" "$LOG_DIR/smoke.log" \
-    "$LOG_DIR/color-unit.log" "$LOG_DIR/profile-default.log" "$LOG_DIR/profile-c4-opt-in.log" \
-    "$LOG_DIR/profile-c3-opt-out.log" "$LOG_DIR/profile-invalid-false.log" \
+    "$LOG_DIR/color-unit.log" "$LOG_DIR/production-visual.log" \
     "$LOG_DIR/python-provider-unit.log" "$LOG_DIR/color-contract.log" \
     "$LOG_DIR/binding-evidence.log" "$LOG_DIR/python-provider-production.log"; then
     echo "Unexpected Mason background installation or update detected" >&2
