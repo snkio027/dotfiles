@@ -630,6 +630,18 @@ for index, expected_name in ipairs(expected_layers) do
 	assert_eq(compose.layers[index].name, expected_name, ("Composition layer %d changed"):format(index))
 end
 
+local generic_lsp_groups = require("theme.bindings.lsp").groups()
+local rust_analyzer_groups = require("theme.adapters.rust_analyzer").groups()
+assert_eq(generic_lsp_groups["@lsp.type.label"].link, "DxLabel", "Audited cross-provider label ownership changed")
+assert_eq(generic_lsp_groups["@lsp.type.lifetime"], nil, "rust-analyzer lifetime leaked into generic LSP bindings")
+assert_eq(
+	generic_lsp_groups["@lsp.type.builtinType"],
+	nil,
+	"rust-analyzer builtinType leaked into generic LSP bindings"
+)
+assert_eq(rust_analyzer_groups["@lsp.type.lifetime"].link, "DxLifetime", "rust-analyzer must own lifetime")
+assert_eq(rust_analyzer_groups["@lsp.type.builtinType"].link, "DxBuiltin", "rust-analyzer must own builtinType")
+
 local normalized_fields = {
 	"link",
 	"fg",
@@ -643,7 +655,28 @@ local normalized_fields = {
 	"nocombine",
 }
 
+local normalized_field_set = {}
+for _, field in ipairs(normalized_fields) do
+	normalized_field_set[field] = true
+end
+
+local M1_BASE_SHA = "19f0570ee33025832ff1d1d49269d303677d9c0f"
+local M1_BASE_GRAPH_COUNT = 221
+local M1_BASE_GRAPH_SHA256 = "05ff81df9019ace7bee14a494db1a9e39c7d18426f3b78bae1ef3012a068a276"
+
+local function assert_governed_graph_fields(graph)
+	for group, spec in pairs(graph) do
+		for field in pairs(spec) do
+			if not normalized_field_set[field] then
+				fail(("C3.1 graph equivalence does not govern field %s on %s"):format(field, group))
+			end
+		end
+	end
+end
+
 local function normalized_graph_digest(graph)
+	assert_governed_graph_fields(graph)
+
 	local names = {}
 	for name in pairs(graph) do
 		table.insert(names, name)
@@ -667,13 +700,14 @@ local function normalized_graph_digest(graph)
 end
 
 local graph_count, graph_digest = normalized_graph_digest(full_hl)
-assert_eq(graph_count, 221, "C3.1 governed highlight group count changed during M1")
-assert_eq(
-	graph_digest,
-	"05ff81df9019ace7bee14a494db1a9e39c7d18426f3b78bae1ef3012a068a276",
-	"C3.1 normalized highlight graph changed during M1"
-)
+assert_eq(graph_count, M1_BASE_GRAPH_COUNT, ("C3.1 highlight group count changed from %s"):format(M1_BASE_SHA))
+assert_eq(graph_digest, M1_BASE_GRAPH_SHA256, ("C3.1 normalized highlight graph changed from %s"):format(M1_BASE_SHA))
 print(("C3.1 graph equivalence verified: %d groups, sha256=%s"):format(graph_count, graph_digest))
+
+local bad_graph_field = vim.deepcopy(full_hl)
+bad_graph_field.DxVariable.reverse = true
+local ok_unknown_field = pcall(assert_governed_graph_fields, bad_graph_field)
+assert(not ok_unknown_field, "Negative control failure: unknown highlight attributes must fail closed")
 
 -- ==========================================================================
 -- 9. Shared Manifest Symbolic Sentinel Locator Test across 5 Languages

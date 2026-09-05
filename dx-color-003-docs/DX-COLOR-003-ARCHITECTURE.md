@@ -690,7 +690,11 @@ UI bindings
 plugin bindings
 ```
 
-Later layers may override earlier groups only intentionally.
+Each highlight group has exactly one composition owner.
+
+Cross-layer duplicate ownership is forbidden. A semantic rule that becomes
+provider-specific must transfer ownership to the appropriate adapter instead of
+overriding a generic binding.
 
 The composition order must be documented and tested.
 

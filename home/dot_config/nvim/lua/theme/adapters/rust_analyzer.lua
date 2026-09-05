@@ -7,6 +7,8 @@ local M = {}
 function M.groups()
   return {
     ["@type.lifetime.rust"] = { link = "DxLifetime" },
+    ["@lsp.type.lifetime"] = { link = "DxLifetime" },
+    ["@lsp.type.builtinType"] = { link = "DxBuiltin" },
     ["@lsp.type.typeAlias"] = { link = "DxType" },
     ["@lsp.type.union"] = { link = "DxType" },
     ["@lsp.type.selfTypeKeyword"] = { link = "DxType" },

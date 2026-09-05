@@ -30,10 +30,8 @@ function M.groups()
     ["@lsp.type.comment"] = { link = "DxComment" },
     ["@lsp.type.event"] = { link = "DxMember" },
 
-    -- Safe semantic extensions observed across the current provider set.
+    -- Provider-independent audited extension shared by the current provider set.
     ["@lsp.type.label"] = { link = "DxLabel" },
-    ["@lsp.type.lifetime"] = { link = "DxLifetime" },
-    ["@lsp.type.builtinType"] = { link = "DxBuiltin" },
 
     -- Modifier foreground normalization preserves the base semantic identity.
     ["@lsp.typemod.variable.readonly"] = { link = "DxVariable" },
