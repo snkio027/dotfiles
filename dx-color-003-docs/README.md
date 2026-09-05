@@ -55,6 +55,9 @@ Milestone evidence records:
 - [`DX-COLOR-003-M2B-B-STATIC-MEMBER-CORRECTION.md`](./DX-COLOR-003-M2B-B-STATIC-MEMBER-CORRECTION.md)
   — the narrow clangd/C++ behavior correction, positive and negative runtime
   controls, and governed highlight-graph delta.
+- [`DX-COLOR-003-M2C-PYTHON-PROVIDER-OWNERSHIP.md`](./DX-COLOR-003-M2C-PYTHON-PROVIDER-OWNERSHIP.md)
+  — the Python provider activation provenance, isolated Ty exclusion experiment,
+  capability evidence, and interactive-provider ownership decision.
 
 The architecture and test specifications are normative. The C4 color values are candidate visual values and require runtime visual acceptance before becoming the default profile.
 

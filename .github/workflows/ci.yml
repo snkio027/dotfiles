@@ -128,8 +128,8 @@ jobs:
             shfmt -d -i 4 -ci "$rendered"
           done
 
-          shellcheck -S warning -s bash tests/nvim/cold_start.sh
-          shfmt -d -i 4 -ci tests/nvim/cold_start.sh
+          shellcheck -S warning -s bash tests/nvim/cold_start.sh tests/nvim/python_provider_ownership.sh
+          shfmt -d -i 4 -ci tests/nvim/cold_start.sh tests/nvim/python_provider_ownership.sh
           shellcheck -S warning -s bash tests/zsh/linux_homebrew_test.sh
           shfmt -d -i 4 -ci tests/zsh/linux_homebrew_test.sh
           shellcheck -S warning -s bash .devcontainer/install-chezmoi.sh .devcontainer/post-create.sh .devcontainer/provision-nvim.sh tests/devcontainer/lifecycle_smoke.sh tests/devcontainer/provisioning_contract_test.sh
@@ -183,6 +183,7 @@ jobs:
           find home/dot_config .github brew -type f -name '*.toml' -print0 | xargs -0 taplo format --check
           stylua --check home/dot_config/nvim tests/nvim
           nvim -n -u NONE -i NONE --headless "+set rtp^=$PWD/home/dot_config/nvim" "+luafile tests/nvim/run_contract.lua" "tests/nvim/color_unit_contract.lua"
+          nvim -n -u NONE -i NONE --headless "+set rtp^=$PWD/home/dot_config/nvim" "+luafile tests/nvim/run_contract.lua" "tests/nvim/python_provider_ownership_contract.lua"
           hadolint --failure-threshold error .devcontainer/Dockerfile
 
           yazi_version="$(yazi --version)"
