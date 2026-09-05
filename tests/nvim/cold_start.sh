@@ -40,11 +40,12 @@ run_nvim lazy-restore "+luafile tests/nvim/restore_lock.lua" "+Lazy! restore" \
 run_nvim startup-policy "+luafile tests/nvim/startup_policy.lua" +qa
 run_nvim color-unit "-n" "+set rtp^=$PWD/home/dot_config/nvim" "+luafile tests/nvim/run_contract.lua" "tests/nvim/color_unit_contract.lua"
 run_nvim smoke "+luafile tests/nvim/smoke.lua" +qa
-run_nvim color-contract "-n" "+luafile tests/nvim/run_contract.lua" "tests/nvim/color_contract.lua"
+run_nvim color-contract "-n" "+luafile tests/nvim/color_contract.lua" +qa
+run_nvim binding-evidence "-n" "+luafile tests/nvim/binding_evidence.lua" +qa
 
 if grep -ERni 'Package is already installing|MasonToolsStartingInstall|MasonToolsUpdateCompleted|^Installing tools:|^Updating tools:' \
     "$LOG_DIR/lazy-restore.log" "$LOG_DIR/startup-policy.log" "$LOG_DIR/smoke.log" \
-    "$LOG_DIR/color-unit.log" "$LOG_DIR/color-contract.log"; then
+    "$LOG_DIR/color-unit.log" "$LOG_DIR/color-contract.log" "$LOG_DIR/binding-evidence.log"; then
     echo "Unexpected Mason background installation or update detected" >&2
     exit 1
 fi

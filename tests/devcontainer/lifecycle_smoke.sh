@@ -82,7 +82,8 @@ assert_container_state() {
         cd "$workspace_folder"
         nvim --headless "+luafile tests/nvim/startup_policy.lua" \
             "+luafile tests/nvim/smoke.lua" +qa
-        DOTFILES_STRICT_LSP=1 nvim -n --headless "+luafile tests/nvim/run_contract.lua" "tests/nvim/color_contract.lua"
+        DOTFILES_STRICT_LSP=1 nvim -n --headless "+luafile tests/nvim/color_contract.lua" +qa
+        nvim -n --headless "+luafile tests/nvim/binding_evidence.lua" +qa
         bash tests/nvim/color/validate_fixtures.sh
     ) >"$nvim_log" 2>&1 || {
         cat "$nvim_log" >&2
@@ -91,6 +92,10 @@ assert_container_state() {
     grep -Fq "Neovim toolchain smoke tests passed" "$nvim_log" || {
         cat "$nvim_log" >&2
         fail "Neovim warm smoke did not complete"
+    }
+    grep -Fq "M2A binding-topology evidence passed: 28/28 cases, 15/15 comparisons." "$nvim_log" || {
+        cat "$nvim_log" >&2
+        fail "M2A binding-topology evidence did not complete"
     }
     if grep -Eqi 'Package is already installing|^Installing tools:|^Updating tools:|MasonToolsUpdate' "$nvim_log"; then
         cat "$nvim_log" >&2

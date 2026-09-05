@@ -66,6 +66,7 @@ case "$PROFILE" in
         exercise ninja --version
         exercise python3 --version
         exercise rg --version
+        exercise rust-analyzer --version
         exercise shellcheck --version
         exercise shfmt --version
         exercise starship --version

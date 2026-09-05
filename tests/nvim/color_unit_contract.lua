@@ -756,6 +756,8 @@ end
 
 local verified_sentinels = 0
 local expected_total = 0
+local verified_binding_cases = 0
+local binding_tags = {}
 
 for lang_name, lang_spec in pairs(manifest.languages) do
 	local filepath = repo_root .. "/" .. lang_spec.path
@@ -764,6 +766,79 @@ for lang_name, lang_spec in pairs(manifest.languages) do
 	end
 	local buf = vim.fn.bufadd(filepath)
 	vim.fn.bufload(buf)
+
+	if type(lang_spec.evidence_client) ~= "string" or type(lang_spec.evidence_clients) ~= "table" then
+		fail("Binding evidence client metadata missing for " .. lang_name)
+	end
+	local declared_clients = {}
+	for _, client in ipairs(lang_spec.evidence_clients) do
+		if type(client.name) ~= "string" or type(client.semantic_tokens) ~= "boolean" then
+			fail("Invalid evidence client metadata for " .. lang_name)
+		end
+		if client.legend ~= nil then
+			if
+				type(client.legend) ~= "table"
+				or type(client.legend.token_types) ~= "table"
+				or type(client.legend.token_modifiers) ~= "table"
+			then
+				fail("Invalid semantic-token legend contract for " .. client.name)
+			end
+			for _, vocabulary in ipairs({ client.legend.token_types, client.legend.token_modifiers }) do
+				for _, entry in ipairs(vocabulary) do
+					if type(entry) ~= "string" or entry == "" then
+						fail("Invalid semantic-token legend entry for " .. client.name)
+					end
+				end
+			end
+		end
+		declared_clients[client.name] = true
+	end
+	if not declared_clients[lang_spec.evidence_client] then
+		fail("Expected interactive evidence client is not declared for " .. lang_name)
+	end
+
+	for _, case in ipairs(lang_spec.binding_cases or {}) do
+		if binding_tags[case.tag] then
+			fail("Duplicate binding evidence tag: " .. case.tag)
+		end
+		binding_tags[case.tag] = true
+		if type(case.semantic_description) ~= "string" or case.semantic_description == "" then
+			fail("Binding case lacks source semantic description: " .. case.tag)
+		end
+		for _, dimension in ipairs({ "scope", "mutability", "storage", "owner" }) do
+			if type(case.topology and case.topology[dimension]) ~= "string" or case.topology[dimension] == "" then
+				fail(("Binding case %s lacks topology dimension %s"):format(case.tag, dimension))
+			end
+		end
+		local evidence = case.evidence
+		if
+			type(evidence) ~= "table"
+			or type(evidence.treesitter) ~= "table"
+			or type(evidence.lsp) ~= "table"
+			or type(evidence.effective) ~= "table"
+			or type(evidence.producer_delta) ~= "table"
+		then
+			fail("Binding case has incomplete evidence schema: " .. case.tag)
+		end
+		if not declared_clients[evidence.lsp.provider] then
+			fail(("Binding case %s names undeclared LSP provider %s"):format(case.tag, evidence.lsp.provider))
+		end
+		if not domain.roles[evidence.effective.role] then
+			fail(("Binding case %s resolves outside the 23-role domain: %s"):format(case.tag, evidence.effective.role))
+		end
+		if
+			type(evidence.producer_delta.lsp_only) ~= "table"
+			or type(evidence.producer_delta.treesitter_only) ~= "table"
+		then
+			fail("Binding case producer-delta evidence is incomplete: " .. case.tag)
+		end
+
+		local r, _, line_text, comment_r = locate_symbolic_sentinel(buf, case.tag, case.token, lang_name)
+		if r <= comment_r or is_comment_line(vim.trim(line_text), lang_name) then
+			fail("Binding locator matched its marker/comment line: " .. case.tag)
+		end
+		verified_binding_cases = verified_binding_cases + 1
+	end
 
 	for _, s in ipairs(lang_spec.sentinels) do
 		expected_total = expected_total + 1
@@ -779,6 +854,18 @@ for lang_name, lang_spec in pairs(manifest.languages) do
 	end
 	vim.api.nvim_buf_delete(buf, { force = true })
 end
+
+assert_eq(verified_binding_cases, 28, "Expected exactly 28 M2A binding evidence cases")
+assert_eq(#manifest.binding_comparisons, 15, "Expected exactly 15 M2A cross-producer comparisons")
+for _, comparison in ipairs(manifest.binding_comparisons) do
+	if not binding_tags[comparison.left] or not binding_tags[comparison.right] then
+		fail("Binding comparison references an unknown case: " .. comparison.axis)
+	end
+	if type(comparison.treesitter_distinguishes) ~= "boolean" or type(comparison.lsp_distinguishes) ~= "boolean" then
+		fail("Binding comparison lacks explicit producer verdicts: " .. comparison.axis)
+	end
+end
+print("Verified all 28/28 M2A binding locators and 15/15 comparison schemas.")
 
 assert(
 	verified_sentinels == expected_total and verified_sentinels > 0,

@@ -9,6 +9,27 @@ from typing import Generic, Optional, TypeVar
 
 T = TypeVar("T")
 
+# DX:M2 python.binding.module_binding
+module_retry_limit = 3
+
+
+class BindingProbe:
+    # DX:M2 python.binding.class_attribute
+    class_label = "binding-probe"
+
+    def __init__(self, initial_value: int) -> None:
+        # DX:M2 python.binding.instance_attribute
+        self.instance_value = initial_value
+
+    def observe(
+        self,
+        # DX:M2 python.binding.parameter
+        parameter_value: int,
+    ) -> int:
+        # DX:M2 python.binding.local_binding
+        local_value = parameter_value + self.instance_value
+        return local_value + module_retry_limit
+
 # Sentinel: regular expression pattern (DxString = Muted Sage)
 # DX:SENTINEL python.pattern.regexp
 PATTERN: re.Pattern[str] = re.compile(r"^DX42\d+$")
@@ -64,11 +85,12 @@ async def fetch_async(endpoint: str, timeout_seconds: float = 5.0) -> DownloadSu
 def main() -> None:
     uri: str = "https://api.example.com/v1/data"
     assert PATTERN.match("DX42100") is not None
+    binding_total = BindingProbe(1).observe(module_retry_limit)
 
     loop = asyncio.new_event_loop()
     try:
         receipt = loop.run_until_complete(fetch_async(uri))
-        print(f"Received bytes: {receipt.size}, empty: {receipt.is_empty}")
+        print(f"Received bytes: {receipt.size}, empty: {receipt.is_empty}, binding: {binding_total}")
     finally:
         loop.close()
 

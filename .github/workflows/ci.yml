@@ -433,7 +433,8 @@ jobs:
             nvim --headless "+Lazy! sync" "+luafile tests/nvim/provision.lua" +qa
             nvim --headless "+MasonToolsUpdateSync" +qa
             nvim --headless "+luafile tests/nvim/smoke.lua" +qa
-            nvim -n --headless "+luafile tests/nvim/run_contract.lua" "tests/nvim/color_contract.lua"
+            nvim -n --headless "+luafile tests/nvim/color_contract.lua" +qa
+            nvim -n --headless "+luafile tests/nvim/binding_evidence.lua" +qa
           } 2>&1 | tee "$rolling_log"
           if grep -Fqi 'Package is already installing' "$rolling_log"; then
             echo "::error::Concurrent Mason installation detected."

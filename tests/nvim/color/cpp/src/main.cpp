@@ -18,6 +18,29 @@
 
 namespace dx::network {
 
+// DX:M2 cpp.binding.namespace_variable
+inline int namespace_counter = 1;
+
+// DX:M2 cpp.binding.namespace_static
+static int namespace_static_counter = 2;
+
+struct BindingProbe {
+    // DX:M2 cpp.binding.static_data_member
+    static inline int shared_count = 3;
+    // DX:M2 cpp.binding.instance_member
+    int instance_value = 4;
+};
+
+int observe_binding_topology(
+    // DX:M2 cpp.binding.parameter
+    int parameter_value
+) {
+    // DX:M2 cpp.binding.local_variable
+    int local_value = parameter_value + namespace_counter + namespace_static_counter;
+    const BindingProbe probe{};
+    return local_value + BindingProbe::shared_count + probe.instance_value;
+}
+
 // Constant definition using object macro
 inline constexpr std::size_t kDefaultBufferSize = BUFFER_CAPACITY;
 
@@ -109,8 +132,9 @@ int main() {
 
     // Method call: decoder.decode() -> Muted Amber
     auto header = decoder.decode(sample_data);
+    const int binding_total = observe_binding_topology(1);
     if (header.has_value()) {
-        log_diagnostic(header->key, 1);
+        log_diagnostic(header->key, binding_total);
     }
 
     return 0;

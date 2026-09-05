@@ -81,7 +81,7 @@ description = "Rust 与 Cargo"
 kind = "brew"
 name = "rust-analyzer"
 owner = "core"
-profiles = ["core", "workstation", "devcontainer"]
+profiles = ["core", "workstation", "devcontainer", "quality"]
 description = "Rust 语义分析"
 
 [[tools]]
