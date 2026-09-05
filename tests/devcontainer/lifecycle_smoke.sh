@@ -10,7 +10,7 @@ fail() {
 assert_container_state() {
     local workspace_folder="${1:?container workspace folder is required}"
     local pass_name="${2:-unknown}"
-    local user_name passwd_shell source_path status_output nvim_log bootstrap_binary bootstrap_receipt
+    local user_name passwd_shell source_path status_output nvim_log invalid_profile_output bootstrap_binary bootstrap_receipt
     local mason_manifest mason_data_root mason_tool unique_count
     local -a mason_tools
 
@@ -82,6 +82,28 @@ assert_container_state() {
         cd "$workspace_folder"
         nvim --headless "+luafile tests/nvim/startup_policy.lua" \
             "+luafile tests/nvim/smoke.lua" +qa
+        nvim -n --headless \
+            --cmd "lua vim.g.dx_color_expected_profile = 'c3_1'; vim.g.dx_color_profile_case = 'default'" \
+            "+luafile tests/nvim/profile_runtime.lua" +qa
+        nvim -n --headless \
+            --cmd "lua vim.g.dx_color_profile = 'c4'; vim.g.dx_color_expected_profile = 'c4'; vim.g.dx_color_profile_case = 'opt-in'" \
+            "+luafile tests/nvim/profile_runtime.lua" +qa
+        nvim -n --headless \
+            --cmd "lua vim.g.dx_color_profile = 'c3_1'; vim.g.dx_color_expected_profile = 'c3_1'; vim.g.dx_color_profile_case = 'opt-out'" \
+            "+luafile tests/nvim/profile_runtime.lua" +qa
+        if invalid_profile_output="$(
+            nvim -n --headless \
+                --cmd "lua vim.g.dx_color_profile = false; vim.g.dx_color_profile_case = 'invalid-false'" \
+                "+luafile tests/nvim/profile_runtime.lua" +qa 2>&1
+        )"; then
+            printf '%s\n' "$invalid_profile_output"
+            fail "M3-C invalid false selector unexpectedly succeeded"
+        fi
+        printf '%s\n' "$invalid_profile_output"
+        grep -Fq "expected one of: c3_1, c4" <<<"$invalid_profile_output" ||
+            fail "M3-C invalid false selector did not report the accepted profiles"
+        grep -Fq "M3-C invalid false selector rejected by production runtime." <<<"$invalid_profile_output" ||
+            fail "M3-C invalid false selector rejection marker is missing"
         DOTFILES_STRICT_LSP=1 nvim -n --headless "+luafile tests/nvim/color_contract.lua" +qa
         nvim -n --headless "+luafile tests/nvim/binding_evidence.lua" +qa
         nvim -u NONE -i NONE --headless "+set rtp^=$PWD/home/dot_config/nvim" \
@@ -120,6 +142,26 @@ assert_container_state() {
     grep -Fq "M2C-B decision implemented: ADOPT TY AS INTERACTIVE SEMANTIC PROVIDER" "$nvim_log" || {
         cat "$nvim_log" >&2
         fail "M2C-B provider-ownership decision was not implemented"
+    }
+    grep -Fq "M3-C runtime profile selection passed: default -> c3_1." "$nvim_log" || {
+        cat "$nvim_log" >&2
+        fail "M3-C default C3.1 runtime selection did not complete"
+    }
+    grep -Fq "M3-C runtime profile selection passed: opt-in -> c4." "$nvim_log" || {
+        cat "$nvim_log" >&2
+        fail "M3-C explicit C4 runtime selection did not complete"
+    }
+    grep -Fq "M3-C runtime C4 contrast contract passed against actual Normal.bg" "$nvim_log" || {
+        cat "$nvim_log" >&2
+        fail "M3-C C4 runtime contrast contract did not complete"
+    }
+    grep -Fq "M3-C runtime profile selection passed: opt-out -> c3_1." "$nvim_log" || {
+        cat "$nvim_log" >&2
+        fail "M3-C explicit C3.1 runtime opt-out did not complete"
+    }
+    grep -Fq "M3-C invalid false selector rejected by production runtime." "$nvim_log" || {
+        cat "$nvim_log" >&2
+        fail "M3-C invalid false selector runtime rejection did not complete"
     }
     if grep -Eqi 'Package is already installing|^Installing tools:|^Updating tools:|MasonToolsUpdate' "$nvim_log"; then
         cat "$nvim_log" >&2
