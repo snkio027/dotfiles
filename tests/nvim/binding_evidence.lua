@@ -143,6 +143,73 @@ local function roles_for_foreground(foreground)
 	return roles
 end
 
+local function expected_semantic_groups(token, filetype)
+	local priorities = vim.hl and vim.hl.priorities or {}
+	local base_priority = priorities.semantic_tokens or 125
+	local groups = {
+		{ group = ("@lsp.type.%s.%s"):format(token.type, filetype), priority = base_priority },
+	}
+	for _, modifier in ipairs(token.modifiers) do
+		groups[#groups + 1] = {
+			group = ("@lsp.mod.%s.%s"):format(modifier, filetype),
+			priority = base_priority + 1,
+		}
+		groups[#groups + 1] = {
+			group = ("@lsp.typemod.%s.%s.%s"):format(token.type, modifier, filetype),
+			priority = base_priority + 2,
+		}
+	end
+	table.sort(groups, function(left, right)
+		return left.group < right.group
+	end)
+	return groups
+end
+
+local function semantic_application(inspected, token, filetype, tag)
+	local priorities = vim.hl and vim.hl.priorities or {}
+	local base_priority = priorities.semantic_tokens or 125
+	local groups = {}
+	local foregrounds = {}
+	local seen = {}
+	for _, applied in ipairs(inspected.semantic_tokens or {}) do
+		local group = applied.opts and applied.opts.hl_group
+		if group then
+			if seen[group] then
+				fail(("duplicate Neovim semantic highlight for %s: %s"):format(tag, group))
+			end
+			seen[group] = true
+			local priority = tonumber(applied.opts.priority) or base_priority
+			groups[#groups + 1] = { group = group, priority = priority }
+			local highlight = vim.api.nvim_get_hl(0, { name = group, link = false })
+			if highlight.fg then
+				local roles = roles_for_foreground(highlight.fg)
+				if #roles ~= 1 then
+					fail(
+						("semantic foreground for %s does not resolve to exactly one Dx role: %s -> %s"):format(
+							tag,
+							group,
+							vim.inspect(roles)
+						)
+					)
+				end
+				foregrounds[#foregrounds + 1] = {
+					group = group,
+					priority_delta = priority - base_priority,
+					role = roles[1],
+				}
+			end
+		end
+	end
+	table.sort(groups, function(left, right)
+		return left.group < right.group
+	end)
+	table.sort(foregrounds, function(left, right)
+		return left.group < right.group
+	end)
+	assert_equal(groups, expected_semantic_groups(token, filetype), "Neovim-applied semantic groups drift for " .. tag)
+	return { groups = groups, foregrounds = foregrounds }
+end
+
 local function wait_for_clients(bufnr, expectations)
 	local by_name = {}
 	local ready = vim.wait(15000, function()
@@ -422,6 +489,16 @@ local function capture_case(bufnr, case, lang, spec, clients_by_name, raw_tokens
 		"effective Dx role drift for " .. case.tag
 	)
 
+	local application
+	if expected.applied_foregrounds then
+		application = semantic_application(inspected, expected.lsp, spec.filetype, case.tag)
+		assert_equal(
+			application.foregrounds,
+			expected.applied_foregrounds,
+			"Neovim semantic foreground competition drift for " .. case.tag
+		)
+	end
+
 	local observation = {
 		tag = case.tag,
 		treesitter = captures,
@@ -431,6 +508,7 @@ local function capture_case(bufnr, case, lang, spec, clients_by_name, raw_tokens
 			source = winner.source,
 			role = expected.effective.role,
 		},
+		application = application,
 	}
 	io.stdout:write(
 		("[M2 EVIDENCE] %s | TS=%s | expected=%s | LSP=%s:%s[%s] | effective=%s->%s\n"):format(
@@ -445,6 +523,28 @@ local function capture_case(bufnr, case, lang, spec, clients_by_name, raw_tokens
 		)
 	)
 	io.stdout:flush()
+	if observation.application then
+		local applied_groups = {}
+		for _, applied in ipairs(observation.application.groups) do
+			applied_groups[#applied_groups + 1] = ("%s@%d"):format(applied.group, applied.priority)
+		end
+		local foregrounds = {}
+		for _, applied in ipairs(observation.application.foregrounds) do
+			foregrounds[#foregrounds + 1] = ("%s@+%d->%s"):format(applied.group, applied.priority_delta, applied.role)
+		end
+		io.stdout:write(
+			("[M2B APPLICATION] %s | source=%s/%s | groups=%s | foregrounds=%s | winner=%s->%s\n"):format(
+				case.tag,
+				case.source_identity,
+				case.occurrence,
+				table.concat(applied_groups, ","),
+				table.concat(foregrounds, ","),
+				observation.effective.group,
+				observation.effective.role
+			)
+		)
+		io.stdout:flush()
+	end
 	return observation
 end
 
@@ -482,7 +582,9 @@ local function main()
 	end
 
 	local observations = {}
+	local classification_observations = {}
 	local case_count = 0
+	local classification_count = 0
 	for _, lang in ipairs({ "zig", "c", "cpp", "rust", "python" }) do
 		local spec = manifest.languages[lang]
 		if not spec or not spec.evidence_client or not spec.evidence_clients then
@@ -511,6 +613,20 @@ local function main()
 			end
 			observations[case.tag] = capture_case(bufnr, case, lang, spec, clients_by_name, raw_tokens_by_name)
 			case_count = case_count + 1
+		end
+		if lang == "cpp" then
+			local review = manifest.classification_reviews and manifest.classification_reviews.cpp_static_data_member
+			if not review or type(review.cases) ~= "table" then
+				fail("M2B C++ static data member review is missing")
+			end
+			for _, case in ipairs(review.cases) do
+				if observations[case.tag] or classification_observations[case.tag] then
+					fail("duplicate M2B classification evidence tag: " .. case.tag)
+				end
+				classification_observations[case.tag] =
+					capture_case(bufnr, case, lang, spec, clients_by_name, raw_tokens_by_name)
+				classification_count = classification_count + 1
+			end
 		end
 
 		local attached_clients = vim.lsp.get_clients({ bufnr = bufnr })
@@ -548,11 +664,36 @@ local function main()
 		)
 	end
 
+	local review = manifest.classification_reviews and manifest.classification_reviews.cpp_static_data_member
+	if not review then
+		fail("M2B classification review metadata missing")
+	end
+	assert_equal(classification_count, 7, "M2B C++ classification evidence case count changed")
+	local observed_tags = vim.tbl_keys(classification_observations)
+	table.sort(observed_tags)
+	local declared_tags = vim.deepcopy(review.case_tags or {})
+	table.sort(declared_tags)
+	assert_equal(observed_tags, declared_tags, "M2B classification case topology drift")
+	local allowed_decisions = {
+		["RECLASSIFY STATIC DATA MEMBER TO DxMember"] = true,
+		["KEEP STATIC DATA MEMBER AS DxVariable"] = true,
+		["DEFER STATIC DATA MEMBER CLASSIFICATION"] = true,
+	}
+	if not allowed_decisions[review.decision] then
+		fail("M2B classification decision is not one of the three authorized outcomes")
+	end
+
 	print(
 		("M2A binding-topology evidence passed: %d/28 cases, %d/%d comparisons."):format(
 			case_count,
 			#manifest.binding_comparisons,
 			#manifest.binding_comparisons
+		)
+	)
+	print(
+		("M2B static-data-member evidence passed: %d/7 cases; decision: %s"):format(
+			classification_count,
+			review.decision
 		)
 	)
 end
