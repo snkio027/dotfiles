@@ -11,9 +11,12 @@
 
 ## Decision
 
-Human A/B acceptance selected C4.4 High-Chroma Night for sustained use. M5
-therefore retires C3.1 as an executable compatibility path and promotes C4.4
-from an opt-in candidate to the only supported production visual.
+Human A/B acceptance selected C4.4 High-Chroma Night. The
+[final M4 closure](./DX-COLOR-003-M4-HUMAN-ACCEPTANCE-CLOSURE.md) records the
+actual evidence and an explicit waiver of the fixed five-language and timed
+observation procedure. M5 therefore retires C3.1 as an executable compatibility
+path and promotes C4.4 from an opt-in candidate to the only supported production
+visual.
 
 This is not a palette iteration. Every accepted C4.4 HEX value remains
 unchanged.

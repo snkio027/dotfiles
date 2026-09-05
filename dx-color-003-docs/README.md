@@ -47,9 +47,10 @@ Architecture extraction and visual redesign MUST be delivered separately.
 5. [`DX-COLOR-003-C4-VISUAL-SPEC.md`](./DX-COLOR-003-C4-VISUAL-SPEC.md)
 6. [Codex execution contract](./DX-COLOR-003-CODEX-EXECUTION-CONTRACT.md)
 
-The M3-A contract is normative for visual relationships. The older C4 visual
-specification is research input and contains candidate values; it does not
-select the final C4 palette.
+The architecture and test specifications describe the current M5 normative
+runtime and verification model. The M3-A contract is the frozen initial C4
+design baseline; its C4.0 visual hypotheses were superseded by governed M4
+human evidence. The older C4 visual specification remains research input.
 
 Milestone evidence records:
 
@@ -69,7 +70,7 @@ Milestone evidence records:
   boundary, capability matrix, and semantic-token provenance contract.
 - [`DX-COLOR-003-M3B-C4-CANDIDATE.md`](./DX-COLOR-003-M3B-C4-CANDIDATE.md)
   — the first independently composable C4.0 palette and visual profile,
-  profile-aware contracts, and resolved-graph governance.
+  historical profile-aware contracts, and resolved-graph governance.
 - [`DX-COLOR-003-M3C-C4-SELECTOR.md`](./DX-COLOR-003-M3C-C4-SELECTOR.md)
   — the deterministic C3.1/C4 selector, fail-closed selection policy, and
   production runtime proof against the actual resolved `Normal.bg`.
@@ -79,12 +80,16 @@ Milestone evidence records:
 - [`DX-COLOR-003-M4-C4-4-HIGH-CHROMA-NIGHT.md`](./DX-COLOR-003-M4-C4-4-HIGH-CHROMA-NIGHT.md)
   — the TokyoNight-informed perceptual rebase, softened body white, dark navy
   canvas, full-color-wheel semantic axes, and C4.3-to-C4.4 provenance.
+- [`DX-COLOR-003-M4-HUMAN-ACCEPTANCE-CLOSURE.md`](./DX-COLOR-003-M4-HUMAN-ACCEPTANCE-CLOSURE.md)
+  — the final `PASS`, actual A/B evidence, explicit five-language/timed-protocol
+  waiver, decision authority, and limits of the human acceptance claim.
 - [`DX-COLOR-003-M5-C3-RETIREMENT.md`](./DX-COLOR-003-M5-C3-RETIREMENT.md)
   — the removal of the executable C3.1 compatibility surface, promotion of
   C4.4 to the sole production visual, and historical graph reconstruction.
 
-The architecture and test specifications are normative. C4.4 completed human
-visual acceptance and is the sole production visual baseline.
+The architecture and test specifications are normative. C4.4 received a
+governed human `PASS` under the recorded protocol waiver and is the sole
+production visual baseline.
 
 Current milestone status:
 
@@ -94,7 +99,7 @@ M2   Evidence / authority / provider governance CLOSED / FROZEN
 M3-A C4 visual contract                         CLOSED / FROZEN
 M3-B C4.0 candidate visual profile              CLOSED / FROZEN
 M3-C Explicit C4 opt-in selector                CLOSED / FROZEN
-M4   Human visual acceptance                    CLOSED / ACCEPTED
+M4   Human visual acceptance                    CLOSED / PASS VIA GOVERNED WAIVER
 M5   C3.1 retirement / C4.4 promotion           CURRENT
 
 C3.1                                            RUNTIME RETIRED / HISTORY PRESERVED
