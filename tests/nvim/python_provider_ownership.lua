@@ -1,5 +1,4 @@
---- DX-COLOR-003 M2C-A Python provider-ownership runtime evidence.
---- Observes either production startup or the isolated Ty-excluded control.
+--- DX-COLOR-003 M2C-B explicit Python provider-ownership runtime contract.
 
 local function fail(message)
 	error("M2C_PROVIDER_OWNERSHIP_FAILURE: " .. message, 2)
@@ -242,10 +241,6 @@ end
 
 local function main()
 	vim.opt.swapfile = false
-	local mode = vim.env.M2C_MODE
-	if mode ~= "production" and mode ~= "ty-excluded" then
-		fail("M2C_MODE must be production or ty-excluded")
-	end
 	local report_path = vim.env.M2C_REPORT_PATH
 	if report_path == nil or report_path == "" then
 		fail("M2C_REPORT_PATH is required")
@@ -256,7 +251,7 @@ local function main()
 
 	local repo_root = vim.fs.root(0, ".git") or vim.fn.getcwd()
 	local manifest = dofile(repo_root .. "/tests/nvim/python_provider_ownership_manifest.lua")
-	local expected = mode == "production" and manifest.production or manifest.ty_excluded
+	local expected = manifest.production
 
 	local loaded, load_error = pcall(require("lazy").load, { plugins = { "nvim-lspconfig" } })
 	if not loaded then
@@ -270,46 +265,58 @@ local function main()
 	assert_equal(lazy_state, expected.lazy_server_state, "effective LazyVim Python server configuration drifted")
 
 	local mason_opts = LazyVim.opts("mason.nvim")
-	local ty_entries = 0
-	for _, tool in ipairs(mason_opts.ensure_installed or {}) do
-		if tool == "ty" then
-			ty_entries = ty_entries + 1
-		end
-	end
-	assert_equal(ty_entries, 1, "Ty must be installed exactly once through the Mason tool manifest")
-
 	local registry = require("mason-registry")
-	local ty_package = registry.get_package("ty")
-	assert_equal(ty_package:is_installed(), true, "Mason Ty package is not installed")
-	local receipt_path = vim.fs.joinpath(vim.fn.stdpath("data"), "mason", "packages", "ty", "mason-receipt.json")
-	local receipt = read_json(receipt_path)
-	assert_equal(receipt.name, "ty", "Mason Ty receipt name drifted")
-	local ty_binary = vim.fs.joinpath(vim.fn.stdpath("data"), "mason", "bin", "ty")
-	assert_equal(vim.fn.executable(ty_binary), 1, "Mason Ty executable is unavailable")
-
 	local mappings = require("mason-lspconfig.mappings").get_mason_map()
-	assert_equal(
-		mappings.package_to_lspconfig[manifest.activation.mason_package],
-		manifest.activation.lspconfig_server,
-		"Mason package-to-lspconfig mapping drifted"
-	)
-	local resolved_ty = vim.lsp.config[manifest.activation.lspconfig_server]
+	local package_reports = {}
+	for _, name in ipairs({ "pyright", "ruff", "ty" }) do
+		local entries = 0
+		for _, tool in ipairs(mason_opts.ensure_installed or {}) do
+			if tool == name then
+				entries = entries + 1
+			end
+		end
+		assert_equal(entries, 1, name .. " must be installed exactly once through the Mason tool manifest")
+
+		local spec = manifest.packages[name]
+		local package = registry.get_package(name)
+		assert_equal(package:is_installed(), true, "Mason package is not installed: " .. name)
+		local receipt_path = vim.fs.joinpath(vim.fn.stdpath("data"), "mason", "packages", name, "mason-receipt.json")
+		local receipt = read_json(receipt_path)
+		assert_equal(receipt.name, name, "Mason receipt name drifted: " .. name)
+		local binary = vim.fs.joinpath(vim.fn.stdpath("data"), "mason", "bin", spec.executable)
+		assert_equal(vim.fn.executable(binary), 1, "Mason executable is unavailable: " .. spec.executable)
+		assert_equal(
+			mappings.package_to_lspconfig[name],
+			spec.lspconfig_server,
+			"Mason package-to-lspconfig mapping drifted: " .. name
+		)
+		package_reports[name] = {
+			installed = true,
+			receipt_name = receipt.name,
+			binary = binary,
+			package_to_lspconfig = mappings.package_to_lspconfig[name],
+		}
+	end
+
+	local resolved_ty = vim.lsp.config[manifest.activation.primary]
 	if type(resolved_ty) ~= "table" then
 		fail("nvim-lspconfig did not provide a resolvable Ty configuration")
 	end
-	assert_equal(resolved_ty.cmd, manifest.activation.resolved_cmd, "resolved Ty command drifted")
-	assert_equal(resolved_ty.filetypes, manifest.activation.resolved_filetypes, "resolved Ty filetypes drifted")
+	assert_equal(resolved_ty.cmd, manifest.activation.resolved_ty_cmd, "resolved Ty command drifted")
+	assert_equal(resolved_ty.filetypes, manifest.activation.resolved_ty_filetypes, "resolved Ty filetypes drifted")
 
 	local automatic_enable = require("mason-lspconfig.settings").current.automatic_enable
 	if type(automatic_enable) ~= "table" or type(automatic_enable.exclude) ~= "table" then
 		fail("effective mason-lspconfig automatic_enable policy is not an exclusion list")
 	end
 	local automatic_exclude = sorted(vim.deepcopy(automatic_enable.exclude))
-	assert_equal(
-		contains(automatic_exclude, "ty"),
-		mode == "ty-excluded",
-		"Ty automatic-enable exclusion does not match the test topology"
-	)
+	for _, name in ipairs({ "pyright", "ruff", "ty" }) do
+		assert_equal(
+			contains(automatic_exclude, name),
+			expected.automatic_enable_excluded[name],
+			"automatic-enable exclusion drifted: " .. name
+		)
+	end
 
 	local enable_trace = {}
 	for _, call in ipairs(_G.DX_M2C_ENABLE_TRACE) do
@@ -322,17 +329,14 @@ local function main()
 		trace_by_name[call.name] = trace_by_name[call.name] or {}
 		trace_by_name[call.name][#trace_by_name[call.name] + 1] = call
 	end
-	for _, name in ipairs({ "pyright", "ruff" }) do
-		assert_equal(#(trace_by_name[name] or {}), 1, name .. " must be enabled exactly once")
-	end
-	if mode == "production" then
-		assert_equal(#(trace_by_name.ty or {}), 1, "Ty must be enabled exactly once in production startup")
-		local ty_call = trace_by_name.ty[1]
-		if not ty_call.source:match("mason%-lspconfig%.nvim/lua/mason%-lspconfig/features/automatic_enable%.lua$") then
-			fail("Ty was not enabled by mason-lspconfig automatic_enable: " .. ty_call.source)
+	for _, name in ipairs({ "pyright", "ruff", "ty" }) do
+		local calls = trace_by_name[name] or {}
+		assert_equal(#calls, expected.enable_calls[name], name .. " enable-call count drifted")
+		for _, call in ipairs(calls) do
+			if not call.source:match("mason%-lspconfig%.nvim/lua/mason%-lspconfig/features/automatic_enable%.lua$") then
+				fail(name .. " was not enabled by mason-lspconfig automatic_enable: " .. call.source)
+			end
 		end
-	else
-		assert_equal(#(trace_by_name.ty or {}), 0, "test-only exclusion must prevent the Ty enable call")
 	end
 
 	local native_enabled = {}
@@ -396,62 +400,68 @@ local function main()
 	end
 	semantic_producers = sorted(semantic_producers)
 	assert_equal(semantic_producers, expected.semantic_producers, "semantic-token producer topology drifted")
+	assert_equal(client_reports.pyright, { attached = false }, "Pyright must remain unattached")
 
-	local probe_report = { producer = "none", neovim_tokens = {}, applied_groups = {}, foregrounds = {} }
-	local row, column = locate_probe(bufnr, manifest.semantic_probe)
-	if mode == "production" then
-		local ty = clients_by_name.ty
-		vim.lsp.semantic_tokens.force_refresh(bufnr)
-		local raw = raw_at_position(request_raw_tokens(bufnr, ty), row, column)
-		local expected_token = {
-			client_id = ty.id,
-			provider = manifest.semantic_probe.provider,
-			type = manifest.semantic_probe.type,
-			modifiers = manifest.semantic_probe.modifiers,
-		}
-		assert_equal(raw, { expected_token }, "raw Ty semantic-token provenance drifted")
-		local decoded
-		local decoded_ready = vim.wait(15000, function()
-			decoded = neovim_at_position(bufnr, row, column, clients_by_id)
-			return #decoded > 0
-		end, 100)
-		if not decoded_ready then
-			fail("Neovim did not apply Ty's semantic token")
+	local capability_owners = {}
+	for capability in pairs(manifest.primary_capability_owners) do
+		local owners = {}
+		for name, client in pairs(client_reports) do
+			if client.attached and client.capabilities[capability] then
+				owners[#owners + 1] = name
+			end
 		end
-		assert_equal(decoded, raw, "Neovim client-ID-bound Ty token differs from the raw response")
-		local groups, foregrounds = semantic_application(bufnr, row, column)
-		assert_equal(groups, manifest.semantic_probe.applied_groups, "Neovim-applied Ty semantic groups drifted")
-		assert_equal(foregrounds, manifest.semantic_probe.foregrounds, "Ty foreground authority drifted")
-		probe_report = {
-			producer = "ty",
-			raw_token = expected_token,
-			neovim_tokens = decoded,
-			applied_groups = groups,
-			foregrounds = foregrounds,
-		}
-	else
-		local decoded = neovim_at_position(bufnr, row, column, clients_by_id)
-		assert_equal(decoded, {}, "Ty-excluded control must not apply semantic tokens")
-		local inspected = vim.inspect_pos(bufnr, row, column)
-		assert_equal(inspected.semantic_tokens or {}, {}, "Ty-excluded control has semantic extmarks")
+		capability_owners[capability] = sorted(owners)
 	end
+	assert_equal(
+		capability_owners,
+		manifest.primary_capability_owners,
+		"primary interactive capability ownership drifted"
+	)
+
+	local probe_report
+	local row, column = locate_probe(bufnr, manifest.semantic_probe)
+	local ty = clients_by_name.ty
+	vim.lsp.semantic_tokens.force_refresh(bufnr)
+	local raw = raw_at_position(request_raw_tokens(bufnr, ty), row, column)
+	local expected_token = {
+		client_id = ty.id,
+		provider = manifest.semantic_probe.provider,
+		type = manifest.semantic_probe.type,
+		modifiers = manifest.semantic_probe.modifiers,
+	}
+	assert_equal(raw, { expected_token }, "raw Ty semantic-token provenance drifted")
+	local decoded
+	local decoded_ready = vim.wait(15000, function()
+		decoded = neovim_at_position(bufnr, row, column, clients_by_id)
+		return #decoded > 0
+	end, 100)
+	if not decoded_ready then
+		fail("Neovim did not apply Ty's semantic token")
+	end
+	assert_equal(decoded, raw, "Neovim client-ID-bound Ty token differs from the raw response")
+	local groups, foregrounds = semantic_application(bufnr, row, column)
+	assert_equal(groups, manifest.semantic_probe.applied_groups, "Neovim-applied Ty semantic groups drifted")
+	assert_equal(foregrounds, manifest.semantic_probe.foregrounds, "Ty foreground authority drifted")
+	probe_report = {
+		producer = "ty",
+		raw_token = expected_token,
+		neovim_tokens = decoded,
+		applied_groups = groups,
+		foregrounds = foregrounds,
+	}
 
 	local report = {
 		milestone = manifest.milestone,
-		mode = mode,
+		mode = "production",
 		lazy_server_state = lazy_state,
-		mason = {
-			installed = true,
-			receipt_name = receipt.name,
-			binary = ty_binary,
-			package_to_lspconfig = mappings.package_to_lspconfig.ty,
-		},
+		packages = package_reports,
 		resolved_config = { cmd = resolved_ty.cmd, filetypes = resolved_ty.filetypes },
 		automatic_enable = { exclude = automatic_exclude },
 		enable_trace = enable_trace,
 		native_enabled = native_enabled,
 		attached = sorted(vim.tbl_keys(clients_by_name)),
 		clients = client_reports,
+		capability_owners = capability_owners,
 		semantic_producers = semantic_producers,
 		semantic_probe = probe_report,
 		decision = manifest.decision,
@@ -461,8 +471,7 @@ local function main()
 	for _, name in ipairs(report.attached) do
 		local client = report.clients[name]
 		io.stdout:write(
-			("[M2C CLIENT] mode=%s name=%s id=%d semantic=%s completion=%s hover=%s definition=%s references=%s rename=%s code_action=%s\n"):format(
-				mode,
+			("[M2C-B CLIENT] name=%s id=%d semantic=%s completion=%s hover=%s definition=%s references=%s rename=%s code_action=%s\n"):format(
 				name,
 				client.id,
 				tostring(client.capabilities.semantic_tokens),
@@ -477,8 +486,7 @@ local function main()
 	end
 	for _, call in ipairs(enable_trace) do
 		io.stdout:write(
-			("[M2C ENABLE] mode=%s name=%s enabled=%s source=%s:%d\n"):format(
-				mode,
+			("[M2C-B ENABLE] name=%s enabled=%s source=%s:%d\n"):format(
 				call.name,
 				tostring(call.enabled),
 				call.source,
@@ -487,31 +495,34 @@ local function main()
 		)
 	end
 	io.stdout:write(
-		("[M2C PROVENANCE] mode=%s installed=true mapping=ty enabled=%s attached=%s semantic=%s\n"):format(
-			mode,
-			tostring(native_enabled.ty),
-			tostring(clients_by_name.ty ~= nil),
-			table.concat(semantic_producers, ",")
+		("[M2C-B OWNERSHIP] installed=pyright,ruff,ty enabled=ruff,ty attached=%s semantic=%s pyright_enable_calls=%d\n"):format(
+			table.concat(report.attached, ","),
+			table.concat(semantic_producers, ","),
+			#(trace_by_name.pyright or {})
 		)
 	)
-	if mode == "production" then
-		local raw = probe_report.raw_token
-		local foreground = probe_report.foregrounds[1]
-		io.stdout:write(
-			("[M2C SEMANTIC] raw=%s#%d:%s[%s] neovim=client#%d groups=%d foreground=%s@%d->%s\n"):format(
-				raw.provider,
-				raw.client_id,
-				raw.type,
-				table.concat(raw.modifiers, ","),
-				probe_report.neovim_tokens[1].client_id,
-				#probe_report.applied_groups,
-				foreground.group,
-				foreground.priority,
-				foreground.role
-			)
+	io.stdout:write(
+		("[M2C-B PROVENANCE] provider=ty enabled=%s attached=%s raw=true neovim_client_bound=true\n"):format(
+			tostring(native_enabled.ty),
+			tostring(clients_by_name.ty ~= nil)
 		)
-	end
-	io.stdout:write(("M2C-A Python provider ownership evidence passed (%s).\n"):format(mode))
+	)
+	local semantic_raw = probe_report.raw_token
+	local foreground = probe_report.foregrounds[1]
+	io.stdout:write(
+		("[M2C-B SEMANTIC] raw=%s#%d:%s[%s] neovim=client#%d groups=%d foreground=%s@%d->%s\n"):format(
+			semantic_raw.provider,
+			semantic_raw.client_id,
+			semantic_raw.type,
+			table.concat(semantic_raw.modifiers, ","),
+			probe_report.neovim_tokens[1].client_id,
+			#probe_report.applied_groups,
+			foreground.group,
+			foreground.priority,
+			foreground.role
+		)
+	)
+	io.stdout:write("M2C-B explicit Python provider ownership passed.\n")
 	io.stdout:flush()
 
 	local attached_clients = vim.lsp.get_clients({ bufnr = bufnr })

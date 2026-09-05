@@ -47,8 +47,8 @@ return {
   {
     "folke/noice.nvim",
     opts = {
-      -- Pyright emits frequent progress completions while editing. Diagnostics,
-      -- completion, hover and signature help remain enabled without this noise.
+      -- Language servers can emit frequent progress completions while editing.
+      -- Diagnostics, completion, hover and signature help remain enabled.
       lsp = { progress = { enabled = false } },
     },
   },

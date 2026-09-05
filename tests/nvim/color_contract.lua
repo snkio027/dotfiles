@@ -804,8 +804,10 @@ local function main()
 			end
 		end
 		local check_list = (#protocol_sentinels > 0) and protocol_sentinels or sentinels
+		local require_every_sentinel = #protocol_sentinels > 0
 
 		local tokens_ready = vim.wait(15000, function()
+			local matched = 0
 			for _, s in ipairs(check_list) do
 				local r, c = locate_symbolic_sentinel(bufnr, s.tag, s.token, lang)
 				local raw_toks = vim.lsp.semantic_tokens.get_at_pos(bufnr, r, c)
@@ -816,11 +818,17 @@ local function main()
 						break
 					end
 				end
-				if not found then
+				if found then
+					matched = matched + 1
+				elseif require_every_sentinel then
 					return false
 				end
 			end
-			return true
+			-- Protocol sentinels are exact per-position contracts. Languages whose
+			-- visual sentinels are Tree-sitter-owned only need to prove that the
+			-- selected semantic provider populated this buffer; not every syntax
+			-- landmark (for example a regexp body) has an LSP token.
+			return require_every_sentinel or matched > 0
 		end, 100)
 
 		assert(

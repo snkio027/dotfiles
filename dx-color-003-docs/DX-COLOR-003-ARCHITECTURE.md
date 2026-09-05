@@ -125,7 +125,7 @@ Examples:
 C/C++   -> clangd
 Zig     -> ZLS
 Rust    -> rust-analyzer
-Python  -> Pyright
+Python  -> Ty + Ruff companion
 ```
 
 Language servers are **semantic evidence producers**.

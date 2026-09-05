@@ -1,4 +1,4 @@
---- M2C-A pre-init trace for native LSP activation provenance.
+--- M2C-B pre-init trace for explicit native LSP activation ownership.
 --- This file is loaded with --cmd before the production init.lua executes.
 
 if _G.DX_M2C_ENABLE_TRACE ~= nil then
