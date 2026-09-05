@@ -16,7 +16,8 @@ The current DX-COLOR-002 implementation successfully established:
 - `LspForegroundPassthrough`;
 - Tier-1 / Tier-2 runtime verification.
 
-The remaining architectural debt is that one `mappings.lua` currently contains several different responsibilities:
+At the M0 baseline, one `mappings.lua` contained several different
+responsibilities:
 
 ```text
 Tree-sitter base bindings
@@ -31,9 +32,11 @@ completion
 git/diff integration
 ```
 
-This makes provider dialects and universal semantics too easy to mix.
+This made provider dialects and universal semantics too easy to mix.
 
-DX-COLOR-003 extracts a stable internal domain and treats Tree-sitter grammars and language servers as external evidence producers.
+M1 extracted a stable internal domain and now treats Tree-sitter grammars and
+language servers as external evidence producers. That architecture is frozen;
+M3 changes only visual projection.
 
 ---
 
@@ -381,7 +384,7 @@ home/dot_config/nvim/lua/theme/
 │
 ├── visual/
 │   ├── c3_1.lua
-│   └── c4_airy.lua
+│   └── c4.lua
 │
 ├── bindings/
 │   ├── treesitter.lua
@@ -471,7 +474,7 @@ M1 requirement:
 
 ---
 
-### 6.4 `visual/c4_airy.lua`
+### 6.4 `visual/c4.lua`
 
 Purpose:
 
@@ -793,37 +796,36 @@ M1 MUST preserve this closure exactly.
 
 ---
 
-## 8. Candidate role admission: module/non-local binding
+## 8. Frozen M2 decision: module/non-local binding
 
-TokyoNight/ZLS evidence shows that `variable + static` can carry useful scope/storage information.
+The original architecture identified module/non-local binding as a candidate
+Domain concept. M2 then collected cross-language runtime evidence for it.
 
-DX-COLOR-003 does **not** automatically approve `DxStaticVariable`.
-
-The candidate semantic concept is:
-
-> A value binding whose program scope/storage is non-local to the current function/block and belongs to a module, namespace, type, or persistent/static storage domain.
-
-Working candidate name:
+Historical candidate name:
 
 ```text
 DxModuleBinding
 ```
 
-This role is **not part of M1**.
+Historical candidate definition:
 
-Before admission, M2 must collect evidence for representative cases in:
+> A value binding whose program scope/storage is non-local to the current
+> function/block and belongs to a module, namespace, type, or persistent/static
+> storage domain.
+
+M2 found real binding-topology evidence but no stable cross-language role or
+independent visual value. Its final decision is:
 
 ```text
-Zig
-C
-C++
-Rust
-Python where provider evidence exists
+DEFERRED / FROZEN
 ```
 
-The role may be introduced even if only one adapter initially binds to it, but its semantic definition must remain language/provider independent.
+The candidate demonstrates that a provider-independent definition is necessary
+but not sufficient for Domain admission. M3 must not admit the role, reserve
+palette capacity for it, or reopen its classification. Reopening requires new
+evidence and a separately governed M2 regression/decision process.
 
-Never define the role as:
+The rejected provider-vocabulary definition remains:
 
 > “a variable with the LSP `static` modifier”.
 

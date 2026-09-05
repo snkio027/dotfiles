@@ -271,7 +271,7 @@ Suggested structure:
 ```text
 tests/nvim/visual_contracts/
   c3_1.lua
-  c4_airy.lua
+  c4.lua
 ```
 
 Shared contracts remain in the core unit test.
@@ -294,7 +294,9 @@ Apply to all profiles:
 
 ## 14. C4-specific contracts
 
-Use the values from the C4 visual specification.
+Use the relationships and thresholds from the normative M3-A C4 visual
+contract. Candidate values from the older C4 visual specification are test
+inputs only after M3-B selects them; they are not the source of visual policy.
 
 Required invariants:
 
@@ -364,7 +366,7 @@ Do not add a fragile injection fixture solely to satisfy symmetry.
 
 ## 17. Binding-topology evidence matrix
 
-M2 should extend the manifest with scope/binding cases.
+M2 extended the manifest with scope/binding cases.
 
 The goal is evidence, not a predetermined new role.
 
@@ -382,7 +384,15 @@ current effective role
 proposed domain meaning, if any
 ```
 
-The result should support or reject `DxModuleBinding`.
+The evidence established that binding topology is real but did not support a
+stable cross-language role or independent visual value. The final decision is:
+
+```text
+DxModuleBinding = DEFERRED / FROZEN
+```
+
+M3 must not reopen this decision. New evidence requires a separately governed
+M2 regression/decision process.
 
 ---
 
