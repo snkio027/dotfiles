@@ -84,6 +84,10 @@ assert_container_state() {
             "+luafile tests/nvim/smoke.lua" +qa
         DOTFILES_STRICT_LSP=1 nvim -n --headless "+luafile tests/nvim/color_contract.lua" +qa
         nvim -n --headless "+luafile tests/nvim/binding_evidence.lua" +qa
+        nvim -u NONE -i NONE --headless "+set rtp^=$PWD/home/dot_config/nvim" \
+            "+luafile tests/nvim/run_contract.lua" "tests/nvim/python_provider_ownership_contract.lua"
+        DOTFILES_M2C_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}" \
+            bash tests/nvim/python_provider_ownership.sh
         bash tests/nvim/color/validate_fixtures.sh
     ) >"$nvim_log" 2>&1 || {
         cat "$nvim_log" >&2
@@ -104,6 +108,22 @@ assert_container_state() {
     grep -Fq "M2B-B static-data-member behavior correction passed: 13/13 cases; decision: RECLASSIFY STATIC DATA MEMBER TO DxMember" "$nvim_log" || {
         cat "$nvim_log" >&2
         fail "M2B-B static-data-member behavior correction did not complete"
+    }
+    grep -Fq "M2C-A Python provider ownership evidence passed (production)." "$nvim_log" || {
+        cat "$nvim_log" >&2
+        fail "M2C-A production provider-ownership evidence did not complete"
+    }
+    grep -Fq "M2C-A Python provider ownership evidence passed (ty-excluded)." "$nvim_log" || {
+        cat "$nvim_log" >&2
+        fail "M2C-A Ty-excluded provider-ownership evidence did not complete"
+    }
+    grep -Fq "M2C-A Ty exclusion changed only Ty activation; Pyright and Ruff topology remained stable." "$nvim_log" || {
+        cat "$nvim_log" >&2
+        fail "M2C-A provider-ownership comparison did not complete"
+    }
+    grep -Fq "M2C-A decision: ADOPT TY AS INTERACTIVE SEMANTIC PROVIDER" "$nvim_log" || {
+        cat "$nvim_log" >&2
+        fail "M2C-A provider-ownership decision did not complete"
     }
     if grep -Eqi 'Package is already installing|^Installing tools:|^Updating tools:|MasonToolsUpdate' "$nvim_log"; then
         cat "$nvim_log" >&2
