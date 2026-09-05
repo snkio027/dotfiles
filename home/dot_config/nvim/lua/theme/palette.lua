@@ -1,4 +1,4 @@
---- DX Semantic Color System (DX-COLOR-002)
+--- DX Semantic Color System (DX-COLOR-003)
 --- Palette Definition: Decouples Source Semantic Colors from State and UI Colors.
 --- Single Source of Truth for all Source Semantic Hex Literals.
 
