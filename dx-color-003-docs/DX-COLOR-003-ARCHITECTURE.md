@@ -1,14 +1,14 @@
 # DX-COLOR-003 — Semantic Highlighting Architecture
 
 - **Document ID:** DX-COLOR-003-ARCH
-- **Status:** Normative Development Specification
-- **Baseline:** `19f0570ee33025832ff1d1d49269d303677d9c0f`
+- **Status:** Normative Production Specification / M5
+- **Initial baseline:** `19f0570ee33025832ff1d1d49269d303677d9c0f`
 
 ---
 
 ## 1. Problem statement
 
-The current DX-COLOR-002 implementation successfully established:
+The historical DX-COLOR-002 baseline established:
 
 - a 23-role semantic model;
 - Tree-sitter and LSP mappings;
@@ -366,11 +366,11 @@ If no, do not admit it.
 
 Adapters never choose colors.
 
-Visual profiles never interpret LSP semantics.
+The visual projection never interprets LSP semantics.
 
 ---
 
-## 5. Target module structure
+## 5. Current production module structure
 
 The target is intentionally modular but not framework-heavy.
 
@@ -383,7 +383,6 @@ home/dot_config/nvim/lua/theme/
 ├── authority.lua
 │
 ├── visual/
-│   ├── c3_1.lua
 │   └── c4.lua
 │
 ├── bindings/
@@ -456,29 +455,26 @@ Purpose:
 - hold custom raw source HEX values where named host colors are insufficient;
 - expose state/UI colors.
 
+M5 production ownership:
+
+```text
+palette.code            accepted C4.4 source-semantic colors
+palette.ui.normal_bg    accepted C4.4 canvas
+```
+
+There is no runtime profile palette or C3.1 production palette.
+
 Raw source HEX MUST live only here or in a single explicitly designated visual-palette source.
 
 No external binding knowledge is allowed.
 
 ---
 
-### 6.3 `visual/c3_1.lua`
+### 6.3 `visual/c4.lua`
 
 Purpose:
 
-- preserve the exact current C3.1 role rendering during architecture extraction.
-
-M1 requirement:
-
-> The C3.1 visual output must remain behaviorally equivalent to the baseline.
-
----
-
-### 6.4 `visual/c4.lua`
-
-Purpose:
-
-- opt-in C4 visual projection;
+- sole production C4.4 visual projection;
 - maps `Dx*` roles to visual attributes.
 
 It does not know:
@@ -492,18 +488,19 @@ Example shape:
 ```lua
 function M.roles(p)
   return {
-    DxVariable = { fg = p.ui.text },
-    DxType = { fg = p.code.c4_type },
+    DxVariable = { fg = p.code.variable },
+    DxType = { fg = p.code.type },
     -- ...
   }
 end
 ```
 
-C4 is not default until human visual acceptance.
+C3.1 remains historical evidence only. It has no executable module, palette,
+selector, default, opt-out, or rollback path after M5.
 
 ---
 
-### 6.5 `bindings/treesitter.lua`
+### 6.4 `bindings/treesitter.lua`
 
 Purpose:
 
@@ -525,7 +522,7 @@ It MUST remain provider-independent.
 
 ---
 
-### 6.6 `bindings/lsp.lua`
+### 6.5 `bindings/lsp.lua`
 
 Purpose:
 
@@ -545,7 +542,7 @@ Only distinctions that are safe at the generic LSP level belong here.
 
 ---
 
-### 6.7 `adapters/zls.lua`
+### 6.6 `adapters/zls.lua`
 
 Purpose:
 
@@ -574,7 +571,7 @@ If simultaneous competing semantic-token providers are introduced in the future,
 
 ---
 
-### 6.8 `adapters/clangd.lua`
+### 6.7 `adapters/clangd.lua`
 
 Purpose:
 
@@ -596,7 +593,7 @@ Do not globally suppress all clangd semantic tokens.
 
 ---
 
-### 6.9 `adapters/rust_analyzer.lua`
+### 6.8 `adapters/rust_analyzer.lua`
 
 Purpose:
 
@@ -614,7 +611,7 @@ Rust lifetime Tree-sitter extension remains source evidence and must stay indepe
 
 ---
 
-### 6.10 `adapters/pyright.lua`
+### 6.9 `adapters/pyright.lua`
 
 Purpose:
 
@@ -624,7 +621,7 @@ Do not invent semantic-token rules for capabilities Pyright does not expose in t
 
 ---
 
-### 6.11 `authority.lua`
+### 6.10 `authority.lua`
 
 Purpose:
 
@@ -652,7 +649,7 @@ Keep it simple. Do not build a runtime arbitration engine.
 
 ---
 
-### 6.12 `bindings/ui.lua` and `bindings/plugins.lua`
+### 6.11 `bindings/ui.lua` and `bindings/plugins.lua`
 
 These isolate non-source concerns from semantic source mappings.
 
@@ -675,7 +672,7 @@ Source semantic adapters must not contain UI chrome.
 
 ---
 
-### 6.13 `compose.lua`
+### 6.12 `compose.lua`
 
 Purpose:
 
@@ -703,7 +700,7 @@ The composition order must be documented and tested.
 
 ---
 
-### 6.14 `init.lua`
+### 6.13 `init.lua`
 
 Assembly only.
 
@@ -711,7 +708,7 @@ Target responsibility:
 
 ```text
 resolve host palette
-select visual profile
+load the sole production visual projection
 compose highlight graph
 return final table
 ```
@@ -900,15 +897,17 @@ DX-COLOR-003 MUST NOT:
 
 ## 12. Architecture Definition of Done
 
-Architecture extraction is complete only when:
+The current M5 architecture is complete only when:
 
 - `mappings.lua` responsibilities have been separated;
-- current C3.1 visual behavior is unchanged;
+- `theme.highlights()` composes the sole C4.4 visual directly;
+- the C3.1 module, palette, selector, and runtime fixtures are absent;
 - 23-role closure remains unchanged;
 - all current sentinels pass;
 - provider-specific rules are isolated;
 - raw source HEX remains centralized;
 - no speculative provider mappings exist;
+- historical M1 through M4 graph provenance remains executable in tests;
 - full CI is green;
 - a diff review can explain every override by responsibility layer.
 
@@ -918,7 +917,7 @@ Architecture extraction is complete only when:
 
 These references are research inputs, not runtime dependencies.
 
-### Current repository baseline
+### Historical M0 repository baseline
 
 ```text
 snkio027/dotfiles
@@ -933,6 +932,28 @@ snkio027/dotfiles
 
   tests/nvim/color_manifest.lua
   tests/nvim/color_unit_contract.lua
+  tests/nvim/color_contract.lua
+```
+
+### Current M5 production baseline
+
+```text
+snkio027/dotfiles
+  M5 base commit:
+    65b61ee03bef0bc0bb8bee945d1bbc32a6a829b5
+
+  theme/init.lua
+    direct single-visual composition
+
+  theme/palette.lua
+    palette.code = accepted C4.4
+    palette.ui.normal_bg = #1A1B2A
+
+  theme/visual/c4.lua
+    sole production role projection
+
+  tests/nvim/color_unit_contract.lua
+  tests/nvim/production_visual_runtime.lua
   tests/nvim/color_contract.lua
 ```
 

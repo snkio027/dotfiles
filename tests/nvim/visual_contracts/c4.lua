@@ -1,4 +1,4 @@
---- DX-COLOR-003 M4 profile-aware contract for C4.4 High-Chroma Night.
+--- DX-COLOR-003 M5 production contract for C4.4 High-Chroma Night.
 
 local M = {}
 
@@ -103,9 +103,9 @@ local state_roles = {
 	DxHint = "hint",
 }
 
-local changed_tokens = {}
-for token in pairs(role_tokens) do
-	changed_tokens[role_tokens[token]] = true
+local governed_tokens = {}
+for _, token in pairs(role_tokens) do
+	governed_tokens[token] = true
 end
 
 local must_separate = {
@@ -185,43 +185,30 @@ function M.verify(context)
 	local graph = context.graph
 	local domain = context.domain
 	local host_colors = context.host_colors
-	local code = palette.code_profiles and palette.code_profiles.c4
+	local code = palette.code
 
 	if type(code) ~= "table" then
-		fail("palette.code_profiles.c4 is missing")
+		fail("production palette.code is missing")
 	end
 
-	assert_eq(vim.tbl_count(code), vim.tbl_count(palette.code), "C4 palette token closure changed")
-	local observed_changed = {}
-	for name, c3_value in pairs(palette.code) do
-		local c4_value = code[name]
-		if type(c4_value) ~= "string" then
-			fail("C4 palette is missing token: " .. name)
-		end
-		if c4_value:lower() ~= c3_value:lower() then
-			observed_changed[name] = true
+	assert_eq(vim.tbl_count(code), vim.tbl_count(governed_tokens), "C4.4 production palette token closure changed")
+	for name in pairs(governed_tokens) do
+		if type(code[name]) ~= "string" then
+			fail("C4.4 production palette is missing token: " .. name)
 		end
 	end
 	for name in pairs(code) do
-		if palette.code[name] == nil then
-			fail("C4 palette defines an unknown source token: " .. name)
+		if not governed_tokens[name] then
+			fail("C4.4 production palette defines an unknown source token: " .. name)
 		end
-	end
-	if not vim.deep_equal(observed_changed, changed_tokens) then
-		fail(
-			("C4.4 must change exactly the 19 governed visual tokens (expected %s, got %s)"):format(
-				vim.inspect(changed_tokens),
-				vim.inspect(observed_changed)
-			)
-		)
 	end
 
 	for role, token in pairs(role_tokens) do
 		if not domain.roles[role] then
-			fail("C4 profile references a role outside the Domain: " .. role)
+			fail("C4.4 production visual references a role outside the Domain: " .. role)
 		end
 		if not roles[role] then
-			fail("C4 profile is missing role: " .. role)
+			fail("C4.4 production visual is missing role: " .. role)
 		end
 		assert_hex_eq(roles[role].fg, code[token], ("C4 role %s does not use palette token %s"):format(role, token))
 	end
@@ -334,19 +321,19 @@ function M.verify_negative_controls(context)
 		{
 			name = "bad_primary_body",
 			mutate = function(palette)
-				palette.code_profiles.c4.variable = palette.code_profiles.c4.comment
+				palette.code.variable = palette.code.comment
 			end,
 		},
 		{
 			name = "bad_comment",
 			mutate = function(palette)
-				palette.code_profiles.c4.comment = palette.code_profiles.c4.variable
+				palette.code.comment = palette.code.variable
 			end,
 		},
 		{
 			name = "bad_comment_floor",
 			mutate = function(palette)
-				palette.code_profiles.c4.comment = palette.ui.overlay0
+				palette.code.comment = palette.ui.overlay0
 			end,
 		},
 		{
@@ -358,31 +345,31 @@ function M.verify_negative_controls(context)
 		{
 			name = "bad_must_pair",
 			mutate = function(palette)
-				palette.code_profiles.c4.keyword_function = palette.code_profiles.c4.keyword
+				palette.code.keyword_function = palette.code.keyword
 			end,
 		},
 		{
 			name = "bad_should_pair",
 			mutate = function(palette)
-				palette.code_profiles.c4.lifetime = palette.code_profiles.c4.type
+				palette.code.lifetime = palette.code.type
 			end,
 		},
 		{
 			name = "bad_intentional_near",
 			mutate = function(palette)
-				palette.code_profiles.c4.parameter = palette.code_profiles.c4.callable
+				palette.code.parameter = palette.code.callable
 			end,
 		},
 		{
 			name = "bad_source_state",
 			mutate = function(palette)
-				palette.code_profiles.c4.member = palette.state.error
+				palette.code.member = palette.state.error
 			end,
 		},
 		{
 			name = "bad_operator_state",
 			mutate = function(palette)
-				palette.code_profiles.c4.operator = palette.state.warn
+				palette.code.operator = palette.state.warn
 			end,
 		},
 	}

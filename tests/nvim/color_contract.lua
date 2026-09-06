@@ -82,6 +82,7 @@ local function main()
 
 		-- UI Chrome
 		base = hex_to_rgb(p.ui.base),
+		normal_bg = hex_to_rgb(p.ui.normal_bg),
 		mantle = hex_to_rgb(p.ui.mantle),
 		surface0 = hex_to_rgb(p.ui.surface0),
 		surface1 = hex_to_rgb(p.ui.surface1),
@@ -95,12 +96,14 @@ local function main()
 		return vim.api.nvim_get_hl(0, { name = hl_name, link = false })
 	end
 
-	-- Verify production theme is truly using Mocha base palette
+	-- Verify the production theme uses the canvas owned by theme.palette.
+	-- Catppuccin Mocha remains the host theme, while C4.4 intentionally owns
+	-- a dedicated Normal background.
 	local normal = get_resolved_hl("Normal")
-	if normal.bg ~= colors_rgb.base then
+	if normal.bg ~= colors_rgb.normal_bg then
 		fail(
-			("Production theme is not using Catppuccin Mocha base (expected %06x, got %s)"):format(
-				colors_rgb.base,
+			("Production theme is not using the governed Normal background (expected %06x, got %s)"):format(
+				colors_rgb.normal_bg,
 				normal.bg and ("%06x"):format(normal.bg) or "nil"
 			)
 		)

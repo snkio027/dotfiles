@@ -221,7 +221,7 @@ Adding a new `Dx*` role requires:
 
 1. domain description independent of provider vocabulary;
 2. role registry update;
-3. visual definition in every active visual profile;
+3. visual definition in the production visual projection;
 4. at least one real fixture binding;
 5. closure test update;
 6. no collision with unrelated roles;
@@ -260,31 +260,35 @@ This should catch “refactor accidentally changed color” failures.
 
 ---
 
-## 12. Profile-aware visual contracts
+## 12. Production visual contract
 
-C3.1 and C4 have different visual principles.
+M5 has one executable production visual: C4.4 High-Chroma Night. The runtime
+contract must not reconstruct a profile selector or retain a C3.1 rollback
+module.
 
-Do not force one profile's mathematical assumptions onto the other.
-
-Suggested structure:
+Current structure:
 
 ```text
 tests/nvim/visual_contracts/
-  c3_1.lua
   c4.lua
 ```
 
-Shared contracts remain in the core unit test.
+The core unit test freezes the current production graph independently and
+reconstructs historical C4.3, C4.0, M2B, and M1 graph digests from explicit
+authorized deltas. Historical reconstruction is evidence provenance, not an
+executable runtime profile.
 
 ---
 
 ## 13. Shared visual contracts
 
-Apply to all profiles:
+Apply to the production visual:
 
 - source/state separation;
 - error/warn semantic uniqueness where intentionally reserved;
-- no green-dominant normal source role;
+- green dominance is allowed only for the governed builtin and string axes;
+- body readability and critical distinctions must not depend only on hue;
+- no critical source/state distinction may rely only on red versus green;
 - state success uses sky/cyan rather than green;
 - diagnostic Error/Warn have non-color undercurl cues;
 - function keyword and ordinary keyword are distinct roles;
@@ -292,37 +296,64 @@ Apply to all profiles:
 
 ---
 
-## 14. C4-specific contracts
+## 14. C4.4 production contracts
 
-Use the relationships and thresholds from the normative M3-A C4 visual
-contract. Candidate values from the older C4 visual specification are test
-inputs only after M3-B selects them; they are not the source of visual policy.
+The frozen C4.4 evidence record and executable
+`tests/nvim/visual_contracts/c4.lua` govern the production visual. The original
+M3-A contract remains a historical design baseline; its initial C4.0 contrast
+and no-green hypotheses were explicitly superseded by M4 human evidence.
 
 Required invariants:
 
 ```text
-DxVariable >= 9.0 contrast against resolved Normal.bg
+resolved Normal.bg == #1A1B2A
+DxVariable >= 10.0 contrast against resolved Normal.bg
 
-DxComment <= 3.8
-DxDocComment > DxComment
+DxComment      within 4.1–4.6
+DxDocComment   within 6.0–6.5
+DxComment < DxDocComment < DxVariable
 
-DxType >= 7.5
-DxType > DxBuiltin
-type/builtin gap >= 1.5
+DxType         within 7.8–8.4
+DxBuiltin      within 9.0–9.6
+Type/Builtin   OKLab distance >= 0.17
 
-DxKeyword != DxFunctionKeyword
-DxFunctionKeyword != DxCallable
-DxKeyword != DxCallable
+Builtin and String are green-dominant
+No other normal source role is green-dominant
 
-DxOperator may exceed DxVariable
+DxOperator >= 10.8
 DxOperator must not use state error/warn
 
 DxComment < DxPunctuation < DxVariable
 ```
 
+The pairing contract is relational rather than mere HEX inequality:
+
+```text
+MUST-SEPARATE
+  Keyword / FunctionKeyword       >= 0.14 OKLab
+  FunctionKeyword / Namespace     >= 0.12 OKLab
+  Namespace / Type                >= 0.11 OKLab
+  Type / Builtin                  >= 0.17 OKLab
+  Variable / Member               >= 0.12 OKLab
+  Variable / String               >= 0.14 OKLab
+  Callable / Constant             >= 0.04 OKLab
+  Callable / Number               >= 0.065 OKLab
+  normal source / Error state     >= 0.035 OKLab
+
+SHOULD-SEPARATE
+  Builtin / String                >= 0.035 OKLab
+  Number / Constant               >= 0.11 OKLab
+  Meta / Keyword                  >= 0.10 OKLab
+  Type / Lifetime                 >= 0.07 OKLab
+
+INTENTIONAL-NEAR
+  Variable / Parameter            0.02–0.10 OKLab
+  Comment / Punctuation           0.02–0.06 OKLab
+```
+
 Do not call these universal accessibility requirements.
 
-They are profile-specific visual-design contracts.
+They are C4.4 production-visual design contracts.
 
 ---
 
@@ -332,7 +363,7 @@ Tests should prove gates fail closed.
 
 Keep existing negative-control philosophy.
 
-Add C4 controls:
+Keep C4.4 controls for:
 
 ```text
 bad_primary_body:
@@ -343,8 +374,20 @@ bad_comment:
   comment made too bright
   -> fail
 
-bad_function_keyword:
-  function keyword equals keyword
+bad_comment_floor:
+  comment made too dim
+  -> fail
+
+bad_background:
+  production canvas replaced
+  -> fail
+
+bad_must_pair / bad_should_pair / bad_intentional_near:
+  pairing relationship violated
+  -> fail
+
+bad_source_state:
+  source role reuses error state
   -> fail
 
 bad_operator_state:
@@ -409,7 +452,7 @@ same font weight
 same viewport
 same file
 same editor UI settings
-only visual profile changes
+only candidate visual values change
 ```
 
 Capture at least:
@@ -419,6 +462,7 @@ Zig
 Rust
 C++23
 Python
+C
 ```
 
 Judge:
@@ -435,6 +479,20 @@ operator salience
 string comfort
 overall color density
 ```
+
+The default acceptance protocol uses both observation windows from the M3-A
+contract:
+
+```text
+First impression      10 minutes
+Sustained editing     30-60 minutes
+```
+
+A human owner may replace part of that protocol only through an explicit,
+reviewable waiver. The waiver must name every unperformed requirement, record
+the actual controlled evidence, identify the decision authority, give exactly
+one `PASS` / `PASS WITH CHANGES` / `REJECT` verdict, and state the limits of the
+result. CI or screenshots alone cannot imply such a waiver.
 
 ---
 
@@ -456,7 +514,8 @@ The verification system is complete when it can distinguish:
 wrong semantic role
 wrong authority
 wrong provider token assumption
-wrong visual profile mapping
+wrong production visual mapping
+unexpected retired compatibility surface
 wrong UI state
 ```
 

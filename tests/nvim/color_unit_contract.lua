@@ -1,6 +1,6 @@
 --- DX Semantic Color System (DX-COLOR-003)
 --- Tier-1 Unit Contract: standalone verification of the domain, composition graph,
---- visual profile, bindings, authority, and sentinel locators.
+--- production visual projection, bindings, authority, and sentinel locators.
 --- Runnable via:
 --- nvim -u NONE -i NONE --headless "+set rtp^=$PWD/home/dot_config/nvim" "+luafile tests/nvim/color_unit_contract.lua" +qa
 
@@ -60,13 +60,8 @@ if not ok_domain or type(domain.roles) ~= "table" then
 	fail("theme.domain module could not be loaded or missing role registry")
 end
 
-local ok_visual, c3_1 = pcall(require, "theme.visual.c3_1")
-if not ok_visual or type(c3_1.roles) ~= "function" then
-	fail("theme.visual.c3_1 module could not be loaded or missing roles()")
-end
-
-local ok_c4, c4 = pcall(require, "theme.visual.c4")
-if not ok_c4 or type(c4.roles) ~= "function" then
+local ok_visual, visual = pcall(require, "theme.visual.c4")
+if not ok_visual or type(visual.roles) ~= "function" then
 	fail("theme.visual.c4 module could not be loaded or missing roles()")
 end
 
@@ -76,62 +71,19 @@ if not ok_compose or type(compose.highlights) ~= "function" then
 end
 
 local ok_theme, theme = pcall(require, "theme")
-if
-	not ok_theme
-	or type(theme.highlights) ~= "function"
-	or type(theme.resolve_profile) ~= "function"
-	or type(theme.active_profile) ~= "function"
-then
-	fail("theme module could not be loaded or missing profile-selection entrypoints")
+if not ok_theme or type(theme.highlights) ~= "function" then
+	fail("theme module could not be loaded or missing highlights()")
 end
-
-local previous_profile = vim.g.dx_color_profile
-vim.g.dx_color_profile = nil
-local default_profile_name, default_visual = theme.active_profile()
-assert_eq(theme.default_profile, "c3_1", "M3-C default profile changed")
-assert_eq(default_profile_name, "c3_1", "unset M3-C selector must use C3.1")
-assert_eq(default_visual, c3_1, "unset M3-C selector resolved the wrong visual module")
+if theme.default_profile ~= nil or theme.resolve_profile ~= nil or theme.active_profile ~= nil then
+	fail("M5 retirement left a runtime profile-selection entrypoint")
+end
 
 local p = palette_mod.resolve(colors)
-local c4_p = palette_mod.resolve(colors, "c4")
-local roles = c3_1.roles(p)
-local c4_roles = c4.roles(c4_p)
+local roles = visual.roles(p)
 local full_hl = theme.highlights(colors)
-local c4_full_hl = compose.highlights(c4_p, c4)
-
-vim.g.dx_color_profile = "c3_1"
-local opt_out_name, opt_out_visual = theme.active_profile()
-assert_eq(opt_out_name, "c3_1", "explicit M3-C opt-out must select C3.1")
-assert_eq(opt_out_visual, c3_1, "explicit M3-C opt-out resolved the wrong visual module")
-assert(vim.deep_equal(theme.highlights(colors), full_hl), "explicit C3.1 opt-out changed the frozen graph")
-
-vim.g.dx_color_profile = "c4"
-local opt_in_name, opt_in_visual = theme.active_profile()
-assert_eq(opt_in_name, "c4", "explicit M3-C opt-in must select C4")
-assert_eq(opt_in_visual, c4, "explicit M3-C opt-in resolved the wrong visual module")
-assert(vim.deep_equal(theme.highlights(colors), c4_full_hl), "explicit C4 opt-in did not select the C4.0 graph")
-
-local invalid_profiles = {
-	{ label = "empty", value = "" },
-	{ label = "case-mismatched", value = "C4" },
-	{ label = "unknown", value = "unknown" },
-	{ label = "number", value = 42 },
-	{ label = "false", value = false },
-	{ label = "true", value = true },
-}
-for _, invalid in ipairs(invalid_profiles) do
-	local ok_invalid, invalid_error = pcall(theme.resolve_profile, invalid.value)
-	assert(
-		not ok_invalid,
-		("invalid M3-C profile %s (%s) must fail closed"):format(invalid.label, vim.inspect(invalid.value))
-	)
-	assert(
-		tostring(invalid_error):find("expected one of: c3_1, c4", 1, true),
-		"invalid M3-C profile error must name the accepted profiles"
-	)
-end
-vim.g.dx_color_profile = previous_profile
-print("M3-C selector contract passed: default/opt-out=c3_1, opt-in=c4, invalid values fail closed.")
+local composed_hl = compose.highlights(p, visual)
+assert(vim.deep_equal(full_hl, composed_hl), "theme.highlights() must resolve directly to C4.4")
+print("M5 single-production-visual contract passed: theme.highlights() -> C4.4.")
 
 local groups = {}
 for group, spec in pairs(full_hl) do
@@ -183,10 +135,7 @@ for _, role in ipairs(required_semantic_roles) do
 		fail("Domain role is missing semantic description: " .. role)
 	end
 	if not roles[role] then
-		fail("C3.1 visual profile is missing required semantic role: " .. role)
-	end
-	if not c4_roles[role] then
-		fail("C4 visual profile is missing required semantic role: " .. role)
+		fail("C4.4 production visual is missing required semantic role: " .. role)
 	end
 	role_count = role_count + 1
 end
@@ -198,222 +147,35 @@ for role in pairs(domain.roles) do
 end
 for role in pairs(roles) do
 	if not domain.roles[role] then
-		fail("C3.1 visual profile defines role outside the domain closure: " .. role)
-	end
-end
-for role in pairs(c4_roles) do
-	if not domain.roles[role] then
-		fail("C4 visual profile defines role outside the domain closure: " .. role)
+		fail("C4.4 production visual defines role outside the domain closure: " .. role)
 	end
 end
 assert_eq(role_count, 23, "Expected exactly 23 semantic roles in DX-COLOR-003")
 
 -- ==========================================================================
--- 3. Source Contrast Budget Gate (Calculated Mathematically vs Mocha Base)
--- ==========================================================================
-
-local function hex_to_rgb(hex)
-	local clean = hex:gsub("^#", "")
-	return tonumber(clean:sub(1, 2), 16), tonumber(clean:sub(3, 4), 16), tonumber(clean:sub(5, 6), 16)
-end
-
-local function luminance(r, g, b)
-	local function channel(c)
-		c = c / 255
-		if c <= 0.04045 then
-			return c / 12.92
-		else
-			return ((c + 0.055) / 1.055) ^ 2.4
-		end
-	end
-	return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
-end
-
-local function contrast_ratio(hex1, hex2)
-	local l1 = luminance(hex_to_rgb(hex1))
-	local l2 = luminance(hex_to_rgb(hex2))
-	if l1 < l2 then
-		l1, l2 = l2, l1
-	end
-	return (l1 + 0.05) / (l2 + 0.05)
-end
-
-local base_hex = colors.base
-for name, hex in pairs(p.code) do
-	local cr = contrast_ratio(hex, base_hex)
-	if cr < 4.5 or cr > 8.8 then
-		fail(("Contrast budget violation for code.%s (%s): ratio %.2f outside [4.5, 8.8]"):format(name, hex, cr))
-	end
-	if name ~= "punctuation" and name ~= "comment" then
-		if cr < 5.0 then
-			fail(("Primary semantic role code.%s (%s) ratio %.2f is below minimum 5.0:1"):format(name, hex, cr))
-		end
-	else
-		if cr < 4.5 then
-			fail(("De-emphasis role code.%s (%s) ratio %.2f is below minimum 4.5:1"):format(name, hex, cr))
-		end
-	end
-end
-
--- ==========================================================================
--- 4. Source-State Separation Gate & Yellow / Red Scarcity
--- ==========================================================================
-
-local function verify_source_state_separation(palette)
-	local state_values = {
-		palette.state.error:lower(),
-		palette.state.warn:lower(),
-		palette.state.info:lower(),
-		palette.state.hint:lower(),
-		palette.state.success:lower(),
-	}
-	for name, hex in pairs(palette.code) do
-		if vim.tbl_contains(state_values, hex:lower()) then
-			error(("Source-State separation violation: code.%s uses state accent %s"):format(name, hex), 2)
-		end
-	end
-end
-verify_source_state_separation(p)
-
-local function verify_yellow_scarcity(r, palette)
-	local warn_color = palette.state.warn:lower()
-	for name, hex in pairs(palette.code) do
-		if hex:lower() == warn_color then
-			error(("Yellow Scarcity violation: code.%s uses bright state warn yellow"):format(name), 2)
-		end
-	end
-	for role, spec in pairs(r) do
-		if role ~= "DxWarn" and spec.fg and spec.fg:lower() == warn_color then
-			error(("Yellow Scarcity violation: %s uses bright yellow but is not DxWarn"):format(role), 2)
-		end
-	end
-end
-verify_yellow_scarcity(roles, p)
-
-local function verify_red_scarcity(r, palette)
-	local err_color = palette.state.error:lower()
-	for role, spec in pairs(r) do
-		if role ~= "DxError" and spec.fg and spec.fg:lower() == err_color then
-			error(("Red Scarcity violation: %s uses red but is not DxError"):format(role), 2)
-		end
-	end
-end
-verify_red_scarcity(roles, p)
-
--- ==========================================================================
--- 4b. CVD-Aware Invariants & Visual Hierarchy Contract (Candidate C3)
--- ==========================================================================
-
--- P3: No normal source role uses green-dominant hue
-for name, hex in pairs(p.code) do
-	local r_val, g_val, b_val = hex_to_rgb(hex)
-	if g_val > r_val + 20 and g_val > b_val + 20 then
-		fail(("Source palette violation: code.%s (%s) uses a green-dominant hue"):format(name, hex))
-	end
-end
-
--- P4: state.success != green; state.success == sky/cyan family
-assert(p.state.success:lower() ~= colors.green:lower(), "state.success must not use green for CVD safety")
-assert_eq(p.state.success:lower(), colors.sky:lower(), "state.success must use Catppuccin Sky")
-
--- P5: Visual Hierarchy: callable > type > builtin; type - builtin has significant contrast-ratio gap
-local cr_callable = contrast_ratio(p.code.callable, base_hex)
-local cr_type = contrast_ratio(p.code.type, base_hex)
-local cr_builtin = contrast_ratio(p.code.builtin, base_hex)
-assert(
-	cr_callable > cr_type,
-	("Visual hierarchy violation: callable (%.2f) must exceed type (%.2f)"):format(cr_callable, cr_type)
-)
-assert(
-	cr_type > cr_builtin,
-	("Visual hierarchy violation: type (%.2f) must exceed builtin (%.2f)"):format(cr_type, cr_builtin)
-)
-local type_builtin_cr_gap = cr_type - cr_builtin
-assert(
-	type_builtin_cr_gap >= 1.0,
-	("Visual hierarchy violation: type/builtin contrast-ratio gap %.2f must be >= 1.0"):format(type_builtin_cr_gap)
-)
-
--- P6: Scaffolding Ceiling: operator / punctuation / comment must not exceed semantic body
-local max_scaffolding_cr = math.max(
-	contrast_ratio(p.code.operator, base_hex),
-	contrast_ratio(p.code.punctuation, base_hex),
-	contrast_ratio(p.code.comment, base_hex)
-)
-local min_semantic_body_cr = math.min(
-	contrast_ratio(p.code.variable, base_hex),
-	contrast_ratio(p.code.member, base_hex),
-	contrast_ratio(p.code.parameter, base_hex),
-	contrast_ratio(p.code.builtin, base_hex)
-)
-assert(
-	max_scaffolding_cr <= min_semantic_body_cr,
-	("Scaffolding ceiling violation: max scaffolding (%.2f) exceeds min semantic body (%.2f)"):format(
-		max_scaffolding_cr,
-		min_semantic_body_cr
-	)
-)
-
--- P7: Diagnostic Non-Color Redundancy Contract
-assert_eq(
-	groups["DiagnosticUnderlineError"].undercurl,
-	true,
-	"DiagnosticUnderlineError must provide non-color undercurl cue"
-)
-assert_eq(
-	groups["DiagnosticUnderlineWarn"].undercurl,
-	true,
-	"DiagnosticUnderlineWarn must provide non-color undercurl cue"
-)
-
--- ==========================================================================
--- 5. In-Memory Negative Control (Proves Gates Fail-Closed on Bad Palettes)
--- ==========================================================================
-
--- Negative Control 1: Yellow Scarcity Catch
-local bad_yellow = vim.deepcopy(p)
-bad_yellow.code.callable = bad_yellow.state.warn
-local bad_yellow_roles = c3_1.roles(bad_yellow)
-local ok_y, _ = pcall(verify_yellow_scarcity, bad_yellow_roles, bad_yellow)
-assert(not ok_y, "Negative control failure: verify_yellow_scarcity must fail when code.callable uses yellow")
-
--- Negative Control 2: Source-State Separation Catch
-local bad_state = vim.deepcopy(p)
-bad_state.code.type = bad_state.state.error
-local ok_s, _ = pcall(verify_source_state_separation, bad_state)
-assert(not ok_s, "Negative control failure: verify_source_state_separation must fail when code.type uses state.error")
-
--- Negative Control 3: Red Scarcity Catch
-local bad_red = vim.deepcopy(p)
-bad_red.code.keyword = bad_red.state.error
-local bad_red_roles = c3_1.roles(bad_red)
-local ok_r, _ = pcall(verify_red_scarcity, bad_red_roles, bad_red)
-assert(not ok_r, "Negative control failure: verify_red_scarcity must fail when DxKeyword uses state.error")
-
--- ==========================================================================
--- 5b. C4.4 Profile-Aware Visual Contract and Negative Controls
+-- 3. C4.4 Production Visual Contract and Negative Controls
 -- ==========================================================================
 
 local repo_root = vim.fs.root(0, ".git") or vim.fn.getcwd()
 local c4_contract = dofile(repo_root .. "/tests/nvim/visual_contracts/c4.lua")
 c4_contract.verify({
-	palette = c4_p,
-	roles = c4_roles,
-	graph = c4_full_hl,
+	palette = p,
+	roles = roles,
+	graph = full_hl,
 	domain = domain,
 	host_colors = colors,
 })
 c4_contract.verify_negative_controls({
-	palette = c4_p,
-	visual = c4,
-	graph = c4_full_hl,
+	palette = p,
+	visual = visual,
+	graph = full_hl,
 	domain = domain,
 	host_colors = colors,
 })
 print("C4.4 High-Chroma Night visual contract and negative controls passed.")
 
 -- ==========================================================================
--- 6. No Raw Source Hex Outside Palette Gate & Namespace Disjointness Gate
+-- 4. No Raw Source Hex Outside Palette Gate & Namespace Disjointness Gate
 -- ==========================================================================
 
 local theme_dir = repo_root .. "/home/dot_config/nvim/lua/theme"
@@ -433,6 +195,23 @@ for name, type_str in vim.fs.dir(theme_dir, { depth = math.huge }) do
 	end
 end
 
+local retired_visual = repo_root .. "/home/dot_config/nvim/lua/theme/visual/c3_1.lua"
+if vim.uv.fs_stat(retired_visual) ~= nil then
+	fail("M5 retirement left the C3.1 runtime module in place")
+end
+for _, relative_path in ipairs({ "init.lua", "palette.lua", "visual/c4.lua" }) do
+	local path = theme_dir .. "/" .. relative_path
+	local file = assert(io.open(path, "r"))
+	local content = file:read("*a")
+	file:close()
+	for _, retired_term in ipairs({ "c3_1", "code_profiles", "dx_color_profile", "resolve_profile", "active_profile" }) do
+		if content:find(retired_term, 1, true) then
+			fail(("M5 retirement left %s in live runtime file %s"):format(retired_term, relative_path))
+		end
+	end
+end
+print("M5 executable compatibility surface is absent: C3.1 module, selector, and profile palette removed.")
+
 -- Namespace Disjointness
 for k, _ in pairs(roles) do
 	if not k:match("^Dx") then
@@ -446,7 +225,7 @@ for k, _ in pairs(groups) do
 end
 
 -- ==========================================================================
--- 7. Validate Tree-sitter, LSP Base, Typemod Governance, and Extra Groups
+-- 5. Validate Tree-sitter, LSP Base, Typemod Governance, and Extra Groups
 -- ==========================================================================
 
 local required_ts = {
@@ -692,7 +471,7 @@ for group, _ in pairs(groups) do
 end
 
 -- ==========================================================================
--- 8. M1 Architecture Topology and C3.1 Graph Equivalence
+-- 6. M5 Production Graph and Historical Provenance
 -- ==========================================================================
 
 local expected_layers = {
@@ -810,6 +589,9 @@ local C4_3_GRAPH_SHA256 = "12d9299d27f50cc96bc056662ce13eed1bb1e46d7fc154f7bd565
 local M4_C4_4_BASE_SHA = M4_C4_3_HEAD_SHA
 local C4_4_GRAPH_COUNT = 226
 local C4_4_GRAPH_SHA256 = "1ac13a349234d5926a250a82c6beb1135fe4483bfe1208f0e24245d4f0022fc8"
+local M5_BASE_SHA = "65b61ee03bef0bc0bb8bee945d1bbc32a6a829b5"
+local M5_PRODUCTION_GRAPH_COUNT = 226
+local M5_PRODUCTION_GRAPH_SHA256 = "51cfaae3c02ec25551f1a8afd27427d3919d6b53c3b05f5ae26ff6c125aa6666"
 local C4_4_AUTHORIZED_FOREGROUND_DELTA = {
 	DxVariable = "#C9D4F2",
 	DxKeyword = "#C08CFF",
@@ -844,6 +626,40 @@ local C4_0_FOREGROUND_BASELINE = {
 	DxComment = "#6C7086",
 	DxDocComment = "#9399B2",
 }
+local C3_1_FOREGROUND_BASELINE = {
+	DxKeyword = "#B298CE",
+	DxFunctionKeyword = "#82AEDB",
+	DxCallable = "#D8A972",
+	DxType = "#78B6CC",
+	DxBuiltin = "#7393B7",
+	DxLifetime = "#7DA6C8",
+	DxMember = "#AA91DF",
+	DxParameter = "#AA94BE",
+	DxVariable = "#989FCC",
+	DxMeta = "#C395B9",
+	DxNamespace = "#75A0D8",
+	DxString = "#ADA497",
+	DxNumber = "#C18975",
+	DxConstant = "#B78EAF",
+	DxLabel = "#8D91A4",
+	DxOperator = "#898FA6",
+	DxPunctuation = "#858A9F",
+	DxComment = "#81869E",
+	DxDocComment = "#9298AD",
+}
+local M5_AUTHORIZED_CONSUMER_DELTA = {
+	CursorLineNr = "#AA91DF",
+	DapBreakpointCondition = "#C18975",
+	NeotestFocused = "#AA91DF",
+	NeotestMarked = "#C18975",
+	RenderMarkdownCodeInline = "#C18975",
+	RenderMarkdownH1 = "#B298CE",
+	RenderMarkdownH2 = "#AA91DF",
+	RenderMarkdownH3 = "#78B6CC",
+	RenderMarkdownHint = "#B298CE",
+	RenderMarkdownQuote = "#B298CE",
+	SnacksIndentScope = "#AA91DF",
+}
 local C4_PROFILE_AUTHORIZED_GROUP_DELTA = { "Normal" }
 local M2B_AUTHORIZED_GRAPH_DELTA = {
 	"@lsp.typemod.variable.classScope.cpp",
@@ -856,7 +672,7 @@ local function assert_governed_graph_fields(graph)
 	for group, spec in pairs(graph) do
 		for field in pairs(spec) do
 			if not normalized_field_set[field] then
-				fail(("C3.1 graph equivalence does not govern field %s on %s"):format(field, group))
+				fail(("DX graph governance does not recognize field %s on %s"):format(field, group))
 			end
 		end
 	end
@@ -887,71 +703,51 @@ local function normalized_graph_digest(graph)
 	return #names, vim.fn.sha256(table.concat(normalized, "\n"))
 end
 
-local graph_count, graph_digest = normalized_graph_digest(full_hl)
-assert_eq(graph_count, M2B_GRAPH_COUNT, ("M2B-B highlight group count changed from %s"):format(M2B_BASE_SHA))
-assert_eq(graph_digest, M2B_GRAPH_SHA256, ("M2B-B normalized highlight graph changed from %s"):format(M2B_BASE_SHA))
-
-local historical_graph = vim.deepcopy(full_hl)
-for _, group in ipairs(M2B_AUTHORIZED_GRAPH_DELTA) do
-	if historical_graph[group] == nil then
-		fail("M2B-B authorized graph group is missing: " .. group)
-	end
-	historical_graph[group] = nil
-end
-local historical_count, historical_digest = normalized_graph_digest(historical_graph)
+local production_count, production_digest = normalized_graph_digest(full_hl)
 assert_eq(
-	historical_count,
-	M1_BASE_GRAPH_COUNT,
-	("M2B-B authorized-delta removal did not restore the M1 graph count from %s"):format(M1_BASE_SHA)
+	production_count,
+	M5_PRODUCTION_GRAPH_COUNT,
+	("M5 production highlight-group count changed from %s"):format(M5_BASE_SHA)
 )
 assert_eq(
-	historical_digest,
-	M1_BASE_GRAPH_SHA256,
-	("M2B-B authorized-delta removal did not restore the M1 graph digest from %s"):format(M1_BASE_SHA)
+	production_digest,
+	M5_PRODUCTION_GRAPH_SHA256,
+	("M5 production resolved graph changed from %s"):format(M5_BASE_SHA)
+)
+print(("M5 production C4.4 graph frozen: %d groups, sha256=%s"):format(production_count, production_digest))
+
+assert_eq(full_hl.Normal.bg, p.ui.normal_bg, "M5 production Normal background does not use its owned canvas token")
+assert_eq(vim.tbl_count(full_hl.Normal), 1, "M5 production Normal override must own only the canvas background")
+
+local accepted_c4_4_graph = vim.deepcopy(full_hl)
+local consumer_delta_count = 0
+for group, old_foreground in pairs(M5_AUTHORIZED_CONSUMER_DELTA) do
+	local spec = accepted_c4_4_graph[group]
+	if spec == nil or spec.fg == nil then
+		fail("M5 authorized C4.4 consumer is missing: " .. group)
+	end
+	if spec.fg:lower() == old_foreground:lower() then
+		fail("M5 palette promotion did not update governed consumer: " .. group)
+	end
+	spec.fg = old_foreground
+	consumer_delta_count = consumer_delta_count + 1
+end
+assert_eq(consumer_delta_count, 11, "M5 must change exactly eleven palette.code consumers")
+local accepted_c4_4_count, accepted_c4_4_digest = normalized_graph_digest(accepted_c4_4_graph)
+assert_eq(accepted_c4_4_count, C4_4_GRAPH_COUNT, "M5 consumer rollback changed accepted C4.4 count")
+assert_eq(
+	accepted_c4_4_digest,
+	C4_4_GRAPH_SHA256,
+	("M5 consumer rollback did not reconstruct accepted C4.4 from %s"):format(M4_C4_4_BASE_SHA)
 )
 print(
-	("M1 historical graph reconstructed after authorized M2B-B delta removal: %d groups, sha256=%s"):format(
-		historical_count,
-		historical_digest
+	("Accepted C4.4 candidate reconstructed after M5 consumer rollback: %d groups, sha256=%s"):format(
+		accepted_c4_4_count,
+		accepted_c4_4_digest
 	)
 )
-print(("M2B-B graph frozen: %d groups, sha256=%s"):format(graph_count, graph_digest))
 
-local function assert_profile_topology_equal(reference, candidate)
-	assert_eq(
-		vim.tbl_count(candidate),
-		vim.tbl_count(reference) + #C4_PROFILE_AUTHORIZED_GROUP_DELTA,
-		"C4.4 changed the governed highlight-group count outside its authorized canvas group"
-	)
-	for group, reference_spec in pairs(reference) do
-		local candidate_spec = candidate[group]
-		if candidate_spec == nil then
-			fail("C4 removed governed highlight group: " .. group)
-		end
-		if domain.roles[group] then
-			assert_eq(candidate_spec.link, reference_spec.link, "C4 changed Domain role link topology: " .. group)
-		else
-			if not vim.deep_equal(candidate_spec, reference_spec) then
-				fail("C4 changed non-visual composition ownership or attributes: " .. group)
-			end
-		end
-	end
-	for group in pairs(candidate) do
-		if reference[group] == nil and not vim.list_contains(C4_PROFILE_AUTHORIZED_GROUP_DELTA, group) then
-			fail("C4 added unauthorized highlight group: " .. group)
-		end
-	end
-	assert_eq(candidate.Normal.bg, c4_p.ui.normal_bg, "C4.4 Normal background does not use its owned canvas token")
-	assert_eq(vim.tbl_count(candidate.Normal), 1, "C4.4 Normal override must own only the canvas background")
-end
-
-assert_profile_topology_equal(full_hl, c4_full_hl)
-local c4_graph_count, c4_graph_digest = normalized_graph_digest(c4_full_hl)
-assert_eq(c4_graph_count, C4_4_GRAPH_COUNT, ("C4.4 graph count changed from %s"):format(M4_C4_4_BASE_SHA))
-assert_eq(c4_graph_digest, C4_4_GRAPH_SHA256, ("C4.4 resolved graph changed from %s"):format(M4_C4_4_BASE_SHA))
-print(("C4.4 resolved graph frozen: %d groups, sha256=%s"):format(c4_graph_count, c4_graph_digest))
-
-local historical_c4_3_graph = vim.deepcopy(c4_full_hl)
+local historical_c4_3_graph = vim.deepcopy(accepted_c4_4_graph)
 for role, old_foreground in pairs(C4_4_AUTHORIZED_FOREGROUND_DELTA) do
 	local spec = historical_c4_3_graph[role]
 	if spec == nil or spec.fg == nil then
@@ -972,7 +768,7 @@ assert_eq(
 )
 print(("C4.3 graph reconstructed after C4.4 visual rollback: %d groups, sha256=%s"):format(c4_3_count, c4_3_digest))
 
-local historical_c4_graph = vim.deepcopy(c4_full_hl)
+local historical_c4_graph = vim.deepcopy(accepted_c4_4_graph)
 for role, old_foreground in pairs(C4_0_FOREGROUND_BASELINE) do
 	local spec = historical_c4_graph[role]
 	if spec == nil or spec.fg == nil then
@@ -998,20 +794,69 @@ assert_eq(
 )
 print(("C4.0 graph reconstructed after C4.4 visual rollback: %d groups, sha256=%s"):format(c4_0_count, c4_0_digest))
 
-local bad_profile_extra = vim.deepcopy(c4_full_hl)
-bad_profile_extra.DxUnauthorized = { fg = c4_p.code_profiles.c4.variable }
-assert(not pcall(assert_profile_topology_equal, full_hl, bad_profile_extra), "C4 topology must reject added groups")
-
-local bad_profile_link = vim.deepcopy(c4_full_hl)
-bad_profile_link["@lsp.type.variable"].link = "DxMember"
-assert(not pcall(assert_profile_topology_equal, full_hl, bad_profile_link), "C4 topology must reject link drift")
-
-local bad_profile_authority = vim.deepcopy(c4_full_hl)
-bad_profile_authority["@lsp.mod.deprecated"].strikethrough = false
-assert(
-	not pcall(assert_profile_topology_equal, full_hl, bad_profile_authority),
-	"C4 topology must reject style-authority drift"
+local historical_m2b_graph = vim.deepcopy(full_hl)
+for group, old_foreground in pairs(M5_AUTHORIZED_CONSUMER_DELTA) do
+	historical_m2b_graph[group].fg = old_foreground
+end
+for role, old_foreground in pairs(C3_1_FOREGROUND_BASELINE) do
+	local spec = historical_m2b_graph[role]
+	if spec == nil or spec.fg == nil then
+		fail("M5 C3.1 historical reconstruction is missing role: " .. role)
+	end
+	spec.fg = old_foreground
+end
+for _, group in ipairs(C4_PROFILE_AUTHORIZED_GROUP_DELTA) do
+	if historical_m2b_graph[group] == nil then
+		fail("M5 C3.1 historical reconstruction is missing group: " .. group)
+	end
+	historical_m2b_graph[group] = nil
+end
+local m2b_count, m2b_digest = normalized_graph_digest(historical_m2b_graph)
+assert_eq(m2b_count, M2B_GRAPH_COUNT, ("M5 historical reconstruction changed M2B count from %s"):format(M2B_BASE_SHA))
+assert_eq(
+	m2b_digest,
+	M2B_GRAPH_SHA256,
+	("M5 C3.1 visual rollback did not reconstruct M2B from %s"):format(M2B_BASE_SHA)
 )
+print(("M2B C3.1 graph reconstructed from M5 production: %d groups, sha256=%s"):format(m2b_count, m2b_digest))
+
+local historical_m1_graph = vim.deepcopy(historical_m2b_graph)
+for _, group in ipairs(M2B_AUTHORIZED_GRAPH_DELTA) do
+	if historical_m1_graph[group] == nil then
+		fail("M2B-B authorized graph group is missing from historical reconstruction: " .. group)
+	end
+	historical_m1_graph[group] = nil
+end
+local m1_count, m1_digest = normalized_graph_digest(historical_m1_graph)
+assert_eq(
+	m1_count,
+	M1_BASE_GRAPH_COUNT,
+	("M5 provenance reconstruction did not restore the M1 graph count from %s"):format(M1_BASE_SHA)
+)
+assert_eq(
+	m1_digest,
+	M1_BASE_GRAPH_SHA256,
+	("M5 provenance reconstruction did not restore the M1 graph digest from %s"):format(M1_BASE_SHA)
+)
+print(("M1 historical graph reconstructed from M5 production: %d groups, sha256=%s"):format(m1_count, m1_digest))
+
+local function assert_production_graph(candidate)
+	local count, digest = normalized_graph_digest(candidate)
+	assert_eq(count, M5_PRODUCTION_GRAPH_COUNT, "M5 production graph count changed")
+	assert_eq(digest, M5_PRODUCTION_GRAPH_SHA256, "M5 production graph digest changed")
+end
+
+local bad_graph_extra = vim.deepcopy(full_hl)
+bad_graph_extra.DxUnauthorized = { fg = p.code.variable }
+assert(not pcall(assert_production_graph, bad_graph_extra), "M5 production graph must reject added groups")
+
+local bad_graph_link = vim.deepcopy(full_hl)
+bad_graph_link["@lsp.type.variable"].link = "DxMember"
+assert(not pcall(assert_production_graph, bad_graph_link), "M5 production graph must reject link drift")
+
+local bad_graph_authority = vim.deepcopy(full_hl)
+bad_graph_authority["@lsp.mod.deprecated"].strikethrough = false
+assert(not pcall(assert_production_graph, bad_graph_authority), "M5 production graph must reject style-authority drift")
 
 local bad_graph_field = vim.deepcopy(full_hl)
 bad_graph_field.DxVariable.reverse = true
@@ -1019,7 +864,7 @@ local ok_unknown_field = pcall(assert_governed_graph_fields, bad_graph_field)
 assert(not ok_unknown_field, "Negative control failure: unknown highlight attributes must fail closed")
 
 -- ==========================================================================
--- 9. Shared Manifest Symbolic Sentinel Locator Test across 5 Languages
+-- 7. Shared Manifest Symbolic Sentinel Locator Test across 5 Languages
 -- ==========================================================================
 
 local ok_manifest, manifest = pcall(dofile, repo_root .. "/tests/nvim/color_manifest.lua")
