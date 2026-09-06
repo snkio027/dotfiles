@@ -143,6 +143,8 @@ jobs:
 
       - name: Test Shell and apply behavior
         run: |
+          python3 tests/nvim/native_first/test_summarize.py
+          bash tests/nvim/native_first/isolation_contract.sh
           bash tests/devcontainer/provisioning_contract_test.sh
           zsh -f tests/zsh/aliases_test.zsh
           zsh -f tests/zsh/history_test.zsh

@@ -29,6 +29,13 @@ if [ -z "${DOTFILES_NATIVE_FIRST_RUN_ROOT:-}" ] && [ "$KEEP_ROOT" != "1" ]; then
     trap 'rm -rf -- "$RUN_ROOT"' EXIT
 fi
 
+if [ -e "$RUN_ROOT" ] && [ -n "$(find "$RUN_ROOT" -mindepth 1 -print -quit 2>/dev/null)" ]; then
+    echo "native-first run root is not empty; refusing stale or reused evidence: $RUN_ROOT" >&2
+    exit 1
+fi
+mkdir -p "$RUN_ROOT"
+RUN_ROOT="$(cd "$RUN_ROOT" && pwd -P)"
+
 CONFIG_PARENT="$RUN_ROOT/config"
 DATA_PARENT="$RUN_ROOT/data"
 STATE_PARENT="$RUN_ROOT/state"
@@ -39,14 +46,7 @@ SEED_DATA="${DOTFILES_NATIVE_FIRST_SEED_DATA:-${XDG_DATA_HOME:-$HOME/.local/shar
 
 mkdir -p "$CONFIG_ROOT" "$DATA_ROOT" "$STATE_PARENT/nvim" "$CACHE_PARENT"
 cp -R "$REPO_ROOT/home/dot_config/nvim/." "$CONFIG_ROOT/"
-
-for component in lazy mason site; do
-    if [ ! -e "$SEED_DATA/$component" ]; then
-        echo "validated Neovim data seed is missing: $SEED_DATA/$component" >&2
-        exit 1
-    fi
-    ln -s "$SEED_DATA/$component" "$DATA_ROOT/$component"
-done
+python3 "$REPO_ROOT/tests/nvim/native_first/snapshot.py" "$SEED_DATA" "$DATA_ROOT"
 
 if [ "$CASE" != "m5" ]; then
     cp "$REPO_ROOT/tests/nvim/native_first/override.lua" \
@@ -60,11 +60,16 @@ export XDG_CACHE_HOME="$CACHE_PARENT"
 export DOTFILES_NATIVE_FIRST_CASE="$CASE"
 export DOTFILES_NATIVE_FIRST_ROOT="$RUN_ROOT"
 export DOTFILES_NATIVE_FIRST_SEED_DATA="$SEED_DATA"
+export DOTFILES_NATIVE_FIRST_RUN_ID="${DOTFILES_NATIVE_FIRST_RUN_ID:-$(python3 -c 'import uuid; print(uuid.uuid4())')}"
 export NVIM_LOG_FILE="$STATE_PARENT/nvim/log"
 export NVIM_APPNAME="nvim"
 
 cd "$REPO_ROOT"
 if [ "$MODE" = "--preview" ]; then
+    DOTFILES_NATIVE_FIRST_OUTPUT="$RUN_ROOT/preview-preflight.json"
+    export DOTFILES_NATIVE_FIRST_OUTPUT
+    nvim -n --headless "+luafile tests/nvim/native_first/observe.lua" +qa
+    test -s "$DOTFILES_NATIVE_FIRST_OUTPUT"
     nvim -n "$TARGET"
 else
     : "${DOTFILES_NATIVE_FIRST_OUTPUT:=$RUN_ROOT/$CASE.json}"

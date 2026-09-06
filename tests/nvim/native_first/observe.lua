@@ -2,6 +2,9 @@ local function fail(message)
 	error("NATIVE_FIRST_E1_FAILURE: " .. message, 2)
 end
 
+local repo_root = vim.fs.root(0, ".git") or vim.fn.getcwd()
+local readiness = dofile(repo_root .. "/tests/nvim/native_first/readiness.lua")
+
 local function assert_equal(actual, expected, message)
 	if not vim.deep_equal(actual, expected) then
 		fail(("%s\n  expected: %s\n  observed: %s"):format(message, vim.inspect(expected), vim.inspect(actual)))
@@ -267,6 +270,15 @@ local function applied_semantic_groups(inspected)
 	return groups
 end
 
+local function expected_semantic_groups(tokens, filetype)
+	local base = (vim.hl and vim.hl.priorities.semantic_tokens) or 125
+	return readiness.expected_semantic_groups(tokens, filetype, {
+		type = base,
+		modifier = base + 1,
+		typemod = base + 2,
+	})
+end
+
 local function foreground_candidates(inspected)
 	local candidates = {}
 	local priorities = vim.hl and vim.hl.priorities or {}
@@ -293,7 +305,9 @@ local function foreground_candidates(inspected)
 		)
 	end
 	for index, capture in ipairs(inspected.treesitter or {}) do
-		local raw_priority = capture.metadata and capture.metadata.priority
+		local metadata = capture.metadata or {}
+		local raw_priority = metadata.priority
+			or (capture.id and metadata[capture.id] and metadata[capture.id].priority)
 		add(
 			capture.hl_group or ("@" .. capture.capture),
 			"treesitter",
@@ -308,7 +322,10 @@ local function foreground_candidates(inspected)
 		if left.priority ~= right.priority then
 			return left.priority > right.priority
 		end
-		return left.order > right.order
+		if left.group ~= right.group then
+			return left.group < right.group
+		end
+		return left.source < right.source
 	end)
 	return candidates
 end
@@ -340,11 +357,19 @@ end
 local function highlight_graph()
 	local names = sorted_unique(vim.fn.getcompletion("", "highlight"))
 	local graph = {}
+	local canonical = {}
 	for _, name in ipairs(names) do
-		graph[#graph + 1] = { name = name, attributes = normalized_highlight(name) }
+		local attributes = normalized_highlight(name)
+		graph[#graph + 1] = { name = name, attributes = attributes }
+		local fields = { name }
+		for _, key in ipairs(highlight_attributes) do
+			if attributes[key] ~= nil then
+				fields[#fields + 1] = key .. "=" .. vim.json.encode(attributes[key])
+			end
+		end
+		canonical[#canonical + 1] = table.concat(fields, "\31")
 	end
-	local canonical = vim.json.encode(graph)
-	return { count = #graph, sha256 = vim.fn.sha256(canonical) }
+	return { count = #graph, sha256 = vim.fn.sha256(table.concat(canonical, "\30")) }
 end
 
 local function module_source(name, member)
@@ -366,6 +391,83 @@ local function command_output(command)
 		fail(("command failed (%s): %s"):format(table.concat(command, " "), result.stderr or result.stdout))
 	end
 	return vim.trim(result.stdout)
+end
+
+local function file_sha256(path)
+	return command_output({
+		"python3",
+		"-c",
+		"import hashlib,sys; print(hashlib.sha256(open(sys.argv[1], 'rb').read()).hexdigest())",
+		path,
+	})
+end
+
+local function normalize_path(path, root)
+	if path:sub(1, #root) == root then
+		return "<RUN_ROOT>" .. path:sub(#root + 1)
+	end
+	return path
+end
+
+local function file_identities(paths, root)
+	local result = {}
+	for _, path in ipairs(paths) do
+		result[#result + 1] = { path = normalize_path(path, root), sha256 = file_sha256(path) }
+	end
+	table.sort(result, function(left, right)
+		return left.path < right.path
+	end)
+	return result
+end
+
+local function plugin_identities(data_root)
+	local result = {}
+	for _, name in ipairs({
+		"LazyVim",
+		"catppuccin",
+		"lazy.nvim",
+		"mason-lspconfig.nvim",
+		"mason.nvim",
+		"nvim-lspconfig",
+		"nvim-treesitter",
+	}) do
+		local root = data_root .. "/lazy/" .. name
+		result[name] = {
+			commit = command_output({ "git", "-C", root, "rev-parse", "HEAD" }),
+			dirty = command_output({ "git", "-C", root, "status", "--porcelain=v1", "--untracked-files=all" }),
+		}
+	end
+	return result
+end
+
+local function provider_identities(root)
+	local result = {}
+	for _, provider in ipairs({ "clangd", "ruff", "rust-analyzer", "ty", "zls" }) do
+		local path = vim.fn.exepath(provider)
+		if path == "" then
+			fail("provider executable unavailable: " .. provider)
+		end
+		result[provider] = {
+			path = normalize_path(vim.uv.fs_realpath(path) or path, root),
+			version = command_output({ path, "--version" }),
+		}
+	end
+	return result
+end
+
+local function comparable_manifest_tokens(tokens)
+	local result = {}
+	for _, token in ipairs(tokens) do
+		result[#result + 1] = {
+			provider = token.provider,
+			type = token.type,
+			modifiers = token.modifiers,
+		}
+	end
+	table.sort(result, function(left, right)
+		return left.provider .. left.type < right.provider .. right.type
+	end)
+	return result
 end
 
 local selected_tags = {
@@ -476,7 +578,8 @@ local function main()
 	local case = vim.env.DOTFILES_NATIVE_FIRST_CASE
 	local root = vim.env.DOTFILES_NATIVE_FIRST_ROOT
 	local output = vim.env.DOTFILES_NATIVE_FIRST_OUTPUT
-	if not case or not root or not output then
+	local run_id = vim.env.DOTFILES_NATIVE_FIRST_RUN_ID
+	if not case or not root or not output or not run_id then
 		fail("launcher environment is incomplete")
 	end
 	assert_isolated_paths(root)
@@ -509,9 +612,9 @@ local function main()
 	assert_equal(vim.fn.hlexists("DxVariable") == 1, expected.dx, "Dx runtime group presence does not match case")
 	local catppuccin_config = catppuccin_config_summary(expected.dx)
 
-	local repo_root = vim.fs.root(0, ".git") or vim.fn.getcwd()
 	local manifest = dofile(repo_root .. "/tests/nvim/color_manifest.lua")
-	local lock = vim.json.decode(table.concat(vim.fn.readfile(vim.fn.stdpath("config") .. "/lazy-lock.json"), "\n"))
+	local lock_path = vim.fn.stdpath("config") .. "/lazy-lock.json"
+	local lock = vim.json.decode(table.concat(vim.fn.readfile(lock_path), "\n"))
 	local catppuccin_root = vim.fn.stdpath("data") .. "/lazy/catppuccin"
 	local catppuccin_commit = command_output({ "git", "-C", catppuccin_root, "rev-parse", "HEAD" })
 	assert_equal(
@@ -528,8 +631,34 @@ local function main()
 		})
 	end
 
+	local input_identity = {
+		source = {
+			head = command_output({ "git", "-C", repo_root, "rev-parse", "HEAD" }),
+			tree = command_output({ "git", "-C", repo_root, "rev-parse", "HEAD^{tree}" }),
+			status = command_output({
+				"git",
+				"-C",
+				repo_root,
+				"status",
+				"--porcelain=v1",
+				"--untracked-files=all",
+			}),
+		},
+		neovim = vim.version(),
+		lazy_lock_sha256 = file_sha256(lock_path),
+		plugins = plugin_identities(vim.fn.stdpath("data")),
+		providers = provider_identities(root),
+		fixtures = {},
+		language_assets = {},
+	}
+	for _, lang in ipairs({ "zig", "c", "cpp", "rust", "python" }) do
+		local fixture = repo_root .. "/" .. manifest.languages[lang].path
+		input_identity.fixtures[lang] = { path = manifest.languages[lang].path, sha256 = file_sha256(fixture) }
+	end
+
 	local report = {
-		schema = 1,
+		schema = 2,
+		run_id = run_id,
 		case = case,
 		flavour = actual_flavour,
 		base = "1eeb84a54fb7f37e58f2df62897b9268e20e7cb8",
@@ -546,6 +675,7 @@ local function main()
 			lazy = module_source("lazy", "setup"),
 			theme = module_source("theme", "highlights"),
 		},
+		input_identity = input_identity,
 		observations = {},
 		languages = {},
 	}
@@ -585,33 +715,62 @@ local function main()
 		if #report.languages[lang].parser_sources == 0 or #report.languages[lang].query_sources == 0 then
 			fail("parser or highlight-query source is unavailable for " .. lang)
 		end
+		input_identity.language_assets[lang] = {
+			parsers = file_identities(report.languages[lang].parser_sources, root),
+			queries = file_identities(report.languages[lang].query_sources, root),
+		}
 
 		for _, evidence_case in ipairs(selected_cases(spec, selected_tags[lang])) do
 			local row, column = locate_case(bufnr, evidence_case, lang)
-			local ready = vim.wait(15000, function()
-				return #decoded_tokens_at_position(bufnr, row, column, clients) > 0
-			end, 100)
-			if not ready then
-				fail("semantic token did not arrive for " .. evidence_case.tag)
-			end
 			local raw = {}
 			for _, raw_tokens in pairs(raw_by_name) do
 				vim.list_extend(raw, raw_tokens_at_position(raw_tokens, row, column))
 			end
-			local decoded = decoded_tokens_at_position(bufnr, row, column, clients)
-			assert_equal(decoded, comparable_tokens(raw), "raw/Neovim semantic-token drift for " .. evidence_case.tag)
+			assert_equal(comparable_manifest_tokens(raw), {
+				{
+					provider = evidence_case.evidence.lsp.provider,
+					type = evidence_case.evidence.lsp.type,
+					modifiers = evidence_case.evidence.lsp.modifiers,
+				},
+			}, "raw semantic-token evidence drift for " .. evidence_case.tag)
 
 			pcall(vim.api.nvim_win_set_cursor, 0, { row + 1, column })
 			vim.cmd.redraw()
 			local inspected
+			local decoded
+			local applied
+			local application
+			local readiness_state
+			local expected_groups = expected_semantic_groups(raw, spec.filetype)
 			local settled = vim.wait(15000, function()
 				inspected = vim.inspect_pos(bufnr, row, column)
-				return #foreground_candidates(inspected) > 0
+				decoded = decoded_tokens_at_position(bufnr, row, column, clients)
+				applied = applied_semantic_groups(inspected)
+				application = readiness.semantic_application(expected_groups, applied)
+				readiness_state = readiness.readiness({
+					parser_ready = pcall(vim.treesitter.get_parser, bufnr, spec.filetype),
+					treesitter_complete = vim.deep_equal(
+						tree_sitter_captures(inspected),
+						evidence_case.evidence.treesitter
+					),
+					raw_token_arrived = #raw > 0,
+					raw_decoded_equal = vim.deep_equal(decoded, comparable_tokens(raw)),
+					semantic_application_complete = application.complete,
+				})
+				return readiness_state.ready
 			end, 100)
 			if not settled then
-				fail("highlight application did not settle for " .. evidence_case.tag)
+				fail(
+					("highlight application did not settle for %s: %s; semantic groups: %s"):format(
+						evidence_case.tag,
+						vim.inspect(readiness_state),
+						vim.inspect(application)
+					)
+				)
 			end
+			assert_equal(decoded, comparable_tokens(raw), "raw/Neovim semantic-token drift for " .. evidence_case.tag)
 			local candidates = foreground_candidates(inspected)
+			local authority = readiness.authority(candidates)
 			report.observations[#report.observations + 1] = {
 				language = lang,
 				tag = evidence_case.tag,
@@ -622,9 +781,11 @@ local function main()
 				treesitter = tree_sitter_captures(inspected),
 				raw_semantic_tokens = raw,
 				decoded_semantic_tokens = decoded,
-				applied_semantic_groups = applied_semantic_groups(inspected),
+				readiness = readiness_state,
+				expected_semantic_groups = expected_groups,
+				applied_semantic_groups = applied,
 				foreground_candidates = candidates,
-				effective = candidates[1],
+				effective = authority,
 			}
 		end
 

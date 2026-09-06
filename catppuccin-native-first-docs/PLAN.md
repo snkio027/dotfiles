@@ -15,18 +15,28 @@ native candidate is later selected.
 - `native-macchiato`: native Catppuccin Macchiato plus the same UX options.
 - `native-frappe`: native Catppuccin Frappé plus the same UX options.
 
-Every case starts in a separate Neovim process with private config, state and
-cache roots. The locked plugin, parser and Mason download trees may be reused as
-read-only experimental inputs. Native cases remove the production
+Every case starts in a separate Neovim process with private config, data, state
+and cache roots. The locked plugin, parser and Mason trees are read-only seed
+inputs only: the launcher creates a private writable clone/copy for each case,
+rewrites seed-relative links into that snapshot, and rejects a non-empty run
+root. Native cases remove the production
 `custom_highlights` callback; they retain the same integrations, LSP styles,
 provider configuration, fixtures and toolchain.
 
 ## Evidence boundary
 
-The harness proves startup health, path isolation, flavour and `Normal`
-resolution, parser/query availability, provider attachment, raw
-`semanticTokens/full` decoding, client-ID-bound Neovim tokens, applied groups,
-priorities and final resolved attributes across five languages.
+The harness proves startup health, resolved-path and seed-write isolation,
+flavour and `Normal` resolution, parser/query identity, provider attachment,
+raw `semanticTokens/full` decoding, client-ID-bound Neovim tokens, complete
+type/modifier/typemod application, Tree-sitter participation, priorities and
+foreground-authority classification across five languages. Preview first runs
+the same headless preflight before opening the requested file.
+
+One run ID binds all four reports. Before rendering the summary, the harness
+requires identical source/fixture/lock/plugin/parser/query/provider/Neovim input
+identity, observation tags and positions, and normalized raw token facts.
+Client IDs and private temporary roots are process-local and normalized; visual
+winners and resolved attributes are intentionally allowed to differ.
 
 `HARNESS PASS` is not a policy or visual verdict. Native observations are not
 required to reproduce M5 `Dx*` groups or C4.4 HEX values. Human comparison owns
