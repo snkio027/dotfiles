@@ -1,22 +1,48 @@
 return {
   {
-    "folke/tokyonight.nvim",
+    "catppuccin/nvim",
+    name = "catppuccin",
     lazy = false,
     priority = 1000,
     config = function(_, opts)
-      require("tokyonight").setup(opts)
-      vim.cmd.colorscheme("tokyonight-storm")
+      require("catppuccin").setup(opts)
+      vim.cmd.colorscheme("catppuccin")
     end,
     opts = {
-      style = "storm",
-      on_highlights = function(highlights, colors)
-        require("theme").apply_host_overlay(highlights, colors)
+      flavour = "mocha",
+      -- Snacks uses diagnostic groups for Git status filenames. Keep their
+      -- colors without switching Maple Mono to its cursive italic face.
+      lsp_styles = {
+        virtual_text = {
+          errors = { "nocombine" },
+          hints = { "nocombine" },
+          warnings = { "nocombine" },
+          information = { "nocombine" },
+          ok = { "nocombine" },
+        },
+        inlay_hints = {
+          background = false,
+        },
+      },
+      custom_highlights = function(colors)
+        return require("theme").highlights(colors)
       end,
+      integrations = {
+        blink_cmp = true,
+        fzf = true,
+        gitsigns = true,
+        mason = true,
+        native_lsp = { enabled = true },
+        render_markdown = true,
+        snacks = true,
+        treesitter = true,
+        which_key = true,
+      },
     },
   },
   {
     "LazyVim/LazyVim",
-    opts = { colorscheme = "tokyonight-storm" },
+    opts = { colorscheme = "catppuccin" },
   },
   {
     "folke/noice.nvim",

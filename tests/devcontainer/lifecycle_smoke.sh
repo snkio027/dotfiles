@@ -122,9 +122,9 @@ assert_container_state() {
         cat "$nvim_log" >&2
         fail "M2C-B provider-ownership decision was not implemented"
     }
-    grep -Fq "DX-COLOR-004 M1 Storm host runtime contract passed against actual Normal.bg #24283B." "$nvim_log" || {
+    grep -Fq "M5 production C4.4 runtime contract passed against actual Normal.bg #1A1B2A." "$nvim_log" || {
         cat "$nvim_log" >&2
-        fail "DX-COLOR-004 M1 Storm host runtime contract did not complete"
+        fail "M5 production C4.4 runtime contract did not complete"
     }
     if grep -Eqi 'Package is already installing|^Installing tools:|^Updating tools:|MasonToolsUpdate' "$nvim_log"; then
         cat "$nvim_log" >&2
