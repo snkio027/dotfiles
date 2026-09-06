@@ -1,5 +1,5 @@
 --- DX Semantic Color System (DX-COLOR-003)
---- Deterministic assembly of authority, visual, binding, adapter, and UI layers.
+--- Deterministic assembly of the DX semantic overlay.
 
 local domain = require("theme.domain")
 
@@ -14,8 +14,6 @@ M.layers = {
   { name = "clangd", module = require("theme.adapters.clangd"), entrypoint = "groups" },
   { name = "rust_analyzer", module = require("theme.adapters.rust_analyzer"), entrypoint = "groups" },
   { name = "pyright", module = require("theme.adapters.pyright"), entrypoint = "groups" },
-  { name = "ui", module = require("theme.bindings.ui"), entrypoint = "groups" },
-  { name = "plugins", module = require("theme.bindings.plugins"), entrypoint = "groups" },
 }
 
 local function assert_visual_closure(roles)

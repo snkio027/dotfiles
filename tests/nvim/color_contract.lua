@@ -1,6 +1,6 @@
---- DX Semantic Color System (DX-COLOR-002)
+--- DX Semantic Color System (DX-COLOR-004)
 --- Tier-2 Runtime Integration Contract: Executed in production Neovim environment
---- with Catppuccin loaded by LazyVim.
+--- with TokyoNight Storm loaded by LazyVim.
 ---
 --- INVARIANTS:
 --- 1. Must fail closed: observes production configuration, NEVER reconstructs it.
@@ -23,18 +23,18 @@ local function main()
 
 	-- Fail closed: assert production colorscheme was loaded by LazyVim/ui.lua
 	local name = vim.g.colors_name
-	if name ~= "catppuccin" and name ~= "catppuccin-mocha" then
-		fail(("Production colorscheme must be 'catppuccin' or 'catppuccin-mocha', found: %s"):format(vim.inspect(name)))
+	if name ~= "tokyonight-storm" then
+		fail(("Production colorscheme must be 'tokyonight-storm', found: %s"):format(vim.inspect(name)))
 	end
 
-	local ok_cat, cat_palettes = pcall(require, "catppuccin.palettes")
-	if not ok_cat or not cat_palettes or not cat_palettes.get_palette then
-		fail("Catppuccin palettes module must be available from production plugins")
+	local ok_storm, tokyonight_colors = pcall(require, "tokyonight.colors")
+	if not ok_storm or not tokyonight_colors or not tokyonight_colors.setup then
+		fail("TokyoNight colors module must be available from production plugins")
 	end
 
-	local cat_mocha = cat_palettes.get_palette("mocha")
-	if not cat_mocha or not cat_mocha.yellow then
-		fail("Failed to retrieve production Catppuccin Mocha palette")
+	local storm = tokyonight_colors.setup({ style = "storm" })
+	if not storm or not storm.bg or not storm.yellow then
+		fail("Failed to retrieve the production TokyoNight Storm palette")
 	end
 
 	local ok_pal, palette_mod = pcall(require, "theme.palette")
@@ -42,7 +42,7 @@ local function main()
 		fail("theme.palette module must be available from production theme")
 	end
 
-	local p = palette_mod.resolve(cat_mocha)
+	local p = palette_mod.resolve(storm)
 
 	local function hex_to_rgb(hex)
 		if not hex then
@@ -52,7 +52,7 @@ local function main()
 	end
 
 	local colors_rgb = {
-		-- Source Semantic Roles (DX-COLOR-002 Muted Palette)
+		-- Source Semantic Roles (Storm-derived DX projection)
 		variable = hex_to_rgb(p.code.variable),
 		callable = hex_to_rgb(p.code.callable),
 		type = hex_to_rgb(p.code.type),
@@ -80,15 +80,13 @@ local function main()
 		hint = hex_to_rgb(p.state.hint),
 		success = hex_to_rgb(p.state.success),
 
-		-- UI Chrome
-		base = hex_to_rgb(p.ui.base),
-		normal_bg = hex_to_rgb(p.ui.normal_bg),
-		mantle = hex_to_rgb(p.ui.mantle),
-		surface0 = hex_to_rgb(p.ui.surface0),
-		surface1 = hex_to_rgb(p.ui.surface1),
-		surface2 = hex_to_rgb(p.ui.surface2),
-		overlay0 = hex_to_rgb(p.ui.overlay0),
-		text = hex_to_rgb(p.ui.text),
+		-- TokyoNight-owned UI primitives
+		normal_bg = hex_to_rgb(storm.bg),
+		cursorline_bg = hex_to_rgb(storm.bg_highlight),
+		cursorline_nr = hex_to_rgb(storm.orange),
+		cur_search_bg = hex_to_rgb(storm.orange),
+		inlay = hex_to_rgb(storm.dark3),
+		plugin_success = hex_to_rgb(storm.green),
 	}
 
 	--- Resolves final highlight definition without links
@@ -96,13 +94,11 @@ local function main()
 		return vim.api.nvim_get_hl(0, { name = hl_name, link = false })
 	end
 
-	-- Verify the production theme uses the canvas owned by theme.palette.
-	-- Catppuccin Mocha remains the host theme, while C4.4 intentionally owns
-	-- a dedicated Normal background.
+	-- TokyoNight owns the production canvas; DX must not override it.
 	local normal = get_resolved_hl("Normal")
 	if normal.bg ~= colors_rgb.normal_bg then
 		fail(
-			("Production theme is not using the governed Normal background (expected %06x, got %s)"):format(
+			("Production theme is not using TokyoNight Storm Normal.bg (expected %06x, got %s)"):format(
 				colors_rgb.normal_bg,
 				normal.bg and ("%06x"):format(normal.bg) or "nil"
 			)
@@ -150,11 +146,6 @@ local function main()
 					)
 				)
 			end
-		end
-
-		-- Yellow Scarcity Check on production theme: DxCallable must NOT use yellow
-		if colors_rgb.callable == colors_rgb.warn then
-			fail("Yellow Scarcity violation: DxCallable is mapped to state yellow")
 		end
 
 		-- 2. Tree-sitter link resolution
@@ -269,10 +260,10 @@ local function main()
 			fail("@lsp.typemod.function.deprecated must have strikethrough enabled")
 		end
 
-		-- 5. Editor UI Chrome (Yellow Scarcity applied: CurSearch uses state warn yellow)
+		-- 5. Editor UI Chrome is owned by TokyoNight Storm.
 		local cur_search = get_resolved_hl("CurSearch")
-		if cur_search.bg ~= colors_rgb.warn then
-			fail("CurSearch bg must be state yellow")
+		if cur_search.bg ~= colors_rgb.cur_search_bg then
+			fail("CurSearch bg must remain the TokyoNight Storm orange search surface")
 		end
 
 		-- 6. Diagnostics
@@ -302,54 +293,49 @@ local function main()
 			end
 		end
 
-		-- 8. Completion (blink.cmp)
-		local blink_fn = get_resolved_hl("BlinkCmpKindFunction")
-		if blink_fn.fg ~= colors_rgb.callable then
-			fail("BlinkCmpKindFunction must resolve to DxCallable")
+		-- 8. Completion integration topology remains TokyoNight-owned.
+		local blink_fn = vim.api.nvim_get_hl(0, { name = "BlinkCmpKindFunction", link = true })
+		if blink_fn.link ~= "LspKindFunction" then
+			fail("TokyoNight must own BlinkCmpKindFunction integration topology")
+		end
+		local blink_class = vim.api.nvim_get_hl(0, { name = "BlinkCmpKindClass", link = true })
+		if blink_class.link ~= "LspKindClass" then
+			fail("TokyoNight must own BlinkCmpKindClass integration topology")
 		end
 
-		local blink_class = get_resolved_hl("BlinkCmpKindClass")
-		if blink_class.fg ~= colors_rgb.type then
-			fail("BlinkCmpKindClass must resolve to DxType")
-		end
-
-		-- 9. Neotest & DAP
+		-- 9. Neotest & DAP surfaces remain host-owned.
 		local neotest_passed = get_resolved_hl("NeotestPassed")
-		if neotest_passed.fg ~= colors_rgb.success then
-			fail("NeotestPassed must resolve to state success")
+		if neotest_passed.fg ~= colors_rgb.plugin_success then
+			fail("NeotestPassed must use the TokyoNight green integration")
 		end
 
-		local dap_breakpoint = get_resolved_hl("DapBreakpoint")
-		if dap_breakpoint.fg ~= colors_rgb.error then
-			fail("DapBreakpoint must resolve to error red")
+		local dap_stopped_line = get_resolved_hl("DapStoppedLine")
+		if dap_stopped_line.bg == nil then
+			fail("TokyoNight DapStoppedLine integration must provide a background cue")
 		end
 
-		local dap_stopped = get_resolved_hl("DapStopped")
-		if dap_stopped.fg ~= colors_rgb.warn then
-			fail("DapStopped must resolve to warn yellow")
-		end
-
-		-- 10. Auxiliary LSP UI Chrome: Inlay Hints (Background disabled to prevent intrusive badge chips)
+		-- 10. Auxiliary LSP UI Chrome uses TokyoNight's restrained hint surface.
 		local inlay_hint = get_resolved_hl("LspInlayHint")
-		if inlay_hint.bg ~= nil then
-			fail("LspInlayHint must have nil background (inlay_hints.background = false)")
+		if inlay_hint.bg == nil then
+			fail("TokyoNight LspInlayHint must retain its subtle background")
 		end
-		if inlay_hint.fg ~= colors_rgb.overlay0 then
-			fail("LspInlayHint must have overlay0 foreground")
+		if inlay_hint.fg ~= colors_rgb.inlay then
+			fail("LspInlayHint must use the TokyoNight muted foreground")
 		end
 
-		-- 11. Current-line indication contract (quiet: line number only, no full-width text background)
+		-- 11. Current-line values are host-owned; number-only display remains
+		-- an independent editor UX choice.
 		local opt_cursorlineopt = vim.opt.cursorlineopt:get()
 		if not vim.tbl_contains(opt_cursorlineopt, "number") or vim.tbl_contains(opt_cursorlineopt, "line") then
-			fail("cursorlineopt must be 'number' to quiet full-width line background")
+			fail("cursorlineopt must preserve the existing number-only UX policy")
 		end
 		local cursor_line = get_resolved_hl("CursorLine")
-		if cursor_line.bg ~= nil then
-			fail("CursorLine must have nil background to prevent intrusive full-width highlight band")
+		if cursor_line.bg ~= colors_rgb.cursorline_bg then
+			fail("CursorLine must retain the TokyoNight Storm active surface")
 		end
 		local cursor_line_nr = get_resolved_hl("CursorLineNr")
-		if cursor_line_nr.fg ~= colors_rgb.member then
-			fail("CursorLineNr must resolve to member foreground")
+		if cursor_line_nr.fg ~= colors_rgb.cursorline_nr then
+			fail("CursorLineNr must retain the TokyoNight Storm orange foreground")
 		end
 	end
 
@@ -363,7 +349,7 @@ local function main()
 	-- Test Step 2: Colorscheme Reload Invariance (pure observation of production cycle)
 	-- ============================================================================
 	for _ = 1, 3 do
-		vim.cmd.colorscheme("catppuccin")
+		vim.cmd.colorscheme("tokyonight-storm")
 		assert_contract()
 	end
 	print("Colorscheme reload invariance verified across 3 production reload cycles.")

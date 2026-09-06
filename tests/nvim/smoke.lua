@@ -145,16 +145,29 @@ for _, case in ipairs(icon_payload.runtime_observations.nvim) do
 	end
 end
 
+local storm = require("tokyonight.colors").setup({ style = "storm" })
+local storm_icon_primitives = {
+	azure = "blue2",
+	blue = "blue",
+	green = "green",
+	grey = "fg",
+	orange = "orange",
+	purple = "purple",
+	red = "red",
+	teal = "teal",
+	yellow = "yellow",
+}
 local verified_colors = 0
 for role, expected in pairs(icon_payload.color_roles) do
+	local primitive = assert(storm_icon_primitives[role], "Missing TokyoNight icon primitive for " .. role)
 	local highlight = vim.api.nvim_get_hl(0, { name = expected.nvim_highlight, link = false })
-	local expected_rgb = tonumber(expected.rgb:sub(2), 16)
+	local expected_rgb = tonumber(storm[primitive]:sub(2), 16)
 	assert(
 		highlight.fg == expected_rgb,
-		("Final RGB mismatch for %s/%s: expected %s, got #%06x"):format(
+		("TokyoNight icon RGB mismatch for %s/%s: expected %s, got #%06x"):format(
 			role,
 			expected.nvim_highlight,
-			expected.rgb,
+			storm[primitive],
 			highlight.fg or 0
 		)
 	)
@@ -165,7 +178,7 @@ assert(verified_colors == icon_payload.color_role_expected, "Color role coverage
 print(("Audit scope                 %d/%d"):format(icon_payload.audit_expected, icon_payload.audit_expected))
 print(("Explicit consumer mappings  %d/%d"):format(verified_icons, icon_payload.explicit_expected))
 print(("Real-project observations   %d/%d"):format(icon_payload.real_project_expected, icon_payload.audit_expected))
-print(("Final highlight RGB roles   %d/%d"):format(verified_colors, icon_payload.color_role_expected))
+print(("TokyoNight icon RGB roles  %d/%d"):format(verified_colors, icon_payload.color_role_expected))
 print(
 	("Neovim runtime observations %d/%d (informational)"):format(
 		runtime_verified,

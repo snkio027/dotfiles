@@ -132,15 +132,60 @@ local function foreground_candidates(inspected)
 	return candidates
 end
 
-local function roles_for_foreground(foreground)
-	local roles = {}
-	for role in pairs(require("theme.domain").roles) do
-		if vim.api.nvim_get_hl(0, { name = role, link = false }).fg == foreground then
-			roles[#roles + 1] = role
+local function role_for_group(group)
+	local roles = require("theme.domain").roles
+	local candidate = group
+	local visited = {}
+
+	while candidate and not visited[candidate] do
+		visited[candidate] = true
+		if roles[candidate] then
+			return candidate
+		end
+
+		local highlight = vim.api.nvim_get_hl(0, { name = candidate, link = true })
+		if highlight.link then
+			candidate = highlight.link
+		elseif candidate:sub(1, 1) == "@" and candidate:find("%.") then
+			candidate = candidate:match("^(.*)%.[^.]+$")
+		else
+			candidate = nil
 		end
 	end
-	table.sort(roles)
-	return roles
+
+	return nil
+end
+
+local function role_foreground(role)
+	local highlight = vim.api.nvim_get_hl(0, { name = role, link = false })
+	if not highlight.fg then
+		fail("DX role has no resolved foreground: " .. role)
+	end
+	return highlight.fg
+end
+
+local function assert_role_foreground(actual, role, message)
+	assert_equal(actual, role_foreground(role), message)
+end
+
+local function verify_effective_foreground_negative_control()
+	local group = "@lsp.type.variable.dx004WrongForeground"
+	vim.api.nvim_set_hl(0, group, { fg = "#ff0000" })
+
+	assert_equal(role_for_group(group), "DxVariable", "negative-control topology must still resolve to DxVariable")
+	local accepted = pcall(function()
+		local highlight = vim.api.nvim_get_hl(0, { name = group, link = false })
+		assert_role_foreground(
+			highlight.fg,
+			"DxVariable",
+			"negative-control direct foreground must not inherit parent semantic authority"
+		)
+	end)
+
+	vim.api.nvim_set_hl(0, group, {})
+	if accepted then
+		fail("wrong direct child foreground bypassed effective-foreground evidence")
+	end
 end
 
 local function expected_semantic_groups(token, filetype)
@@ -182,20 +227,17 @@ local function semantic_application(inspected, token, filetype, tag)
 			groups[#groups + 1] = { group = group, priority = priority }
 			local highlight = vim.api.nvim_get_hl(0, { name = group, link = false })
 			if highlight.fg then
-				local roles = roles_for_foreground(highlight.fg)
-				if #roles ~= 1 then
+				local role = role_for_group(group)
+				if not role then
 					fail(
-						("semantic foreground for %s does not resolve to exactly one Dx role: %s -> %s"):format(
-							tag,
-							group,
-							vim.inspect(roles)
-						)
+						("semantic foreground for %s does not resolve through DX link topology: %s"):format(tag, group)
 					)
 				end
+				assert_role_foreground(highlight.fg, role, ("semantic foreground drift for %s: %s"):format(tag, group))
 				foregrounds[#foregrounds + 1] = {
 					group = group,
 					priority_delta = priority - base_priority,
-					role = roles[1],
+					role = role,
 				}
 			end
 		end
@@ -483,11 +525,8 @@ local function capture_case(bufnr, case, lang, spec, clients_by_name, raw_tokens
 	end
 	assert_equal(winner.group, expected.effective.group, "effective highlight group drift for " .. case.tag)
 	assert_equal(winner.source, expected.effective.source, "effective authority drift for " .. case.tag)
-	assert_equal(
-		roles_for_foreground(winner.foreground),
-		{ expected.effective.role },
-		"effective Dx role drift for " .. case.tag
-	)
+	assert_equal(role_for_group(winner.group), expected.effective.role, "effective Dx role drift for " .. case.tag)
+	assert_role_foreground(winner.foreground, expected.effective.role, "effective foreground drift for " .. case.tag)
 
 	local application
 	if expected.applied_foregrounds then
@@ -576,13 +615,15 @@ end
 local function main()
 	vim.opt.swapfile = false
 	local colorscheme = vim.g.colors_name
-	if colorscheme ~= "catppuccin" and colorscheme ~= "catppuccin-mocha" then
-		fail("production Catppuccin colorscheme is not active")
+	if colorscheme ~= "tokyonight-storm" then
+		fail("production TokyoNight Storm colorscheme is not active")
 	end
 
 	local domain = require("theme.domain")
 	assert_equal(vim.tbl_count(domain.roles), 23, "M2A must preserve the 23-role domain closure")
 	assert_equal(domain.roles.DxModuleBinding, nil, "M2A must not admit DxModuleBinding")
+	verify_effective_foreground_negative_control()
+	print("M2 effective role and foreground evidence negative control passed.")
 
 	local repo_root = vim.fs.root(0, ".git") or vim.fn.getcwd()
 	local manifest = dofile(repo_root .. "/tests/nvim/color_manifest.lua")
