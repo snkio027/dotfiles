@@ -39,6 +39,8 @@ run_nvim lazy-restore "+luafile tests/nvim/restore_lock.lua" "+Lazy! restore" \
     "+luafile tests/nvim/provision.lua" +qa
 run_nvim startup-policy "+luafile tests/nvim/startup_policy.lua" +qa
 run_nvim color-unit "-n" "+set rtp^=$PWD/home/dot_config/nvim" "+luafile tests/nvim/run_contract.lua" "tests/nvim/color_unit_contract.lua"
+run_nvim native-first-unit "-n" "+set rtp^=$PWD/home/dot_config/nvim" \
+    "+luafile tests/nvim/run_contract.lua" "tests/nvim/native_first_contract.lua"
 run_nvim production-visual "-n" "+luafile tests/nvim/production_visual_runtime.lua" +qa
 run_nvim python-provider-unit "-n" "+set rtp^=$PWD/home/dot_config/nvim" \
     "+luafile tests/nvim/run_contract.lua" "tests/nvim/python_provider_ownership_contract.lua"
@@ -47,12 +49,16 @@ run_nvim color-contract "-n" "+luafile tests/nvim/color_contract.lua" +qa
 run_nvim binding-evidence "-n" "+luafile tests/nvim/binding_evidence.lua" +qa
 DOTFILES_M2C_CONFIG_HOME="$CONFIG_HOME" DOTFILES_M2C_LOG_DIR="$LOG_DIR" \
     bash tests/nvim/python_provider_ownership.sh
+DOTFILES_NATIVE_FIRST_SEED_DATA="$XDG_DATA_HOME/nvim" \
+    bash tests/nvim/native_first/evaluate.sh "$TEST_ROOT/native-first"
 
 if grep -ERni 'Package is already installing|MasonToolsStartingInstall|MasonToolsUpdateCompleted|^Installing tools:|^Updating tools:' \
     "$LOG_DIR/lazy-restore.log" "$LOG_DIR/startup-policy.log" "$LOG_DIR/smoke.log" \
     "$LOG_DIR/color-unit.log" "$LOG_DIR/production-visual.log" \
+    "$LOG_DIR/native-first-unit.log" \
     "$LOG_DIR/python-provider-unit.log" "$LOG_DIR/color-contract.log" \
-    "$LOG_DIR/binding-evidence.log" "$LOG_DIR/python-provider-production.log"; then
+    "$LOG_DIR/binding-evidence.log" "$LOG_DIR/python-provider-production.log" \
+    "$TEST_ROOT/native-first/logs"; then
     echo "Unexpected Mason background installation or update detected" >&2
     exit 1
 fi
