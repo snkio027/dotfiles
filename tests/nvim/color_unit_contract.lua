@@ -1,4 +1,4 @@
---- DX Semantic Color System (DX-COLOR-003)
+--- DX Semantic Color System (DX-COLOR-004)
 --- Tier-1 Unit Contract: standalone verification of the domain, composition graph,
 --- production visual projection, bindings, authority, and sentinel locators.
 --- Runnable via:
@@ -16,35 +16,32 @@ local function assert_eq(actual, expected, msg)
 	end
 end
 
--- Official Catppuccin Mocha palette
+-- Official TokyoNight Storm named palette plus derived public state aliases.
 local colors = {
-	base = "#1e1e2e",
-	mantle = "#181825",
-	crust = "#11111b",
-	surface0 = "#313244",
-	surface1 = "#45475a",
-	surface2 = "#585b70",
-	overlay0 = "#6c7086",
-	overlay1 = "#7f849c",
-	overlay2 = "#9399b2",
-	subtext0 = "#a6adc8",
-	subtext1 = "#bac2de",
-	text = "#cdd6f4",
-	mauve = "#cba6f7",
-	lavender = "#b4befe",
-	blue = "#89b4fa",
-	sapphire = "#74c7ec",
-	sky = "#89dceb",
-	teal = "#94e2d5",
-	green = "#a6e3a1",
-	yellow = "#f9e2af",
-	peach = "#fab387",
-	maroon = "#eba0ac",
-	red = "#f38ba8",
-	pink = "#f5c2e7",
-	flamingo = "#f2cdcd",
-	rosewater = "#f5e0dc",
+	bg = "#24283b",
+	bg_dark = "#1f2335",
+	bg_highlight = "#292e42",
+	blue = "#7aa2f7",
+	blue1 = "#2ac3de",
+	blue2 = "#0db9d7",
+	blue5 = "#89ddff",
+	comment = "#565f89",
+	cyan = "#7dcfff",
+	dark5 = "#737aa2",
+	fg = "#c0caf5",
+	fg_dark = "#a9b1d6",
+	green = "#9ece6a",
+	green1 = "#73daca",
+	magenta = "#bb9af7",
+	orange = "#ff9e64",
+	red1 = "#db4b4b",
+	teal = "#1abc9c",
+	yellow = "#e0af68",
 }
+colors.error = colors.red1
+colors.warning = colors.yellow
+colors.info = colors.blue2
+colors.hint = colors.teal
 
 -- ==========================================================================
 -- 1. Load Theme Modules
@@ -82,8 +79,28 @@ local p = palette_mod.resolve(colors)
 local roles = visual.roles(p)
 local full_hl = theme.highlights(colors)
 local composed_hl = compose.highlights(p, visual)
-assert(vim.deep_equal(full_hl, composed_hl), "theme.highlights() must resolve directly to C4.4")
-print("M5 single-production-visual contract passed: theme.highlights() -> C4.4.")
+assert(vim.deep_equal(full_hl, composed_hl), "theme.highlights() must resolve to the Storm semantic overlay")
+print("DX-COLOR-004 Storm semantic-overlay composition passed.")
+
+local host_overlay_fixture = {
+	Normal = { fg = colors.fg, bg = colors.bg },
+	["@lsp.typemod.type.defaultLibrary"] = { fg = colors.blue1 },
+	["@lsp.type.unresolvedReference"] = { undercurl = true, sp = colors.error },
+}
+theme.apply_host_overlay(host_overlay_fixture, colors)
+assert_eq(host_overlay_fixture.Normal.bg, colors.bg, "Storm host surface was modified by the DX overlay")
+assert_eq(
+	host_overlay_fixture["@lsp.typemod.type.defaultLibrary"],
+	nil,
+	"ungoverned host LSP foreground was not removed"
+)
+assert_eq(
+	host_overlay_fixture["@lsp.type.unresolvedReference"].undercurl,
+	true,
+	"host unresolved-reference non-color cue was removed"
+)
+assert_eq(host_overlay_fixture["@lsp.type.variable"].link, "DxVariable", "DX LSP overlay was not installed")
+print("Storm host/DX semantic ownership boundary passed.")
 
 local groups = {}
 for group, spec in pairs(full_hl) do
@@ -135,7 +152,7 @@ for _, role in ipairs(required_semantic_roles) do
 		fail("Domain role is missing semantic description: " .. role)
 	end
 	if not roles[role] then
-		fail("C4.4 production visual is missing required semantic role: " .. role)
+		fail("Storm semantic visual is missing required semantic role: " .. role)
 	end
 	role_count = role_count + 1
 end
@@ -147,32 +164,32 @@ for role in pairs(domain.roles) do
 end
 for role in pairs(roles) do
 	if not domain.roles[role] then
-		fail("C4.4 production visual defines role outside the domain closure: " .. role)
+		fail("Storm semantic visual defines role outside the domain closure: " .. role)
 	end
 end
 assert_eq(role_count, 23, "Expected exactly 23 semantic roles in DX-COLOR-003")
 
 -- ==========================================================================
--- 3. C4.4 Production Visual Contract and Negative Controls
+-- 3. Storm Host Semantic Visual Contract and Negative Controls
 -- ==========================================================================
 
 local repo_root = vim.fs.root(0, ".git") or vim.fn.getcwd()
-local c4_contract = dofile(repo_root .. "/tests/nvim/visual_contracts/c4.lua")
-c4_contract.verify({
+local storm_contract = dofile(repo_root .. "/tests/nvim/visual_contracts/storm.lua")
+storm_contract.verify({
 	palette = p,
 	roles = roles,
 	graph = full_hl,
 	domain = domain,
 	host_colors = colors,
 })
-c4_contract.verify_negative_controls({
+storm_contract.verify_negative_controls({
 	palette = p,
-	visual = visual,
+	roles = roles,
 	graph = full_hl,
 	domain = domain,
 	host_colors = colors,
 })
-print("C4.4 High-Chroma Night visual contract and negative controls passed.")
+print("DX-COLOR-004 Storm visual contract and negative controls passed.")
 
 -- ==========================================================================
 -- 4. No Raw Source Hex Outside Palette Gate & Namespace Disjointness Gate
@@ -419,8 +436,8 @@ for _, token_type in ipairs(governed_lsp_types) do
 	end
 end
 
--- Completion, Editor UI, Diagnostics, Git, DAP, Neotest, Markdown Groups
-local required_extras = {
+-- Surface and plugin groups belong to TokyoNight, not to the DX overlay.
+local host_owned_groups = {
 	"BlinkCmpKindFunction",
 	"BlinkCmpKindClass",
 	"BlinkCmpKindField",
@@ -452,9 +469,9 @@ local required_extras = {
 	"RenderMarkdownQuote",
 }
 
-for _, extra in ipairs(required_extras) do
-	if not groups[extra] then
-		fail("Missing required extra highlight group mapping: " .. extra)
+for _, group in ipairs(host_owned_groups) do
+	if groups[group] ~= nil then
+		fail("DX semantic overlay unexpectedly owns TokyoNight group: " .. group)
 	end
 end
 
@@ -471,7 +488,7 @@ for group, _ in pairs(groups) do
 end
 
 -- ==========================================================================
--- 6. M5 Production Graph and Historical Provenance
+-- 6. Storm M1 Semantic Graph and M5 Historical Provenance
 -- ==========================================================================
 
 local expected_layers = {
@@ -483,8 +500,6 @@ local expected_layers = {
 	"clangd",
 	"rust_analyzer",
 	"pyright",
-	"ui",
-	"plugins",
 }
 
 assert_eq(#compose.layers, #expected_layers, "Unexpected number of composition layers")
@@ -703,7 +718,73 @@ local function normalized_graph_digest(graph)
 	return #names, vim.fn.sha256(table.concat(normalized, "\n"))
 end
 
-local production_count, production_digest = normalized_graph_digest(full_hl)
+local STORM_M1_GRAPH_COUNT = 152
+local STORM_M1_GRAPH_SHA256 = "81d6f18ac0b493b26924e30d3506c604dcb8cb0900d7e36b040482608184ab30"
+local storm_count, storm_digest = normalized_graph_digest(full_hl)
+assert_eq(storm_count, STORM_M1_GRAPH_COUNT, "Storm M1 semantic-overlay group count changed")
+assert_eq(storm_digest, STORM_M1_GRAPH_SHA256, "Storm M1 semantic-overlay graph changed")
+print(("Storm M1 semantic-overlay graph frozen: %d groups, sha256=%s"):format(storm_count, storm_digest))
+
+-- Reconstruct the released M5 graph from the unchanged semantic architecture,
+-- dormant historical UI/plugin bindings, and its frozen palette. This keeps
+-- DX-COLOR-003 evidence immutable while the production host moves to Storm.
+local m5_palette = {
+	code = {
+		variable = "#C4CAE0",
+		keyword = "#BB9AF7",
+		keyword_function = "#7DCFFF",
+		callable = "#E6B35C",
+		type = "#2AC3DE",
+		builtin = "#9ECE6A",
+		member = "#F29BC1",
+		lifetime = "#67D4C7",
+		parameter = "#C8B2E3",
+		meta = "#D16DDB",
+		namespace = "#5EA1FF",
+		string = "#B8D07A",
+		number = "#F09A6C",
+		constant = "#DCC66A",
+		label = "#8E98B8",
+		operator = "#89DDFF",
+		punctuation = "#8991A8",
+		comment = "#7580A3",
+		doc = "#929BC2",
+	},
+	state = {
+		error = "#F38BA8",
+		warn = "#F9E2AF",
+		success = "#89DCEB",
+		info = "#89B4FA",
+		hint = "#B4BEFE",
+	},
+	ui = {
+		base = "#1E1E2E",
+		mantle = "#181825",
+		crust = "#11111B",
+		surface0 = "#313244",
+		surface1 = "#45475A",
+		surface2 = "#585B70",
+		overlay0 = "#6C7086",
+		overlay1 = "#7F849C",
+		overlay2 = "#9399B2",
+		subtext0 = "#A6ADC8",
+		subtext1 = "#BAC2DE",
+		text = "#CDD6F4",
+		normal_bg = "#1A1B2A",
+	},
+}
+
+local historical_m5_graph = compose.highlights(m5_palette, visual)
+for _, module_name in ipairs({ "theme.bindings.ui", "theme.bindings.plugins" }) do
+	for group, spec in pairs(require(module_name).groups(m5_palette)) do
+		if historical_m5_graph[group] ~= nil then
+			fail("M5 historical reconstruction has duplicate owner for " .. group)
+		end
+		historical_m5_graph[group] = spec
+	end
+end
+
+local production_count, production_digest = normalized_graph_digest(historical_m5_graph)
 assert_eq(
 	production_count,
 	M5_PRODUCTION_GRAPH_COUNT,
@@ -714,12 +795,12 @@ assert_eq(
 	M5_PRODUCTION_GRAPH_SHA256,
 	("M5 production resolved graph changed from %s"):format(M5_BASE_SHA)
 )
-print(("M5 production C4.4 graph frozen: %d groups, sha256=%s"):format(production_count, production_digest))
+print(("M5 historical C4.4 graph preserved: %d groups, sha256=%s"):format(production_count, production_digest))
 
-assert_eq(full_hl.Normal.bg, p.ui.normal_bg, "M5 production Normal background does not use its owned canvas token")
-assert_eq(vim.tbl_count(full_hl.Normal), 1, "M5 production Normal override must own only the canvas background")
+assert_eq(historical_m5_graph.Normal.bg, m5_palette.ui.normal_bg, "M5 historical Normal canvas changed")
+assert_eq(vim.tbl_count(historical_m5_graph.Normal), 1, "M5 historical Normal override changed")
 
-local accepted_c4_4_graph = vim.deepcopy(full_hl)
+local accepted_c4_4_graph = vim.deepcopy(historical_m5_graph)
 local consumer_delta_count = 0
 for group, old_foreground in pairs(M5_AUTHORIZED_CONSUMER_DELTA) do
 	local spec = accepted_c4_4_graph[group]
@@ -794,7 +875,7 @@ assert_eq(
 )
 print(("C4.0 graph reconstructed after C4.4 visual rollback: %d groups, sha256=%s"):format(c4_0_count, c4_0_digest))
 
-local historical_m2b_graph = vim.deepcopy(full_hl)
+local historical_m2b_graph = vim.deepcopy(historical_m5_graph)
 for group, old_foreground in pairs(M5_AUTHORIZED_CONSUMER_DELTA) do
 	historical_m2b_graph[group].fg = old_foreground
 end
@@ -846,19 +927,19 @@ local function assert_production_graph(candidate)
 	assert_eq(digest, M5_PRODUCTION_GRAPH_SHA256, "M5 production graph digest changed")
 end
 
-local bad_graph_extra = vim.deepcopy(full_hl)
-bad_graph_extra.DxUnauthorized = { fg = p.code.variable }
+local bad_graph_extra = vim.deepcopy(historical_m5_graph)
+bad_graph_extra.DxUnauthorized = { fg = m5_palette.code.variable }
 assert(not pcall(assert_production_graph, bad_graph_extra), "M5 production graph must reject added groups")
 
-local bad_graph_link = vim.deepcopy(full_hl)
+local bad_graph_link = vim.deepcopy(historical_m5_graph)
 bad_graph_link["@lsp.type.variable"].link = "DxMember"
 assert(not pcall(assert_production_graph, bad_graph_link), "M5 production graph must reject link drift")
 
-local bad_graph_authority = vim.deepcopy(full_hl)
+local bad_graph_authority = vim.deepcopy(historical_m5_graph)
 bad_graph_authority["@lsp.mod.deprecated"].strikethrough = false
 assert(not pcall(assert_production_graph, bad_graph_authority), "M5 production graph must reject style-authority drift")
 
-local bad_graph_field = vim.deepcopy(full_hl)
+local bad_graph_field = vim.deepcopy(historical_m5_graph)
 bad_graph_field.DxVariable.reverse = true
 local ok_unknown_field = pcall(assert_governed_graph_fields, bad_graph_field)
 assert(not ok_unknown_field, "Negative control failure: unknown highlight attributes must fail closed")

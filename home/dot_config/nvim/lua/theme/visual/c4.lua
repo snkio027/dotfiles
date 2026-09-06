@@ -1,13 +1,13 @@
 --- DX Semantic Color System (DX-COLOR-003)
---- C4.4 High-Chroma Night visual projection.
---- Palette iteration is owned by palette.code.
+--- DX-COLOR-004 M1 Storm-derived semantic projection prototype.
+--- The module name remains stable until promotion/cleanup.
 
 local M = {}
 
 ---@param p table Unified palette returned by palette.resolve()
 ---@return table<string, vim.api.keyset.highlight>
 function M.roles(p)
-  local code = assert(p.code, "C4.4 code palette is unavailable")
+  local code = assert(p.code, "Storm semantic palette is unavailable")
 
   return {
     DxKeyword = { fg = code.keyword, bold = false, italic = false },

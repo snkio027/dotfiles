@@ -1,4 +1,4 @@
---- DX-COLOR-003 M5 production C4.4 runtime contract.
+--- DX-COLOR-004 M1 TokyoNight Storm host runtime contract.
 
 local function main()
 	local function fail(message)
@@ -25,21 +25,15 @@ local function main()
 		return ("#%06X"):format(rgb)
 	end
 
-	local colorscheme = vim.g.colors_name
-	if colorscheme ~= "catppuccin" and colorscheme ~= "catppuccin-mocha" then
-		fail(("Catppuccin production colorscheme is not active: %s"):format(vim.inspect(colorscheme)))
-	end
+	assert_eq(vim.g.colors_name, "tokyonight-storm", "TokyoNight Storm production host is not active")
 
 	local theme = require("theme")
 	if theme.default_profile ~= nil or theme.resolve_profile ~= nil or theme.active_profile ~= nil then
-		fail("runtime profile-selection surface still exists")
+		fail("runtime profile-selection surface must remain absent")
 	end
 
-	local catppuccin = require("catppuccin.palettes").get_palette("mocha")
-	if type(catppuccin) ~= "table" then
-		fail("Catppuccin Mocha palette is unavailable")
-	end
-	local palette = require("theme.palette").resolve(catppuccin)
+	local storm = require("tokyonight.colors").setup({ style = "storm" })
+	local palette = require("theme.palette").resolve(storm)
 	local visual = require("theme.visual.c4")
 	local domain = require("theme.domain")
 	local expected_roles = visual.roles(palette)
@@ -49,7 +43,7 @@ local function main()
 		local expected = expected_roles[role]
 		local actual = vim.api.nvim_get_hl(0, { name = role, link = false })
 		if type(expected) ~= "table" or type(expected.fg) ~= "string" then
-			fail("C4.4 production visual is missing a concrete foreground for " .. role)
+			fail("Storm semantic projection is missing a concrete foreground for " .. role)
 		end
 		assert_eq(actual.fg, hex_to_rgb(expected.fg), "runtime foreground mismatch for " .. role)
 		for _, attribute in ipairs({ "bold", "italic", "underline", "undercurl", "strikethrough", "nocombine" }) do
@@ -88,29 +82,66 @@ local function main()
 	end
 
 	local normal = vim.api.nvim_get_hl(0, { name = "Normal", link = false })
-	local resolved_background = rgb_to_hex(normal.bg)
-	assert_eq(resolved_background:lower(), palette.ui.normal_bg:lower(), "runtime resolved the wrong Normal background")
+	assert_eq(normal.bg, hex_to_rgb(storm.bg), "TokyoNight Storm does not own Normal.bg")
+	assert_eq(normal.fg, hex_to_rgb(storm.fg), "TokyoNight Storm does not own Normal.fg")
+	assert_eq(
+		vim.api.nvim_get_hl(0, { name = "CursorLine", link = false }).bg,
+		hex_to_rgb(storm.bg_highlight),
+		"TokyoNight Storm does not own CursorLine"
+	)
+	assert_eq(
+		vim.api.nvim_get_hl(0, { name = "CursorLineNr", link = false }).fg,
+		hex_to_rgb(storm.orange),
+		"TokyoNight Storm does not own CursorLineNr"
+	)
+	assert_eq(
+		vim.api.nvim_get_hl(0, { name = "NormalFloat", link = false }).bg,
+		hex_to_rgb(storm.bg_dark),
+		"TokyoNight Storm does not own floating surfaces"
+	)
+	assert_eq(
+		vim.api.nvim_get_hl(0, { name = "Pmenu", link = false }).bg,
+		hex_to_rgb(storm.bg_dark),
+		"TokyoNight Storm does not own completion surfaces"
+	)
+
+	local diagnostic_error = vim.api.nvim_get_hl(0, { name = "DiagnosticError", link = false })
+	local diagnostic_underline = vim.api.nvim_get_hl(0, { name = "DiagnosticUnderlineError", link = false })
+	assert_eq(diagnostic_error.fg, hex_to_rgb(storm.error), "TokyoNight diagnostic color ownership changed")
+	assert_eq(diagnostic_underline.undercurl, true, "diagnostic error lost its non-color cue")
+	assert_eq(diagnostic_underline.sp, hex_to_rgb(storm.error), "diagnostic undercurl color changed")
+
+	local overlay = theme.highlights(storm)
+	for _, host_group in ipairs({
+		"Normal",
+		"CursorLine",
+		"DiagnosticError",
+		"BlinkCmpKindFunction",
+		"NeotestPassed",
+		"RenderMarkdownH1",
+	}) do
+		assert_eq(overlay[host_group], nil, "DX overlay took ownership of host group " .. host_group)
+	end
 
 	local repo_root = vim.fs.root(0, ".git") or vim.fn.getcwd()
-	local c4_contract = dofile(repo_root .. "/tests/nvim/visual_contracts/c4.lua")
-	c4_contract.verify({
+	local storm_contract = dofile(repo_root .. "/tests/nvim/visual_contracts/storm.lua")
+	storm_contract.verify({
 		palette = palette,
 		roles = actual_roles,
-		graph = {
-			DiagnosticUnderlineError = vim.api.nvim_get_hl(0, { name = "DiagnosticUnderlineError", link = false }),
-			DiagnosticUnderlineWarn = vim.api.nvim_get_hl(0, { name = "DiagnosticUnderlineWarn", link = false }),
-		},
+		graph = overlay,
 		domain = domain,
-		host_colors = catppuccin,
-		resolved_background = resolved_background,
+		host_colors = storm,
 	})
 
-	print(("M5 production C4.4 runtime contract passed against actual Normal.bg %s."):format(resolved_background))
+	print(
+		("DX-COLOR-004 M1 Storm host runtime contract passed against actual Normal.bg %s."):format(
+			rgb_to_hex(normal.bg)
+		)
+	)
 end
 
 local ok, err = xpcall(main, debug.traceback)
 if not ok then
-	io.stderr:write(("\n!!! M5 PRODUCTION VISUAL RUNTIME FAILURE !!!\n%s\n"):format(tostring(err)))
-	vim.api.nvim_err_writeln(("M5 PRODUCTION VISUAL RUNTIME FAILURE: %s"):format(tostring(err)))
+	io.stderr:write(("\n!!! DX-COLOR-004 M1 PRODUCTION VISUAL RUNTIME FAILURE !!!\n%s\n"):format(err))
 	vim.cmd("cquit 1")
 end
