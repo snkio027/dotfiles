@@ -183,19 +183,33 @@ if ! env -u HOMEBREW_PREFIX -u HOMEBREW_CELLAR -u HOMEBREW_REPOSITORY \
 fi
 
 BOOTSTRAP="$TEST_ROOT/linux-bootstrap.sh"
-BOOTSTRAP_BIN="$TEST_ROOT/bootstrap-bin"
+BOOTSTRAP_PREFIX="$TEST_ROOT/bootstrap-linuxbrew"
+BOOTSTRAP_BIN="$BOOTSTRAP_PREFIX/bin"
 BOOTSTRAP_LOG="$TEST_ROOT/bootstrap.log"
 render "$LINUX_DATA" home/.chezmoiscripts/run_once_before_10_install_brew.sh.tmpl "$BOOTSTRAP"
+sed -i.bak "s#^BREW_PREFIX=\"$LINUX_PREFIX\"#BREW_PREFIX=\"$BOOTSTRAP_PREFIX\"#" "$BOOTSTRAP"
+rm -f "$BOOTSTRAP.bak"
 bash -n "$BOOTSTRAP"
-if grep -Fq 'brew install gcc || true' "$BOOTSTRAP"; then
+if grep -Fq '"$BREW_BIN" install gcc || true' "$BOOTSTRAP"; then
     echo "Linux bootstrap still ignores gcc installation failures" >&2
     exit 1
 fi
 mkdir -p "$BOOTSTRAP_BIN"
 cat >"$BOOTSTRAP_BIN/brew" <<'EOF'
 #!/bin/sh
-echo "simulated brew failure" >&2
-exit 42
+case "${1:-}" in
+--version)
+    echo "Homebrew test"
+    ;;
+install)
+    echo "simulated brew failure" >&2
+    exit 42
+    ;;
+*)
+    echo "unexpected brew command: $*" >&2
+    exit 64
+    ;;
+esac
 EOF
 chmod +x "$BOOTSTRAP_BIN/brew"
 if PATH="$BOOTSTRAP_BIN" /bin/bash "$BOOTSTRAP" >"$BOOTSTRAP_LOG" 2>&1; then

@@ -19,6 +19,9 @@
 {{- if empty $machine_profile -}}
 {{-   $machine_profile = "workstation" -}}
 {{- end -}}
+{{- if not (or (eq $machine_profile "workstation") (eq $machine_profile "devcontainer")) -}}
+{{-   fail (printf "CHEZMOI_PROFILE must be exactly workstation or devcontainer; got %q" $machine_profile) -}}
+{{- end -}}
 
 {{- $op_ssh_socket := env "OP_SSH_AUTH_SOCK" -}}
 {{- if empty $op_ssh_socket -}}

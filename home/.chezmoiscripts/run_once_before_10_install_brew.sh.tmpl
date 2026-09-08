@@ -7,27 +7,47 @@
 
 set -euo pipefail
 
+{{- if .is_mac }}
+{{-   if .is_arm64 }}
+BREW_PREFIX="/opt/homebrew"
+{{-   else }}
+BREW_PREFIX="/usr/local"
+{{-   end }}
+{{- else if .is_linux }}
+BREW_PREFIX="/home/linuxbrew/.linuxbrew"
+{{- else }}
+{{-   fail (printf "unsupported Homebrew platform: %s/%s" .chezmoi.os .chezmoi.arch) }}
+{{- end }}
+BREW_BIN="${BREW_PREFIX}/bin/brew"
+
 echo "🍺  正在检查 Homebrew/Linuxbrew 基座安装状态..."
-if ! command -v brew &>/dev/null; then
+if [ ! -x "$BREW_BIN" ]; then
 {{- if .is_mac }}
     echo "正在为 macOS 安装 Homebrew..."
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-    eval "$(/opt/homebrew/bin/brew shellenv)"
 {{- else if .is_linux }}
     echo "正在安装 Linuxbrew..."
     NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-    eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 {{- end }}
-    echo "✅  Homebrew 基座安装成功。"
 else
     echo "✔  Homebrew 基座已就位。"
 fi
+
+if [ ! -x "$BREW_BIN" ]; then
+    echo "❌  Homebrew 安装结束后入口仍不可执行: $BREW_BIN" >&2
+    exit 1
+fi
+if ! "$BREW_BIN" --version >/dev/null; then
+    echo "❌  Homebrew 入口无法正常执行: $BREW_BIN" >&2
+    exit 1
+fi
+echo "✅  Homebrew 基座安装成功并通过执行检查。"
 
 # 确保 Linux 平台拥有 gcc 编译链 (支持 Neovim Treesitter 语法解析器编译)
 {{- if .is_linux }}
 if ! command -v gcc &>/dev/null; then
     echo "⚙️  正在为 Linuxbrew 安装 C 编译器 (gcc)..."
-    if ! brew install gcc; then
+    if ! "$BREW_BIN" install gcc; then
         printf '%s\n' \
             '❌  Linuxbrew 无法安装 gcc；初始化已停止。' \
             '请检查网络、/home/linuxbrew/.linuxbrew 的写入权限，以及系统构建依赖。' \
