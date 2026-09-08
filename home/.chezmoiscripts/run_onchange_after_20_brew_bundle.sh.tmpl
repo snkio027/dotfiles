@@ -4,6 +4,9 @@
 # 当当前机器的 Brew profile 发生变更或初始化应用时，只安装缺失依赖，
 # 不主动批量升级现有工具。
 # 全量更新由显式的 brewup/devup 维护命令负责。
+{{- if not (or (eq .machine_profile "workstation") (eq .machine_profile "devcontainer")) }}
+{{-   fail (printf "unsupported machine_profile %q; expected workstation or devcontainer" .machine_profile) }}
+{{- end }}
 {{- if eq .machine_profile "devcontainer" }}
 # Brew profile 哈希值: {{ include "../brew/profiles/devcontainer.Brewfile" | sha256sum }}
 {{- else }}
@@ -13,6 +16,18 @@
 
 set -euo pipefail
 
+{{- if .is_mac }}
+{{-   if .is_arm64 }}
+BREW_BIN="/opt/homebrew/bin/brew"
+{{-   else }}
+BREW_BIN="/usr/local/bin/brew"
+{{-   end }}
+{{- else if .is_linux }}
+BREW_BIN="/home/linuxbrew/.linuxbrew/bin/brew"
+{{- else }}
+{{-   fail (printf "unsupported Homebrew platform: %s/%s" .chezmoi.os .chezmoi.arch) }}
+{{- end }}
+
 {{- if eq .machine_profile "devcontainer" }}
 BREW_PROFILE="devcontainer"
 {{- else }}
@@ -20,23 +35,34 @@ BREW_PROFILE="workstation"
 {{- end }}
 BREWFILE="{{ .chezmoi.workingTree }}/brew/profiles/${BREW_PROFILE}.Brewfile"
 
-if command -v brew &>/dev/null && [ -f "$BREWFILE" ]; then
-    echo "📦  正在按现有 Homebrew 元数据安装 ${BREW_PROFILE} profile 缺失依赖..."
-    # Homebrew 6 requires explicit trust for third-party formulae. Keep the
-    # grant scoped to HashiCorp's Terraform formula instead of the whole tap.
-    if brew commands | grep -qx "trust"; then
-        brew trust --formula hashicorp/tap/terraform
-    fi
-    for attempt in 1 2 3; do
-        if HOMEBREW_NO_AUTO_UPDATE=1 brew bundle install --no-upgrade --file="$BREWFILE"; then
-            break
-        fi
-        if [ "$attempt" -eq 3 ]; then
-            echo "❌  ${BREW_PROFILE} profile 缺失依赖连续 3 次安装失败；保留已完成安装并等待网络恢复。" >&2
-            exit 1
-        fi
-        echo "⚠️  Brewfile 安装失败，$((attempt * 2)) 秒后重试 ($attempt/3)..." >&2
-        sleep "$((attempt * 2))"
-    done
-    echo "✅  ${BREW_PROFILE} profile 缺失依赖安装完成；未主动执行批量升级。"
+if [ ! -x "$BREW_BIN" ]; then
+    echo "❌  Homebrew 入口缺失或不可执行: $BREW_BIN" >&2
+    exit 1
 fi
+if ! "$BREW_BIN" --version >/dev/null; then
+    echo "❌  Homebrew 入口无法正常执行: $BREW_BIN" >&2
+    exit 1
+fi
+if [ ! -r "$BREWFILE" ]; then
+    echo "❌  Brew profile 缺失或不可读: $BREWFILE" >&2
+    exit 1
+fi
+
+echo "📦  正在按现有 Homebrew 元数据安装 ${BREW_PROFILE} profile 缺失依赖..."
+# Homebrew 6 requires explicit trust for third-party formulae. Keep the
+# grant scoped to HashiCorp's Terraform formula instead of the whole tap.
+if "$BREW_BIN" commands | grep -qx "trust"; then
+    "$BREW_BIN" trust --formula hashicorp/tap/terraform
+fi
+for attempt in 1 2 3; do
+    if HOMEBREW_NO_AUTO_UPDATE=1 "$BREW_BIN" bundle install --no-upgrade --file="$BREWFILE"; then
+        break
+    fi
+    if [ "$attempt" -eq 3 ]; then
+        echo "❌  ${BREW_PROFILE} profile 缺失依赖连续 3 次安装失败；保留已完成安装并等待网络恢复。" >&2
+        exit 1
+    fi
+    echo "⚠️  Brewfile 安装失败，$((attempt * 2)) 秒后重试 ($attempt/3)..." >&2
+    sleep "$((attempt * 2))"
+done
+echo "✅  ${BREW_PROFILE} profile 缺失依赖安装完成；未主动执行批量升级。"

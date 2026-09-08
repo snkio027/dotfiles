@@ -7,16 +7,38 @@
 
 set -euo pipefail
 
-if ! command -v uv &>/dev/null; then
-    echo "❌  uv 不可用；请先完成 Brewfile 同步。" >&2
+{{- if .is_mac }}
+{{-   if .is_arm64 }}
+UV_BIN="/opt/homebrew/bin/uv"
+{{-   else }}
+UV_BIN="/usr/local/bin/uv"
+{{-   end }}
+{{- else if .is_linux }}
+UV_BIN="/home/linuxbrew/.linuxbrew/bin/uv"
+{{- else }}
+{{-   fail (printf "unsupported uv platform: %s/%s" .chezmoi.os .chezmoi.arch) }}
+{{- end }}
+
+if [ ! -x "$UV_BIN" ]; then
+    echo "❌  Brew 管理的 uv 入口缺失或不可执行: $UV_BIN" >&2
+    exit 1
+fi
+if ! "$UV_BIN" --version >/dev/null; then
+    echo "❌  Brew 管理的 uv 入口无法正常执行: $UV_BIN" >&2
     exit 1
 fi
 
 echo "🧰  正在同步最新稳定版 cxx-init..."
-uv tool install --upgrade --no-config cxx-init
-CXX_INIT_BIN="$(uv tool dir --bin)/cxx"
+"$UV_BIN" tool install --upgrade --no-config cxx-init
+CXX_INIT_BIN="$("$UV_BIN" tool dir --bin)/cxx"
 if [ ! -x "$CXX_INIT_BIN" ]; then
     echo "❌  cxx-init 安装完成但 cxx 入口不可执行: $CXX_INIT_BIN" >&2
     exit 1
 fi
-echo "✅  cxx-init 已就绪：$("$CXX_INIT_BIN" --version)"
+if cxx_init_version="$("$CXX_INIT_BIN" --version)"; then
+    echo "✅  cxx-init 已就绪：$cxx_init_version"
+else
+    status=$?
+    echo "❌  cxx-init 入口无法正常执行: $CXX_INIT_BIN" >&2
+    exit "$status"
+fi

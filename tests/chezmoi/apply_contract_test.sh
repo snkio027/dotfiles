@@ -13,13 +13,19 @@ BREW_SCRIPT="$TEST_ROOT/brew_bundle.sh"
 DEVCONTAINER_BREW_SCRIPT="$TEST_ROOT/devcontainer_brew_bundle.sh"
 DOCTOR_SCRIPT="$TEST_ROOT/doctor.sh"
 BREW_LOG="$TEST_ROOT/brew.log"
+BREW_TEST_PREFIX="$TEST_ROOT/linuxbrew"
+LINUX_WORKSTATION_DATA='{"is_mac":false,"is_linux":true,"is_arm64":false,"machine_profile":"workstation"}'
+LINUX_DEVCONTAINER_DATA='{"is_mac":false,"is_linux":true,"is_arm64":false,"machine_profile":"devcontainer"}'
 
 chezmoi execute-template --source="$REPO_ROOT" \
-    --override-data '{"machine_profile":"workstation"}' \
+    --override-data "$LINUX_WORKSTATION_DATA" \
     <"$BREW_TEMPLATE" >"$BREW_SCRIPT"
 chezmoi execute-template --source="$REPO_ROOT" \
-    --override-data '{"machine_profile":"devcontainer"}' \
+    --override-data "$LINUX_DEVCONTAINER_DATA" \
     <"$BREW_TEMPLATE" >"$DEVCONTAINER_BREW_SCRIPT"
+sed -i.bak "s#/home/linuxbrew/.linuxbrew#$BREW_TEST_PREFIX#g" \
+    "$BREW_SCRIPT" "$DEVCONTAINER_BREW_SCRIPT"
+rm -f "$BREW_SCRIPT.bak" "$DEVCONTAINER_BREW_SCRIPT.bak"
 
 grep -q 'BREW_PROFILE="workstation"' "$BREW_SCRIPT"
 grep -q 'BREW_PROFILE="devcontainer"' "$DEVCONTAINER_BREW_SCRIPT"
@@ -30,15 +36,18 @@ if grep -Eq '(^|[[:space:]])brew[[:space:]]+update([[:space:]]|$)' "$BREW_SCRIPT
     echo "brew apply contract violation: implicit brew update" >&2
     exit 1
 fi
-grep -q 'HOMEBREW_NO_AUTO_UPDATE=1 brew bundle install --no-upgrade' "$BREW_SCRIPT"
+grep -q 'HOMEBREW_NO_AUTO_UPDATE=1 "$BREW_BIN" bundle install --no-upgrade' "$BREW_SCRIPT"
 
-mkdir -p "$TEST_ROOT/bin"
-cat >"$TEST_ROOT/bin/brew" <<'EOF'
+mkdir -p "$BREW_TEST_PREFIX/bin"
+cat >"$BREW_TEST_PREFIX/bin/brew" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 
 printf 'auto_update=%s command=%s\n' "${HOMEBREW_NO_AUTO_UPDATE:-unset}" "$*" >>"$BREW_TEST_LOG"
 case "${1:-}" in
+--version)
+    printf 'Homebrew test\n'
+    ;;
 commands)
     printf 'trust\n'
     ;;
@@ -55,10 +64,10 @@ bundle)
     ;;
 esac
 EOF
-chmod +x "$TEST_ROOT/bin/brew"
+chmod +x "$BREW_TEST_PREFIX/bin/brew"
 
-BREW_TEST_LOG="$BREW_LOG" PATH="$TEST_ROOT/bin:$PATH" bash "$BREW_SCRIPT" >/dev/null
-BREW_TEST_LOG="$BREW_LOG" PATH="$TEST_ROOT/bin:$PATH" bash "$DEVCONTAINER_BREW_SCRIPT" >/dev/null
+BREW_TEST_LOG="$BREW_LOG" PATH="/usr/bin:/bin" bash "$BREW_SCRIPT" >/dev/null
+BREW_TEST_LOG="$BREW_LOG" PATH="/usr/bin:/bin" bash "$DEVCONTAINER_BREW_SCRIPT" >/dev/null
 grep -q 'auto_update=1 command=bundle install --no-upgrade' "$BREW_LOG"
 if grep -Eq 'command=update([[:space:]]|$)' "$BREW_LOG"; then
     echo "brew apply contract violation: runtime update invocation" >&2
