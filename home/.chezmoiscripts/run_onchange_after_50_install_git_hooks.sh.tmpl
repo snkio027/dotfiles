@@ -11,24 +11,72 @@ echo "ℹ️  DevContainer 不修改宿主仓库的 Git hooks。"
 exit 0
 {{- end }}
 
-if command -v gitleaks &>/dev/null; then
-    # 检查当前 dotfiles 源码仓库是否有 .git 目录
-    HOOK_FILE="{{ .chezmoi.workingTree }}/.git/hooks/pre-commit"
-    if [ -d "{{ .chezmoi.workingTree }}/.git" ] && [ -d "{{ .chezmoi.workingTree }}/.git/hooks" ]; then
-        if [ -e "$HOOK_FILE" ] && ! grep -Fq "# Managed by chezmoi" "$HOOK_FILE"; then
-            echo "⚠️  已存在非 Chezmoi 管理的 pre-commit hook，跳过覆盖: $HOOK_FILE"
-            exit 0
-        fi
+{{- if .is_mac }}
+{{-   if .is_arm64 }}
+GITLEAKS_BIN="/opt/homebrew/bin/gitleaks"
+{{-   else }}
+GITLEAKS_BIN="/usr/local/bin/gitleaks"
+{{-   end }}
+{{- else if .is_linux }}
+GITLEAKS_BIN="/home/linuxbrew/.linuxbrew/bin/gitleaks"
+{{- else }}
+{{-   fail (printf "unsupported gitleaks platform: %s/%s" .chezmoi.os .chezmoi.arch) }}
+{{- end }}
+WORKING_TREE={{ .chezmoi.workingTree | quote }}
+GIT_DIR="$WORKING_TREE/.git"
+HOOK_DIR="$GIT_DIR/hooks"
+HOOK_FILE="$HOOK_DIR/pre-commit"
 
-        echo "🔒  正在挂载 gitleaks pre-commit 提交拦截钩子..."
-        cat <<'EOF' >"$HOOK_FILE"
+if [ ! -d "$GIT_DIR" ]; then
+    echo "❌  dotfiles 工作树不是可管理的 Git 仓库: $WORKING_TREE" >&2
+    exit 1
+fi
+mkdir -p "$HOOK_DIR"
+
+if [ -L "$HOOK_FILE" ] || { [ -e "$HOOK_FILE" ] && [ ! -f "$HOOK_FILE" ]; }; then
+    echo "⚠️  pre-commit hook 是符号链接或非普通文件，原样保留: $HOOK_FILE"
+    exit 0
+fi
+if [ -f "$HOOK_FILE" ] && [ "$(sed -n '2p' "$HOOK_FILE")" != "# Managed by chezmoi" ]; then
+    echo "⚠️  已存在非 Chezmoi 管理的 pre-commit hook，跳过覆盖: $HOOK_FILE"
+    exit 0
+fi
+
+if [ ! -x "$GITLEAKS_BIN" ]; then
+    echo "❌  Brew 管理的 gitleaks 入口缺失或不可执行: $GITLEAKS_BIN" >&2
+    exit 1
+fi
+if "$GITLEAKS_BIN" version >/dev/null; then
+    :
+else
+    status=$?
+    echo "❌  Brew 管理的 gitleaks 入口无法正常执行: $GITLEAKS_BIN" >&2
+    exit "$status"
+fi
+
+echo "🔒  正在挂载 gitleaks pre-commit 提交拦截钩子..."
+TEMP_HOOK="$(mktemp "$HOOK_DIR/.pre-commit.XXXXXX")"
+cleanup_temp_hook() {
+    if [ -n "$TEMP_HOOK" ] && [ -e "$TEMP_HOOK" ]; then
+        rm -f -- "$TEMP_HOOK"
+    fi
+}
+trap cleanup_temp_hook EXIT HUP INT TERM
+
+cat <<EOF >"$TEMP_HOOK"
 #!/usr/bin/env bash
 # Managed by chezmoi
-if command -v gitleaks &>/dev/null; then
-    gitleaks git --pre-commit --staged --redact --verbose .
+set -euo pipefail
+
+GITLEAKS_BIN="$GITLEAKS_BIN"
+if [ ! -x "\$GITLEAKS_BIN" ]; then
+    echo "❌  Brew 管理的 gitleaks 入口缺失或不可执行: \$GITLEAKS_BIN" >&2
+    exit 1
 fi
+"\$GITLEAKS_BIN" git --pre-commit --staged --redact --verbose .
 EOF
-        chmod +x "$HOOK_FILE"
-        echo "✅  gitleaks pre-commit 钩子注入完成。"
-    fi
-fi
+chmod +x "$TEMP_HOOK"
+mv -f -- "$TEMP_HOOK" "$HOOK_FILE"
+TEMP_HOOK=""
+trap - EXIT HUP INT TERM
+echo "✅  gitleaks pre-commit 钩子注入完成。"

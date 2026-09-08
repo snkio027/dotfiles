@@ -314,6 +314,7 @@ git rebase origin/main
 - Dev Container 不强制签名、不固定本地 IdentityFile，也不改写 URL，允许使用转发凭据或项目级 Git 配置。
 - 本地模式使用 `~/.ssh/keys/` 下相互独立且有口令的 Ed25519 认证/签名 key；已有无口令 key 不会被脚本自动轮换。
 - 缺少本地 key 时，非交互 `chezmoi apply` 会立即失败并提示操作方式，不会等待 `ssh-keygen` 输入。
+- Fresh apply 在 Brew bundle 后通过确定的 Homebrew/Linuxbrew 入口运行 `gitleaks`，本地磁盘 key 模式也以同样方式运行 `gh`，两者均不依赖父进程 `PATH`。GitHub 目标固定为 `github.com`；`gh` 只在已认证时同步公钥，API 查询或上传失败会保留非零状态以允许 run-once 重试。未认证时会明确说明本次未同步且 run-once 不会自动重试，并输出完整的手动同步命令。`gitleaks` 缺失、不可执行或扫描失败均会非零退出；已有非 chezmoi 管理的 pre-commit hook，以及符号链接或非普通文件均会原样保留并显式告警。
 - 启用 `features.use_1password` 后，SSH 统一使用 1Password Agent 且初始化脚本不生成私钥；导出的 `~/.ssh/keys/git_signing.pub` 会内联为 Git `key::` 配置，并在 apply 时验证 Agent 确实提供同一 key。
 - `git.rewrite_github_https_to_ssh` 是显式 opt-in，默认关闭；可在初始化前通过 `OP_SSH_AUTH_SOCK` 覆盖 1Password Agent socket。
 - 全局 Git ignore 只处理 OS 与编辑器垃圾；依赖缓存、环境文件和 SOPS/age 文件由仓库级 `.gitignore` 与 gitleaks 管理。
