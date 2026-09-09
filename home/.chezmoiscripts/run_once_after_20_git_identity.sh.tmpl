@@ -45,6 +45,18 @@ echo "ℹ️  1Password SSH Agent 与 Git 签名公钥匹配，不生成磁盘�
 exit 0
 {{- end }}
 
+{{- if .is_mac }}
+{{-   if .is_arm64 }}
+GH_BIN="/opt/homebrew/bin/gh"
+{{-   else }}
+GH_BIN="/usr/local/bin/gh"
+{{-   end }}
+{{- else if .is_linux }}
+GH_BIN="/home/linuxbrew/.linuxbrew/bin/gh"
+{{- else }}
+{{-   fail (printf "unsupported GitHub CLI platform: %s/%s" .chezmoi.os .chezmoi.arch) }}
+{{- end }}
+
 KEY_DIR="$HOME/.ssh/keys"
 AUTH_KEY="$KEY_DIR/github_auth"
 SIGN_KEY="$KEY_DIR/git_signing"
@@ -113,42 +125,73 @@ if [ -f "$SIGN_PUB" ]; then
     fi
 fi
 
-# 5. 通过 GitHub CLI (gh) 自动完成远端秘钥注册
-if command -v gh &>/dev/null; then
-    if gh auth status &>/dev/null; then
-        HOSTNAME=$(hostname -s 2>/dev/null || echo "workstation")
-        echo "  ▶ 正在通过 GitHub CLI 将秘钥绑定至 GitHub 账户..."
+# 5. 通过 Brew 管理的 GitHub CLI 自动完成远端秘钥注册。
+# Brew bundle 无法修改父进程 PATH，因此消费者必须使用确定入口。
+if [ ! -x "$GH_BIN" ]; then
+    echo "✘ Brew 管理的 gh 入口缺失或不可执行: $GH_BIN" >&2
+    exit 1
+fi
+if GH_HOST=github.com "$GH_BIN" --version >/dev/null; then
+    :
+else
+    status=$?
+    echo "✘ Brew 管理的 gh 入口无法正常执行: $GH_BIN" >&2
+    exit "$status"
+fi
 
-        # 绑定 SSH 认证秘钥
-        AUTH_MATERIAL="$(awk '{print $1 " " $2}' "$AUTH_PUB")"
-        if ! gh api --paginate user/keys --jq '.[].key' 2>/dev/null | grep -Fqx "$AUTH_MATERIAL"; then
-            if ! gh ssh-key add "$AUTH_PUB" --title "$HOSTNAME-auth-key" 2>/dev/null; then
-                echo "    ⚠️ 认证秘钥自动绑定失败 (执行: gh auth refresh -h github.com -s admin:public_key)"
-            else
-                echo "    ✔ 成功注册认证秘钥至 GitHub"
-            fi
-        else
-            echo "    ✔ 认证秘钥已在 GitHub 注册"
-        fi
+WORKSTATION_HOSTNAME=$(hostname -s 2>/dev/null || echo "workstation")
+if GH_HOST=github.com "$GH_BIN" auth status --active --hostname github.com &>/dev/null; then
+    echo "  ▶ 正在通过 GitHub CLI 将秘钥绑定至 GitHub 账户..."
 
-        # 绑定 Git 提交签名秘钥
-        SIGN_MATERIAL="$(awk '{print $1 " " $2}' "$SIGN_PUB")"
-        if ! gh api --paginate user/ssh_signing_keys --jq '.[].key' 2>/dev/null | grep -Fqx "$SIGN_MATERIAL"; then
-            if ! gh ssh-key add "$SIGN_PUB" --type signing --title "$HOSTNAME-signing-key" 2>/dev/null; then
-                echo "    ⚠️ 签名秘钥自动绑定失败 (执行: gh auth refresh -h github.com -s admin:ssh_signing_key)"
-            else
-                echo "    ✔ 成功注册签名秘钥至 GitHub"
-            fi
-        else
-            echo "    ✔ 签名秘钥已在 GitHub 注册"
-        fi
+    # 绑定 SSH 认证秘钥
+    AUTH_MATERIAL="$(awk '{print $1 " " $2}' "$AUTH_PUB")"
+    if AUTH_REMOTE_KEYS="$(GH_HOST=github.com "$GH_BIN" api --hostname github.com --paginate user/keys --jq '.[].key')"; then
+        :
     else
-        echo "  ℹ  检测到 gh CLI 但未登录，运行 'gh auth login' 后可自动同步远端秘钥。"
+        status=$?
+        echo "    ✘ 无法查询 github.com 认证公钥；本次同步未完成。" >&2
+        exit "$status"
+    fi
+    if printf '%s\n' "$AUTH_REMOTE_KEYS" | grep -Fqx "$AUTH_MATERIAL"; then
+        echo "    ✔ 认证秘钥已在 GitHub 注册"
+    else
+        if GH_HOST=github.com "$GH_BIN" ssh-key add "$AUTH_PUB" --title "$WORKSTATION_HOSTNAME-auth-key"; then
+            echo "    ✔ 成功注册认证秘钥至 GitHub"
+        else
+            status=$?
+            echo "    ✘ 认证公钥上传失败；本次同步未完成。" >&2
+            exit "$status"
+        fi
+    fi
+
+    # 绑定 Git 提交签名秘钥
+    SIGN_MATERIAL="$(awk '{print $1 " " $2}' "$SIGN_PUB")"
+    if SIGN_REMOTE_KEYS="$(GH_HOST=github.com "$GH_BIN" api --hostname github.com --paginate user/ssh_signing_keys --jq '.[].key')"; then
+        :
+    else
+        status=$?
+        echo "    ✘ 无法查询 github.com 签名公钥；本次同步未完成。" >&2
+        exit "$status"
+    fi
+    if printf '%s\n' "$SIGN_REMOTE_KEYS" | grep -Fqx "$SIGN_MATERIAL"; then
+        echo "    ✔ 签名秘钥已在 GitHub 注册"
+    else
+        if GH_HOST=github.com "$GH_BIN" ssh-key add "$SIGN_PUB" --type signing --title "$WORKSTATION_HOSTNAME-signing-key"; then
+            echo "    ✔ 成功注册签名秘钥至 GitHub"
+        else
+            status=$?
+            echo "    ✘ 签名公钥上传失败；本次同步未完成。" >&2
+            exit "$status"
+        fi
     fi
 else
-    echo "  ℹ  未安装 gh CLI，请手动将以下公钥添加至 GitHub Settings → SSH Keys:"
-    echo "     认证公钥路径 : $AUTH_PUB"
-    echo "     签名公钥路径 : $SIGN_PUB"
+    echo "  ℹ  github.com 当前未认证；本次未同步远端公钥。"
+    echo "     该 run_once 脚本不会在后续 apply 中自动重试。请显式执行:"
+    printf '     GH_HOST=github.com %q auth login --hostname github.com --scopes admin:public_key,admin:ssh_signing_key --skip-ssh-key\n' "$GH_BIN"
+    printf '     GH_HOST=github.com %q ssh-key add %q --title %q\n' \
+        "$GH_BIN" "$AUTH_PUB" "$WORKSTATION_HOSTNAME-auth-key"
+    printf '     GH_HOST=github.com %q ssh-key add %q --type signing --title %q\n' \
+        "$GH_BIN" "$SIGN_PUB" "$WORKSTATION_HOSTNAME-signing-key"
 fi
 
 echo ""
