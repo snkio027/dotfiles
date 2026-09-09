@@ -138,6 +138,23 @@ Icon Contract 固定采用“精确文件名 > 扩展名 > 消费者默认值”
 
 GitHub Actions 会在每次提交验证 Brew ownership/profile 生成结果，真实安装并使用安全可自动化的 `core`、`quality` 与 `devcontainer` profile，同时验证模板、Shell、安全策略、macOS 配置、cxx-init、Dev Container 镜像与完整 lifecycle。常规 bootstrap 只验证仓库固定的 SHA-256，不下载公钥或签名验证器；schedule/manual 维护任务才使用提交 SHA 固定的临时 Cosign Action 复验上游 chezmoi checksum bundle，Cosign 不进入运行时镜像。基础镜像仍会连续解析两次并确认得到同一个多平台对象。macOS GUI/字体只声明真实可覆盖的边界；1Password、OrbStack 与授权 MonoLisa 不做虚假 CI 安装声明。每周一还会从空缓存同步上游最新 Neovim 插件与 Mason 工具，运行语义冒烟测试，并在插件锁落后时提示执行 `devup`。Dependabot 每周更新 GitHub Actions 与 `.devcontainer/Dockerfile` 中的 Docker 镜像；当前没有 Dev Container Features，因此不配置 Feature 专用 updater。
 
+DX-COLOR-003 的历史视觉研究文档已从生产树归档。删除前的完整资料保留在：
+
+```text
+a4b3f109556ea89d19a437e11a034a935276be75:dx-color-003-docs/
+```
+
+恢复命令：
+
+```bash
+git archive --format=tar.gz \
+  --output=/tmp/dx-color-003-docs.tar.gz \
+  a4b3f109556ea89d19a437e11a034a935276be75 \
+  dx-color-003-docs/
+```
+
+当前行为由主题源码与 `tests/nvim/` 的生产契约定义。
+
 ## 功能与快捷键速查
 
 修饰键按作用层解释，不把 macOS 的物理按键名称与终端协议混用：

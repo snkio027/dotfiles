@@ -128,20 +128,4 @@ assert_equal(python and python.evidence_clients, {
 	{ name = "ty", semantic_tokens = true },
 }, "Python evidence-provider topology drifted")
 
-local m2ca = read(repo_root .. "/dx-color-003-docs/DX-COLOR-003-M2C-PYTHON-PROVIDER-OWNERSHIP.md")
-if not m2ca:find("ADOPT TY AS INTERACTIVE SEMANTIC PROVIDER", 1, true) then
-	fail("frozen M2C-A evidence record lost its approved decision")
-end
-local m2cb = read(repo_root .. "/dx-color-003-docs/DX-COLOR-003-M2C-B-PYTHON-PROVIDER-CORRECTION.md")
-for _, required in ipairs({
-	"Ty = primary interactive Python LSP",
-	"Ruff = lint/fix/code-action companion",
-	"Pyright = installed rollback asset; explicitly disabled",
-	"a2db03bf6a138c0784d74277adf6f7ee706a5398336305385ced7d3725c0dedf",
-}) do
-	if not m2cb:find(required, 1, true) then
-		fail("M2C-B behavior record is missing: " .. required)
-	end
-end
-
 print("M2C-B explicit Python provider-ownership unit contract passed.")
