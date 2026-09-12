@@ -72,10 +72,10 @@ description = "最新稳定版 Go"
 
 [[tools]]
 kind = "brew"
-name = "rust"
+name = "rustup"
 owner = "core"
-profiles = ["core", "workstation", "devcontainer"]
-description = "Rust 与 Cargo"
+profiles = ["core", "workstation", "devcontainer", "quality"]
+description = "Rust 工具链管理器；编译器与组件由 rustup 管理"
 
 [[tools]]
 kind = "brew"

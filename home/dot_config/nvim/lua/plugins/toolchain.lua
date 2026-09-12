@@ -50,6 +50,13 @@ local function project_executable(subdir)
   return vim.fn.input("Path to executable: ", vim.fs.joinpath(root, subdir), "file")
 end
 
+-- rustup also ships an analyzer proxy. Keep the independently Brew-owned
+-- language server explicit while Cargo/rustc follow the project toolchain.
+local rust_prefix = "/home/linuxbrew/.linuxbrew"
+if vim.fn.has("mac") == 1 then
+  rust_prefix = vim.uv.os_uname().machine == "arm64" and "/opt/homebrew" or "/usr/local"
+end
+
 return {
   -- Mason owns editor-only language servers, formatters and debug adapters.
   {
@@ -192,11 +199,12 @@ return {
     optional = true,
     opts = {
       server = {
+        cmd = { rust_prefix .. "/bin/rust-analyzer" },
         default_settings = {
           ["rust-analyzer"] = {
             check = {
               command = "clippy",
-              extraArgs = { "--all-targets" },
+              allTargets = true,
             },
           },
         },

@@ -129,7 +129,28 @@ python3 icons/generate.py --write # 修改契约后重建 Neovim、eza 与测试
 python3 icons/generate.py --check # 验证生成制品未漂移
 ```
 
-`devdoctor` 检查 Homebrew、chezmoi、age、SSH、gitleaks、语言 Runtime、LLVM/CMake/Ninja、cxx-init、IaC/Kubernetes CLI 和终端工具，并确认 Runtime 的实际路径来自 Homebrew；它不会自动修改系统。
+`devdoctor` 检查 Homebrew、chezmoi、age、SSH、gitleaks、语言 Runtime、LLVM/CMake/Ninja、cxx-init、IaC/Kubernetes CLI 和终端工具。非 Rust Runtime 检查 Homebrew 路径；Rust 单独检查 rustup 所选工具链及 cargo/rustc 的实际入口，禁用诊断期间的自动安装；它不会自动修改系统。
+
+### Rust 工具链职责
+
+Homebrew 管理通用 CLI 和 `rustup` 管理器；rustup 管理 `rustc`、Cargo、rustfmt、Clippy、rust-src 与编译 targets。Brew 的 `rust` 不再是声明的编译器 owner，但迁移不会自动卸载旧安装、删除 `~/.cargo`/`~/.rustup` 或执行 `brew cleanup`。
+
+Shell 将 `$HOMEBREW_PREFIX/opt/rustup/bin` 放在全局 Brew/Cargo 入口之前，保留已继承的项目 shim 优先级、`RUSTUP_TOOLCHAIN`、`CARGO_HOME` 和 `RUSTUP_HOME`。不使用 alias、全局 `RUSTUP_TOOLCHAIN=stable` 或自建版本切换器。Neovim 仍通过固定的 `$HOMEBREW_PREFIX/bin/rust-analyzer` 使用独立的 Brew 语言服务器，避免 rustup 同名代理改变 owner；命令行直接调用 analyzer 时也使用该完整路径。
+
+Brew bundle 后，chezmoi 与 CI 共用 `scripts/rust/provision.sh`：新环境采用 Brew rustup 的 stable 默认值；已有用户 default 保持不变。只安装缺失的默认工具链与 rustfmt/Clippy/rust-src 组件，之后验证实际可执行入口和标准库源码。重复 apply 不运行 `rustup update`、不重设 default，不改项目工具链文件。工具链更新由用户显式运行 `rustup update stable`；管理器更新由 Homebrew 负责。
+
+需要固定 Rust 环境的项目自行提交 `rust-toolchain.toml`，例如：
+
+```toml
+[toolchain]
+channel = "1.98.1" # 示例：按项目验证结果选择，不是 dotfiles 的全局锁
+profile = "minimal"
+components = ["rustfmt", "clippy", "rust-src"]
+```
+
+`rustup show active-toolchain`、`rustup which rustc` 和 `rustc --print sysroot` 用于核对当前项目选择。项目声明的缺失工具链仍遵循 rustup 原生安装行为；旧版本与当前 rust-analyzer 的兼容性需单独验证。Neovim 保存继续运行 Clippy，通过 `check.allTargets=true` 覆盖全部 targets，不再在 `extraArgs` 中重复添加 `--all-targets`。
+
+本次迁移不引入 nextest 或改变测试/调试 UI；PR 合并和 CI 通过也不等于本机已激活。激活须单独授权，在新 Shell/Neovim 中核对工具来源后，再决定是否卸载旧 Brew Rust。
 
 `devup` 需要完整 source checkout。它把 Neovim/neocmake/markdownlint 配置复制到新的临时目录，独立设置 config/data/state/cache、日志与 `NVIM_APPNAME`；先更新候选插件，再在新进程安装缺失 Mason 工具/五语言 parser，最后复用 toolchain smoke。任一步失败或缺少完成标记都返回非零，目录和日志保留；不会升级 Homebrew/cxx-init、改写源 `lazy-lock.json` 或复制候选工具到日用目录。这是 Neovim 状态隔离，不是文件系统沙箱：仍使用本机 Homebrew 工具，第三方安装器可能使用自身的共享下载缓存。
 

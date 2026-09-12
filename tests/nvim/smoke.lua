@@ -273,6 +273,10 @@ end
 local rust = LazyVim.opts("rustaceanvim")
 local rust_analyzer = rust.server.default_settings["rust-analyzer"]
 assert(rust_analyzer.check.command == "clippy", "rust-analyzer is not using Clippy")
+assert(rust_analyzer.check.allTargets == true, "Rust all-target coverage is disabled")
+assert(not contains(rust_analyzer.check.extraArgs, "--all-targets"), "Rust all-targets flag is duplicated")
+assert(rust.server.cmd[1]:match("/bin/rust%-analyzer$"), "Rust analyzer command is not explicit")
+assert(not rust.server.cmd[1]:find("/rustup/", 1, true), "Rustup must not take over the analyzer")
 
 local cmake = LazyVim.opts("cmake-tools.nvim")
 assert(vim.deep_equal(cmake.cmake_generate_options, {}), "CMake adds global overrides after the project preset")

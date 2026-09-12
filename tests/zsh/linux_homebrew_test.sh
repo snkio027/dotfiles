@@ -211,8 +211,8 @@ for profile in linux macos intel devcontainer; do
 
             path=("$PROJECT_BIN" "$HOMEBREW_PREFIX/bin" "$PROJECT_BIN/SDK [1]" /usr/bin /bin)
             source "$OWNER_DIR/homebrew.zsh"
-            [[ "${path[1]}" == "$PROJECT_BIN" && "${path[2]}" == "$HOMEBREW_PREFIX/bin" &&
-                "${path[3]}" == "$PROJECT_BIN/SDK [1]" ]] || exit 59
+            [[ "${path[1]}" == "$PROJECT_BIN" && "${path[2]}" == "$HOMEBREW_PREFIX/opt/rustup/bin" &&
+                "${path[3]}" == "$HOMEBREW_PREFIX/bin" && "${path[4]}" == "$PROJECT_BIN/SDK [1]" ]] || exit 59
             path=("$PROJECT_BIN")
             export GOPATH=/project/go-a:/project/go-b
             source "$OWNER_DIR/homebrew.zsh"

@@ -63,6 +63,7 @@ assert_container_state() {
         '
 
     cmp "$HOME/.config/nvim/lazy-lock.json" "$workspace_folder/home/dot_config/nvim/lazy-lock.json"
+    bash "$workspace_folder/tests/brew/profile_smoke.sh" core || fail "Rust/core command ownership failed"
 
     mason_manifest="${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles/mason-tools.txt"
     mason_data_root="${XDG_DATA_HOME:-$HOME/.local/share}/nvim/mason/packages"
@@ -84,6 +85,7 @@ assert_container_state() {
         nvim --headless "+luafile tests/nvim/startup_policy.lua" \
             "+luafile tests/nvim/smoke.lua" +qa
         nvim -n --headless "+luafile tests/nvim/run_contract.lua" "tests/nvim/completion_contract.lua"
+        nvim -n --headless "+luafile tests/nvim/run_contract.lua" "tests/nvim/rust_toolchain.lua" || exit "$?"
         nvim -n --headless "+luafile tests/nvim/production_visual_runtime.lua" +qa
         DOTFILES_STRICT_LSP=1 nvim -n --headless "+luafile tests/nvim/color_contract.lua" +qa
         nvim -n --headless "+luafile tests/nvim/binding_evidence.lua" +qa
@@ -99,6 +101,10 @@ assert_container_state() {
     grep -Fq "Neovim toolchain smoke tests passed" "$nvim_log" || {
         cat "$nvim_log" >&2
         fail "Neovim warm smoke did not complete"
+    }
+    grep -Fq "Rust ownership runtime passed:" "$nvim_log" || {
+        cat "$nvim_log" >&2
+        fail "Rust ownership runtime did not complete"
     }
     grep -Fq "Tree-sitter evidence parser provisioning 5/5: c,cpp,python,rust,zig" "$nvim_log" || {
         cat "$nvim_log" >&2

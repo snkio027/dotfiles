@@ -63,6 +63,12 @@ jobs:
       - name: Install validation toolchain
         run: |
           brew bundle --file=brew/profiles/quality.Brewfile
+          export RUSTUP_HOME="$RUNNER_TEMP/dotfiles-rustup" CARGO_HOME="$RUNNER_TEMP/dotfiles-cargo"
+          rust_prefix="$(brew --prefix)"
+          export PATH="$rust_prefix/opt/rustup/bin:$PATH"
+          bash scripts/rust/provision.sh "$(brew --prefix)"
+          printf 'RUSTUP_HOME=%s\nCARGO_HOME=%s\n' "$RUSTUP_HOME" "$CARGO_HOME" >> "$GITHUB_ENV"
+          printf '%s/opt/rustup/bin\n' "$(brew --prefix)" >> "$GITHUB_PATH"
           bash tests/brew/profile_smoke.sh quality
 
       - name: Check for AppleDouble (._*) metadata pollution
@@ -141,6 +147,8 @@ jobs:
           shfmt -d -i 4 -ci .devcontainer/install-chezmoi.sh .devcontainer/post-create.sh .devcontainer/provision-nvim.sh tests/devcontainer/lifecycle_smoke.sh tests/devcontainer/provisioning_contract_test.sh
           shellcheck -S warning -s bash tests/brew/profile_smoke.sh
           shfmt -d -i 4 -ci tests/brew/profile_smoke.sh
+          shellcheck -S warning -s bash scripts/rust/provision.sh tests/rust/ownership_test.sh
+          shfmt -d -i 4 -ci scripts/rust/provision.sh tests/rust/ownership_test.sh
           shellcheck -S warning -s bash tests/git/sweep_test.sh
           shfmt -d -i 4 -ci tests/git/sweep_test.sh
           shellcheck -S warning -s bash scripts/supply-chain/*.sh tests/supply-chain/*.sh
@@ -154,6 +162,7 @@ jobs:
           bash tests/zsh/linux_homebrew_test.sh
           bash tests/chezmoi/apply_contract_test.sh
           bash tests/chezmoi/fresh_apply_contract_test.sh
+          bash tests/rust/ownership_test.sh
           bash tests/git/sweep_test.sh
           bash tests/supply-chain/chezmoi_bootstrap_test.sh
           bash tests/supply-chain/brew_vulnerabilities_test.sh
@@ -271,6 +280,12 @@ jobs:
       - name: Install validation toolchain
         run: |
           brew bundle --file=brew/profiles/quality.Brewfile
+          export RUSTUP_HOME="$RUNNER_TEMP/dotfiles-rustup" CARGO_HOME="$RUNNER_TEMP/dotfiles-cargo"
+          rust_prefix="$(brew --prefix)"
+          export PATH="$rust_prefix/opt/rustup/bin:$PATH"
+          bash scripts/rust/provision.sh "$(brew --prefix)"
+          printf 'RUSTUP_HOME=%s\nCARGO_HOME=%s\n' "$RUSTUP_HOME" "$CARGO_HOME" >> "$GITHUB_ENV"
+          printf '%s/opt/rustup/bin\n' "$(brew --prefix)" >> "$GITHUB_PATH"
           bash tests/brew/profile_smoke.sh quality
 
       - name: Configure chezmoi fixture
@@ -343,6 +358,12 @@ jobs:
         run: |
           brew bundle --file=brew/profiles/core.Brewfile
           brew bundle check --file=brew/profiles/core.Brewfile
+          export RUSTUP_HOME="$RUNNER_TEMP/dotfiles-rustup" CARGO_HOME="$RUNNER_TEMP/dotfiles-cargo"
+          rust_prefix="$(brew --prefix)"
+          export PATH="$rust_prefix/opt/rustup/bin:$PATH"
+          bash scripts/rust/provision.sh "$(brew --prefix)"
+          printf 'RUSTUP_HOME=%s\nCARGO_HOME=%s\n' "$RUSTUP_HOME" "$CARGO_HOME" >> "$GITHUB_ENV"
+          printf '%s/opt/rustup/bin\n' "$(brew --prefix)" >> "$GITHUB_PATH"
           bash tests/brew/profile_smoke.sh core
 
   devcontainer-lifecycle:
@@ -407,7 +428,14 @@ jobs:
           brew bundle --file=brew/profiles/quality.Brewfile
 
       - name: Restore locked plugins and provision missing Mason tools
-        run: bash tests/nvim/cold_start.sh
+        env:
+          RUSTUP_HOME: ${{ runner.temp }}/dotfiles-rustup
+          CARGO_HOME: ${{ runner.temp }}/dotfiles-cargo
+        run: |
+          rust_prefix="$(brew --prefix)"
+          export PATH="$rust_prefix/opt/rustup/bin:$PATH"
+          bash scripts/rust/provision.sh "$(brew --prefix)"
+          bash tests/nvim/cold_start.sh
 
   neovim-cold-start:
     name: Validate Rolling-Latest Neovim Environment
@@ -430,11 +458,16 @@ jobs:
 
       - name: Update plugins and tools from empty data directories
         env:
+          RUSTUP_HOME: ${{ runner.temp }}/dotfiles-rustup
+          CARGO_HOME: ${{ runner.temp }}/dotfiles-cargo
           XDG_CONFIG_HOME: ${{ github.workspace }}/home/dot_config
           XDG_DATA_HOME: ${{ runner.temp }}/xdg-data
           XDG_STATE_HOME: ${{ runner.temp }}/xdg-state
           XDG_CACHE_HOME: ${{ runner.temp }}/xdg-cache
         run: |
+          rust_prefix="$(brew --prefix)"
+          export PATH="$rust_prefix/opt/rustup/bin:$PATH"
+          bash scripts/rust/provision.sh "$(brew --prefix)"
           rolling_log="$RUNNER_TEMP/neovim-rolling.log"
           {
             nvim --headless "+Lazy! sync" "+luafile tests/nvim/provision.lua" +qa

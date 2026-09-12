@@ -33,7 +33,7 @@ printf 'Dev Container post-create start\n'
 export HOMEBREW_PREFIX="$LINUXBREW_PREFIX"
 export HOMEBREW_CELLAR="$LINUXBREW_PREFIX/Cellar"
 export HOMEBREW_REPOSITORY="$LINUXBREW_PREFIX"
-export PATH="$LINUXBREW_PREFIX/opt/llvm/bin:$LINUXBREW_PREFIX/bin:$LINUXBREW_PREFIX/sbin:$HOME/.local/bin:$PATH"
+export PATH="$LINUXBREW_PREFIX/opt/rustup/bin:$LINUXBREW_PREFIX/opt/llvm/bin:$LINUXBREW_PREFIX/bin:$LINUXBREW_PREFIX/sbin:$HOME/.local/bin:$PATH"
 
 export CHEZMOI_PROFILE="devcontainer"
 export GIT_AUTHOR_NAME="${GIT_AUTHOR_NAME:-Dev Container}"

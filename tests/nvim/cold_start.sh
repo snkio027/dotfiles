@@ -79,6 +79,8 @@ run_nvim production-visual "-n" "+luafile tests/nvim/production_visual_runtime.l
 run_nvim python-provider-unit "-n" "+set rtp^=$PWD/home/dot_config/nvim" \
     "+luafile tests/nvim/run_contract.lua" "tests/nvim/python_provider_ownership_contract.lua"
 run_nvim smoke "+luafile tests/nvim/smoke.lua" +qa
+run_nvim rust-ownership "-n" "+luafile tests/nvim/run_contract.lua" "tests/nvim/rust_toolchain.lua"
+grep -Fq "Rust ownership runtime passed:" "$LOG_DIR/rust-ownership.log"
 run_nvim color-contract "-n" "+luafile tests/nvim/color_contract.lua" +qa
 run_nvim binding-evidence "-n" "+luafile tests/nvim/binding_evidence.lua" +qa
 DOTFILES_M2C_CONFIG_HOME="$CONFIG_HOME" DOTFILES_M2C_LOG_DIR="$LOG_DIR" \
@@ -88,7 +90,7 @@ if grep -ERni 'Package is already installing|MasonToolsStartingInstall|MasonTool
     "$LOG_DIR/lazy-restore.log" "$LOG_DIR/startup-policy.log" "$LOG_DIR/completion-contract.log" \
     "$LOG_DIR/completion-contract-negative.log" "$LOG_DIR/smoke.log" \
     "$LOG_DIR/color-unit.log" "$LOG_DIR/production-visual.log" \
-    "$LOG_DIR/python-provider-unit.log" "$LOG_DIR/color-contract.log" \
+    "$LOG_DIR/python-provider-unit.log" "$LOG_DIR/color-contract.log" "$LOG_DIR/rust-ownership.log" \
     "$LOG_DIR/binding-evidence.log" "$LOG_DIR/python-provider-production.log"; then
     echo "Unexpected Mason background installation or update detected" >&2
     exit 1
