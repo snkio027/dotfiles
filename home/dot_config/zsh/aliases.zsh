@@ -98,15 +98,53 @@ alias doctor='bash "${XDG_CONFIG_HOME:-$HOME/.config}/zsh/scripts/doctor.sh"'
 alias devdoctor='bash "${XDG_CONFIG_HOME:-$HOME/.config}/zsh/scripts/doctor.sh"'
 alias scan-secrets="gitleaks git --pre-commit --staged --redact --verbose ."
 
-# 更新全局 Homebrew 与 uv 工具、Neovim 插件锁和 Mason 编辑器工具。
-# Lazy 在 chezmoi source state 上运行，确保更新后的 lockfile 可直接审阅和提交。
+# 在独立 XDG 目录准备并冒烟验证 Neovim 更新候选；不采用更新、不升级全局工具。
 function devup() {
-    local source_config
-    brew update && brew upgrade || return
-    uv tool install --upgrade --no-config cxx-init || return
-    source_config="$(chezmoi source-path)/dot_config" || return
-    XDG_CONFIG_HOME="$source_config" nvim --headless "+Lazy! sync" +qa &&
-        XDG_CONFIG_HOME="$source_config" nvim --headless "+MasonToolsUpdateSync" +qa
+    (( $# == 0 )) || { print -u2 "devup: 不接受参数"; return 2; }
+    local source_root candidate phase contract marker result
+    source_root="$(chezmoi source-path)" || return
+    [[ -f "$source_root/../scripts/nvim/update_candidate.lua" ]] || {
+        print -u2 "devup: 需要完整 dotfiles source checkout"
+        return 1
+    }
+    candidate="$(mktemp -d "${TMPDIR:-/tmp}/dotfiles-nvim-candidate.XXXXXX")" || return
+    print -r -- "devup candidate: $candidate"
+    mkdir -p "$candidate"/{config,data,state,cache} || return
+    # Dereference source symlinks so the candidate cannot write through to the source lock.
+    cp -RL "$source_root/dot_config/"{nvim,neocmakelsp,markdownlint-cli2} "$candidate/config/" || return
+    cp "$candidate/config/nvim/lazy-lock.json" "$candidate/baseline-lock.json" || return
+    command cat > "$candidate/nvim" <<'EOF' || return
+#!/bin/sh
+candidate_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)" || exit
+exec env XDG_CONFIG_HOME="$candidate_dir/config" XDG_DATA_HOME="$candidate_dir/data" \
+    XDG_STATE_HOME="$candidate_dir/state" XDG_CACHE_HOME="$candidate_dir/cache" \
+    NVIM_APPNAME=nvim NVIM_LOG_FILE="$candidate_dir/state/nvim.log" nvim -n -i NONE "$@"
+EOF
+    chmod +x "$candidate/nvim" || return
+    (
+        cd "$source_root/.." || exit
+        for phase in update provision smoke; do
+            case "$phase" in
+                update) contract=scripts/nvim/update_candidate.lua; marker='Neovim plugin candidate downloaded.' ;;
+                provision) contract=tests/nvim/provision.lua; marker='Tree-sitter evidence parser provisioning 5/5' ;;
+                smoke) contract=tests/nvim/smoke.lua; marker='Neovim toolchain smoke tests passed' ;;
+            esac
+            if "$candidate/nvim" --headless '+luafile tests/nvim/run_contract.lua' "$contract" \
+                > "$candidate/state/$phase.log" 2>&1; then
+                grep -Fq "$marker" "$candidate/state/$phase.log" || {
+                    print -u2 "devup: $phase 未完成，见 $candidate/state/$phase.log"
+                    exit 1
+                }
+            else
+                result=$?
+                print -u2 "devup: $phase 失败 ($result)，保留日志 $candidate/state/$phase.log"
+                exit "$result"
+            fi
+        done
+    ) || return
+    print -r -- "devup: 候选下载与 toolchain smoke 通过；尚未采用，也不代表完整 CI 或人眼验收。"
+    print -r -- "体验入口: $candidate/nvim"
+    print -r -- "候选锁: $candidate/config/nvim/lazy-lock.json"
 }
 
 # --- 8. Yazi 推出自动切换目录 Hook (离开 Yazi 时自动 cd 至最后所在的目录) ---

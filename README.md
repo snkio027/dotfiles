@@ -14,7 +14,7 @@ Security    │ age · SOPS · SSH signing · gitleaks · Zizmor
 Validation  │ actionlint · ShellCheck · shfmt · Taplo · Hadolint · StyLua
 ```
 
-Homebrew 负责全局 CLI 与语言 Runtime；`brew/ownership.toml` 是工具所有权的唯一来源，并生成 `core / workstation / devcontainer / quality` 四个可安装 profile。uv 负责项目 Python、虚拟环境、依赖，以及 Python 原生全局 CLI 的隔离工具环境（当前为 cxx-init）；Lazy 与 Mason 只管理 Neovim 插件和编辑器专用工具。Brewfile 与 uv tool 都不固定工具版本，更新时选择当前最新稳定版。Neovim 启动与普通 apply 只恢复已提交插件图并安装缺失 Mason 工具；插件和 Mason 更新仅由 `devup` 或 Rolling-Latest CI 显式触发。不使用 mise、asdf、nvm、pyenv；项目仍应提交自身的版本声明与依赖锁文件。
+Homebrew 负责全局 CLI 与语言 Runtime；`brew/ownership.toml` 是工具所有权的唯一来源，并生成 `core / workstation / devcontainer / quality` 四个可安装 profile。uv 负责项目 Python、虚拟环境、依赖，以及 Python 原生全局 CLI 的隔离工具环境（当前为 cxx-init）；Lazy 与 Mason 只管理 Neovim 插件和编辑器专用工具。Brewfile 与 uv tool 都不固定工具版本，更新时选择当前最新稳定版。Neovim 启动与普通 apply 只恢复已提交插件图并安装缺失 Mason 工具；`devup` 与 Rolling-Latest CI 在隔离目录准备插件/Mason 候选，不自动采用更新。不使用 mise、asdf、nvm、pyenv；项目仍应提交自身的版本声明与依赖锁文件。
 
 ## 平台支持边界
 
@@ -106,7 +106,7 @@ dotfiles/
 chezmoi init --apply https://github.com/snkio027/dotfiles
 ```
 
-初始化会询问 Git 姓名和邮箱，安装 Homebrew/Linuxbrew，并按机器类型安装 `workstation` 或 `devcontainer` profile 的缺失依赖，配置 SSH 签名与 gitleaks hook；macOS workstation 还会安装 Ghostty 并应用键盘、Finder、Dock 和截图偏好。日常 `chezmoi apply` 不更新 Homebrew 元数据、不主动批量升级已安装工具，也不会因 Ghostty 配置变化而重新应用 macOS defaults；安装新依赖所必需的依赖链升级仍由 Homebrew 决定，全量更新由 `brewup` 或 `devup` 显式触发。Linux 使用现有终端模拟器，只部署跨平台的 Shell、TUI 与 Neovim 配置。本地新建的长期 SSH key 必须由用户设置口令；启用 1Password Agent 时不会生成磁盘私钥。
+初始化会询问 Git 姓名和邮箱，安装 Homebrew/Linuxbrew，并按机器类型安装 `workstation` 或 `devcontainer` profile 的缺失依赖，配置 SSH 签名与 gitleaks hook；macOS workstation 还会安装 Ghostty 并应用键盘、Finder、Dock 和截图偏好。日常 `chezmoi apply` 不更新 Homebrew 元数据、不主动批量升级已安装工具，也不会因 Ghostty 配置变化而重新应用 macOS defaults；安装新依赖所必需的依赖链升级仍由 Homebrew 决定，Homebrew 全量更新由 `brewup` 显式触发。Linux 使用现有终端模拟器，只部署跨平台的 Shell、TUI 与 Neovim 配置。本地新建的长期 SSH key 必须由用户设置口令；启用 1Password Agent 时不会生成磁盘私钥。
 
 Linux 工作站由 Brewfile 显式安装 `/home/linuxbrew/.linuxbrew/bin/zsh`，新建的非登录交互 Shell 也会直接获得 Linuxbrew PATH、FPATH、插件与补全，不依赖 `.zprofile`。安装 Zsh 与选择登录 Shell 是两个独立行为：本仓库不会执行 `chsh` 或修改 `/etc/shells`。需要切换时，应先确认该路径存在，再由用户按发行版要求将它加入 `/etc/shells` 并显式运行 `chsh -s /home/linuxbrew/.linuxbrew/bin/zsh`。
 
@@ -121,7 +121,8 @@ chezmoi diff                      # 审核目标状态差异
 chezmoi apply                     # 应用配置、安装缺失依赖；不主动全局升级
 HOMEBREW_NO_AUTO_UPDATE=1 brew bundle install --no-upgrade --file="$(chezmoi source-path)/../brew/profiles/workstation.Brewfile"
 brewup                            # update + upgrade + cleanup
-devup                             # 更新 Homebrew、cxx-init、Lazy lock 与 Mason 工具
+uv tool install --upgrade --no-config cxx-init # 显式更新全局 cxx-init
+devup                             # 独立 XDG Neovim 候选；不更新日用环境或源锁
 python3 brew/generate.py --write # 修改 ownership 后重建四个 Brewfile profile
 python3 brew/generate.py --check # 验证 profile 与根 Brewfile 入口未漂移
 python3 icons/generate.py --write # 修改契约后重建 Neovim、eza 与测试制品
@@ -129,6 +130,18 @@ python3 icons/generate.py --check # 验证生成制品未漂移
 ```
 
 `devdoctor` 检查 Homebrew、chezmoi、age、SSH、gitleaks、语言 Runtime、LLVM/CMake/Ninja、cxx-init、IaC/Kubernetes CLI 和终端工具，并确认 Runtime 的实际路径来自 Homebrew；它不会自动修改系统。
+
+`devup` 需要完整 source checkout。它把 Neovim/neocmake/markdownlint 配置复制到新的临时目录，独立设置 config/data/state/cache、日志与 `NVIM_APPNAME`；先更新候选插件，再在新进程安装缺失 Mason 工具/五语言 parser，最后复用 toolchain smoke。任一步失败或缺少完成标记都返回非零，目录和日志保留；不会升级 Homebrew/cxx-init、改写源 `lazy-lock.json` 或复制候选工具到日用目录。这是 Neovim 状态隔离，不是文件系统沙箱：仍使用本机 Homebrew 工具，第三方安装器可能使用自身的共享下载缓存。
+
+候选目录记录 `baseline-lock.json`、新的 `config/nvim/lazy-lock.json`、`state/*.log`（含 Neovim 版本）和 `data/nvim/mason/packages/*/mason-receipt.json`。Mason receipt 是已安装版本的观测，不是可重现的版本锁；插件锁回退也不能还原全局工具。候选目录用于短期体验，可能被系统清理，不保证整体搬移后仍可运行。需要长期保存时保留 lock、receipt 和日志；需要可运行环境时，在最终位置重新创建。
+
+```bash
+candidate=/tmp/dotfiles-nvim-candidate.XXXXXX # 替换为 devup 实际输出
+"$candidate/nvim" /path/to/project            # 仅体验候选；普通 nvim 仍使用日用环境
+diff -u "$candidate/baseline-lock.json" "$candidate/config/nvim/lazy-lock.json"
+```
+
+下载与 smoke 成功不等于完整 CI 或交互验收。确认体验后，在独立维护分支审核并手动复制候选锁到 `$(chezmoi source-path)/dot_config/nvim/lazy-lock.json`，提交 PR，等待 Locked Cold Start/Lifecycle 等实际门禁。合并后才单独授权定向部署并用 `:Lazy restore` 恢复新锁；不自动搬运候选 Mason 安装。如需更新日用 Mason，另行显式执行 `:MasonToolsUpdateSync` 并验收。放弃候选只需退出其 Neovim，普通入口无需回滚。
 
 工具 owner 与安装目标是两个维度：每个工具在 `ownership.toml` 中只有一个 owner，但可以进入多个 profile。`core`、`quality` 和 `devcontainer` 均由 Ubuntu CI 真实安装并执行命令探针；macOS CI 还真实安装并验证 Ghostty 与公开字体。完整 `workstation` 中的 1Password、OrbStack、GUI、字体和手工安装的授权 MonoLisa 保留真实主机验证边界，不在无交互 runner 上伪装成已验证。
 
@@ -316,7 +329,7 @@ git rebase origin/main
 | `git sweep` / `git sweep-delete` / `git sweep-force` | 预览失去远端的分支 / 安全删除已合并分支 / 显式强制删除 |
 | `cz` / `cza` / `czd` | chezmoi 命令入口 / 应用目标状态 / 查看目标差异 |
 | `cze` / `czu` | 编辑受管文件 / 更新 source state 并显示差异（不应用） |
-| `brewup` / `devup` | 更新并清理 Homebrew / 更新 Homebrew、cxx-init、Neovim 插件锁与 Mason 工具 |
+| `brewup` / `devup` | 更新并清理 Homebrew / 隔离准备与冒烟验证 Neovim 更新候选，不自动采用 |
 | `devdoctor` | 只读检查配置、Runtime 来源、签名和关键工具 |
 | `scan-secrets` | 使用 gitleaks 扫描暂存内容 |
 

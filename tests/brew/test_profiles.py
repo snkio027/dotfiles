@@ -203,11 +203,8 @@ if (ROOT / "Brewfile").read_bytes() != (
 
 if any("markdownlint" in tool["name"] for tool in contract["tools"]):
     fail("markdownlint-cli2 must not be globally owned by Homebrew")
-aliases = (ROOT / "home" / "dot_config" / "zsh" / "aliases.zsh").read_text(
-    encoding="utf-8"
-)
-if "markdownlint-cli2" in aliases:
-    fail("Shell still claims global markdownlint-cli2 ownership")
+# Live Shell entry points are checked by tests/zsh/aliases_test.zsh.
+# Copying Mason's configuration to an isolated candidate is not global ownership.
 toolchain = (
     ROOT / "home" / "dot_config" / "nvim" / "lua" / "plugins" / "toolchain.lua"
 ).read_text(encoding="utf-8")

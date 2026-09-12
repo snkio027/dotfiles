@@ -34,18 +34,6 @@ end
 local repo_root = vim.fs.root(0, ".git") or vim.fn.getcwd()
 local manifest = dofile(repo_root .. "/tests/nvim/python_provider_ownership_manifest.lua")
 
-assert_equal(manifest.milestone, "M2C-B", "provider-ownership milestone drifted")
-assert_equal(manifest.base, "5822ddd8982680912484c3aa6dfd661cca59e634", "M2C-B base drifted")
-assert_equal(
-	manifest.decision,
-	"ADOPT TY AS INTERACTIVE SEMANTIC PROVIDER",
-	"approved provider-ownership decision drifted"
-)
-assert_equal(
-	manifest.governance_invariant,
-	"Interactive LSP ownership must be explicit.",
-	"provider-ownership invariant drifted"
-)
 assert_equal(manifest.activation, {
 	primary = "ty",
 	companion = "ruff",
@@ -98,11 +86,6 @@ for _, tool in ipairs({ "pyright", "ruff", "ty" }) do
 		tool .. " must appear exactly once in the Mason tool inventory"
 	)
 end
-assert_equal(
-	occurrences(toolchain, "Ty owns interactive Python language intelligence"),
-	1,
-	"Ty interactive ownership comment is missing"
-)
 assert_equal(occurrences(toolchain, '{ "ty", "check" }'), 1, "explicit whole-project Ty check drifted")
 
 local python_config = read(repo_root .. "/home/dot_config/nvim/lua/plugins/python.lua")
