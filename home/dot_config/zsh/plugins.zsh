@@ -34,34 +34,6 @@ unsetopt PROMPT_SP          # 关闭无换行符脚本输出时的 % 符号与�
 # 环境变量与 Hook 卫生
 export HOMEBREW_NO_ENV_HINTS=1
 
-# 缓存各 CLI 输出的 Zsh 初始化脚本；CLI 升级后自动重建。
-_zsh_cached_init() {
-    local cache_key="$1"
-    local binary_name="$2"
-    shift 2
-
-    local binary_path cache_dir cache_file temp_file
-    binary_path="$(command -v "$binary_name")" || return 0
-    cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/init"
-    cache_file="$cache_dir/$cache_key.zsh"
-    temp_file="$cache_file.$$"
-
-    if ! mkdir -p "$cache_dir" 2>/dev/null; then
-        builtin source <("$binary_path" "$@" 2>/dev/null)
-        return 0
-    fi
-    if [[ ! -s "$cache_file" || "$binary_path" -nt "$cache_file" ]]; then
-        if "$binary_path" "$@" >| "$temp_file" 2>/dev/null; then
-            command mv -f "$temp_file" "$cache_file"
-        else
-            command rm -f "$temp_file"
-            return 0
-        fi
-    fi
-
-    builtin source "$cache_file"
-}
-
 # --- 2. 补全引擎缓存加速与美化 ---
 mkdir -p "${XDG_CACHE_HOME:-$HOME/.cache}/zsh"
 autoload -Uz compinit

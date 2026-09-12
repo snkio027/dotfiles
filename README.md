@@ -31,7 +31,7 @@ Homebrew 负责全局 CLI 与语言 Runtime；`brew/ownership.toml` 是工具所
 ## 体验设计
 
 - `.zshenv` 只定义 XDG Base Directory；`~/.config/zsh/homebrew.zsh` 是 Homebrew PATH/FPATH 的唯一所有者，由 `.zprofile` 与 `.zshrc` 共同加载且不执行启动期子进程；`.zshrc` 其余部分只处理交互功能。
-- Starship、Atuin、fzf、direnv、zoxide 与 Carapace 的生成脚本按二进制修改时间缓存，升级后自动刷新。
+- Starship、Atuin、fzf、direnv、zoxide 与 Carapace 每次按当前命令、参数与环境直接初始化；Zsh 补全缓存仍保留。
 - Starship 使用 Quiet Ops Prompt：默认只显示目录、Git 状态和低频高价值反馈；语言、构建工具、包版本、Python 环境、容器、Docker context 与 Kubernetes 保持静默。非零退出只将输入箭头变红，后台任务数与超过 2 秒的命令耗时显示在第二行右侧。
 - Ghostty 固定使用 Catppuccin Mocha 暗色主题；MonoLisa customizer 输出的 `MonoLisaCode Variable-cv04-cv08-ss03-ss07-ss11` 变量字体负责拉丁文字与真实字重/斜体，PingFang SC 负责中文，Maple Mono NF CN 是 Nerd Font 图标的首选 fallback，`Symbols Nerd Font Mono` 保留为单字符宽度末级兜底，并提供 GPU 渲染和原生分屏。
 - Zellij 默认处于 locked mode，避免在 macOS 和 Linux 上占用 Shell、Neovim 的 Alt 快捷键。

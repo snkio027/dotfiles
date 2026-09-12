@@ -14,35 +14,36 @@ if [ -d "$ZSH_CONFIG_DIR" ]; then
     [ -f "$ZSH_CONFIG_DIR/plugins.zsh" ] && source "$ZSH_CONFIG_DIR/plugins.zsh"
 fi
 
-# --- 2. 交互式工具钩子（生成结果按二进制 mtime 缓存）---
+# --- 2. 交互式工具钩子 ---
+# 每次按当前 PATH、参数与环境生成；Atuin 配置和 Carapace 配置路径也可能改变输出。
 
 if command -v direnv &>/dev/null; then
-    _zsh_cached_init direnv direnv hook zsh
+    builtin source <(command direnv hook zsh)
 fi
 
 if command -v fzf &>/dev/null; then
-    _zsh_cached_init fzf fzf --zsh
+    builtin source <(command fzf --zsh)
 fi
 
 {{- if .features.use_atuin }}
 # Atuin 在 fzf 之后加载，即使上游 fzf 行为改变，Ctrl-R 的最终所有者仍是 Atuin。
 if command -v atuin &>/dev/null; then
-    _zsh_cached_init atuin atuin init zsh --disable-up-arrow
+    builtin source <(command atuin init zsh --disable-up-arrow)
 fi
 {{- end }}
 
 if command -v zoxide &>/dev/null; then
-    _zsh_cached_init zoxide zoxide init zsh
+    builtin source <(command zoxide init zsh)
 fi
 
 if command -v carapace &>/dev/null; then
     export CARAPACE_BRIDGES='zsh,fish,bash'
-    _zsh_cached_init carapace carapace _carapace
+    builtin source <(command carapace _carapace zsh)
 fi
 
 {{- if .features.use_starship }}
 if command -v starship &>/dev/null; then
-    _zsh_cached_init starship starship init zsh
+    builtin source <(command starship init zsh)
 fi
 {{- end }}
 
@@ -55,5 +56,3 @@ fi
 if [[ -n "${HOMEBREW_PREFIX:-}" && -f "$HOMEBREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh" ]]; then
     source "$HOMEBREW_PREFIX/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh"
 fi
-
-unset -f _zsh_cached_init 2>/dev/null || true
