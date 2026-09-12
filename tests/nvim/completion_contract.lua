@@ -59,31 +59,108 @@ vim.bo[snippet_buffer].filetype = "cpp"
 vim.bo[snippet_buffer].expandtab = true
 vim.bo[snippet_buffer].shiftwidth = 4
 vim.bo[snippet_buffer].tabstop = 4
+vim.wo.virtualedit = "onemore"
+
 local cpp_if
-vim.wait(1000, function()
-	for _, snippet in ipairs(luasnip.get_snippets("cpp")) do
-		if snippet.trigger == "if" then
-			cpp_if = snippet
+local cpp_forr
+assert(
+	vim.wait(2000, function()
+		local if_candidates = {}
+		local forr_candidates = {}
+		for _, snippet in ipairs(luasnip.get_snippets("cpp")) do
+			if snippet.trigger == "if" then
+				table.insert(if_candidates, snippet)
+			elseif snippet.trigger == "forr" then
+				table.insert(forr_candidates, snippet)
+			end
+		end
+		if #if_candidates == 1 and #forr_candidates == 1 then
+			cpp_if = if_candidates[1]
+			cpp_forr = forr_candidates[1]
 			return true
 		end
-	end
-	return false
-end, 10)
-assert(cpp_if, "friendly-snippets C++ if snippet is unavailable")
+		return false
+	end, 10),
+	"C++ snippet candidates did not settle to one if and one forr"
+)
+assert_equal(cpp_if.name, "if", "friendly-snippets C++ if candidate")
+assert_equal(cpp_forr.name, "Safe reverse iterator loop", "safe C++ forr candidate")
 
-vim.api.nvim_buf_set_lines(snippet_buffer, 0, -1, false, { "" })
-vim.api.nvim_win_set_cursor(0, { 1, 0 })
-vim.keymap.set("i", "<F5>", function()
-	luasnip.lsp_expand("if ($1) {\n\t$0\n}")
-end, { buffer = snippet_buffer })
-feed("i    <F5><Esc>")
-assert_equal(vim.api.nvim_buf_get_lines(snippet_buffer, 0, -1, false), {
+local snippet_source = require("blink.cmp.sources.snippets.luasnip").new({})
+
+local function accept_snippet_candidate(trigger, indent, shiftwidth, expected)
+	unlink_snippet()
+	vim.bo[snippet_buffer].shiftwidth = shiftwidth
+	vim.bo[snippet_buffer].tabstop = shiftwidth
+	local line = indent .. trigger
+	vim.api.nvim_buf_set_lines(snippet_buffer, 0, -1, false, { line })
+	vim.api.nvim_win_set_cursor(0, { 1, #line })
+
+	local context = {
+		line = line,
+		cursor = { 1, #line },
+		get_cursor = function()
+			return vim.api.nvim_win_get_cursor(0)
+		end,
+		get_line = function()
+			return vim.api.nvim_get_current_line()
+		end,
+	}
+	local response
+	snippet_source:get_completions(context, function(value)
+		response = value
+	end)
+	assert(response, ("Blink snippet response unavailable for %s"):format(trigger))
+
+	local candidates = {}
+	for _, item in ipairs(response.items) do
+		if item.label == trigger then
+			table.insert(candidates, item)
+		end
+	end
+	assert_equal(#candidates, 1, ("Blink %s candidate count"):format(trigger))
+	local selected = candidates[1]
+	assert_equal(
+		luasnip.get_id_snippet(selected.data.snip_id).trigger,
+		trigger,
+		("Blink %s source identity"):format(trigger)
+	)
+
+	selected.textEdit = {
+		newText = trigger,
+		range = {
+			start = { line = 0, character = #indent },
+			["end"] = { line = 0, character = #line },
+		},
+	}
+	selected.cursor_column = #line
+	snippet_source:execute(context, selected)
+	assert_equal(
+		vim.api.nvim_buf_get_lines(snippet_buffer, 0, -1, false),
+		expected,
+		("Blink %s expansion"):format(trigger)
+	)
+	assert(luasnip.in_snippet(), ("LuaSnip session did not start for %s"):format(trigger))
+end
+
+accept_snippet_candidate("if", "    ", 4, {
 	"    if () {",
 	"        ",
 	"    }",
-}, "friendly-snippets nested C++ if indentation")
+})
+
+accept_snippet_candidate("forr", "  ", 2, {
+	"  for (auto it = container.rbegin(); it != container.rend(); ++it) {",
+	"    ",
+	"  }",
+})
+for _, line in ipairs(vim.api.nvim_buf_get_lines(snippet_buffer, 0, -1, false)) do
+	assert(not line:find("size_t", 1, true), "unsafe unsigned forr candidate remains")
+	assert(not line:find(">= 0", 1, true), "non-terminating forr condition remains")
+end
 unlink_snippet()
 vim.api.nvim_buf_delete(snippet_buffer, { force = true })
+feed("<Esc>")
 
 local pair_buffer = vim.api.nvim_create_buf(false, true)
 vim.api.nvim_set_current_buf(pair_buffer)
