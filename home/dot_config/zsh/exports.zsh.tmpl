@@ -3,10 +3,6 @@
 # 由 chezmoi 托管 | DevSecOps 生产级 Profile
 # ------------------------------------------------------------------------------
 
-# 清除从长生命周期终端进程继承的旧工具链覆盖。
-unset RUSTFLAGS ZIG_FLAGS CFLAGS CXXFLAGS
-unset UV_PYTHON_PREFERENCE ZVM_INSTALL
-
 # --- 1. 默认编辑器与 Pager 分页器 ---
 export EDITOR="{{ .git.editor }}"
 export VISUAL="{{ .git.editor }}"
@@ -20,8 +16,8 @@ export PAGER="less -RF"
 export LANG="en_US.UTF-8"
 
 # --- 2. 工具链与主题环境变量 ---
-export CARGO_HOME="$HOME/.cargo"
-export GOPATH="$HOME/go"
+export CARGO_HOME="${CARGO_HOME:-$HOME/.cargo}"
+export GOPATH="${GOPATH:-$HOME/go}"
 export BAT_THEME="Catppuccin Mocha"
 export EZA_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/eza"
 

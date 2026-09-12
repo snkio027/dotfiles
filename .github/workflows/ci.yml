@@ -100,20 +100,23 @@ jobs:
             zsh -n "$rendered"
           done
 
-          # The inner zsh must evaluate these parameter-existence expressions.
+          # The inner zsh must preserve the caller's exact toolchain variable values.
           # shellcheck disable=SC2016
           env \
             RUSTFLAGS=poison ZIG_FLAGS=poison \
             CFLAGS=poison CXXFLAGS=poison \
             UV_PYTHON_PREFERENCE=poison ZVM_INSTALL=poison \
             zsh -fc '
-              source "$1"
-              (( ! ${+RUSTFLAGS} &&
-                 ! ${+ZIG_FLAGS} &&
-                 ! ${+CFLAGS} &&
-                 ! ${+CXXFLAGS} &&
-                 ! ${+UV_PYTHON_PREFERENCE} &&
-                 ! ${+ZVM_INSTALL} ))
+              source "$1" || exit 1
+              [[ "$RUSTFLAGS" == poison &&
+                 "$ZIG_FLAGS" == poison &&
+                 "$CFLAGS" == poison &&
+                 "$CXXFLAGS" == poison &&
+                 "$UV_PYTHON_PREFERENCE" == poison &&
+                 "$ZVM_INSTALL" == poison ]] || {
+                print -u2 -- "exports.zsh changed inherited toolchain variables"
+                exit 1
+              }
             ' _ "$tmp_dir/exports.zsh"
 
           chezmoi execute-template --source=. < home/dot_config/zsh/scripts/executable_doctor.sh.tmpl > "$tmp_dir/doctor.sh"
