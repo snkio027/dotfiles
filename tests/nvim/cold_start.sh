@@ -34,10 +34,39 @@ run_nvim() {
     printf 'completed (log: %s)\n' "$LOG_DIR/$label.log"
 }
 
+run_nvim_expected_failure() {
+    local label="$1"
+    shift
+    local status=0
+    printf '\n==> %s (expected failure)\n' "$label"
+    nvim --headless "$@" >"$LOG_DIR/$label.log" 2>&1 || status=$?
+    if [ "$status" -eq 0 ]; then
+        cat "$LOG_DIR/$label.log" >&2
+        echo "Expected Neovim contract failure returned success: $label" >&2
+        return 1
+    fi
+    printf 'failed as expected with status %d (log: %s)\n' "$status" "$LOG_DIR/$label.log"
+}
+
 cd "$REPO_ROOT"
 run_nvim lazy-restore "+luafile tests/nvim/restore_lock.lua" "+Lazy! restore" \
     "+luafile tests/nvim/provision.lua" +qa
 run_nvim startup-policy "+luafile tests/nvim/startup_policy.lua" +qa
+run_nvim completion-contract "-n" "+luafile tests/nvim/run_contract.lua" "tests/nvim/completion_contract.lua"
+grep -Fq "Completion interaction contract passed: explicit selection, menu-first Tab, Enter confirmation, adaptive snippets." \
+    "$LOG_DIR/completion-contract.log" || {
+    cat "$LOG_DIR/completion-contract.log" >&2
+    echo "Completion interaction contract did not complete" >&2
+    exit 1
+}
+run_nvim_expected_failure completion-contract-negative "-n" \
+    "+lua vim.g.dotfiles_completion_contract_negative = true" \
+    "+luafile tests/nvim/run_contract.lua" "tests/nvim/completion_contract.lua"
+grep -Fq "COMPLETION_CONTRACT_NEGATIVE_CONTROL" "$LOG_DIR/completion-contract-negative.log" || {
+    cat "$LOG_DIR/completion-contract-negative.log" >&2
+    echo "Completion contract negative control did not reach the injected assertion" >&2
+    exit 1
+}
 run_nvim color-unit "-n" "+set rtp^=$PWD/home/dot_config/nvim" "+luafile tests/nvim/run_contract.lua" "tests/nvim/color_unit_contract.lua"
 run_nvim production-visual "-n" "+luafile tests/nvim/production_visual_runtime.lua" +qa
 run_nvim python-provider-unit "-n" "+set rtp^=$PWD/home/dot_config/nvim" \
@@ -49,7 +78,8 @@ DOTFILES_M2C_CONFIG_HOME="$CONFIG_HOME" DOTFILES_M2C_LOG_DIR="$LOG_DIR" \
     bash tests/nvim/python_provider_ownership.sh
 
 if grep -ERni 'Package is already installing|MasonToolsStartingInstall|MasonToolsUpdateCompleted|^Installing tools:|^Updating tools:' \
-    "$LOG_DIR/lazy-restore.log" "$LOG_DIR/startup-policy.log" "$LOG_DIR/smoke.log" \
+    "$LOG_DIR/lazy-restore.log" "$LOG_DIR/startup-policy.log" "$LOG_DIR/completion-contract.log" \
+    "$LOG_DIR/completion-contract-negative.log" "$LOG_DIR/smoke.log" \
     "$LOG_DIR/color-unit.log" "$LOG_DIR/production-visual.log" \
     "$LOG_DIR/python-provider-unit.log" "$LOG_DIR/color-contract.log" \
     "$LOG_DIR/binding-evidence.log" "$LOG_DIR/python-provider-production.log"; then

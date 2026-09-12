@@ -82,6 +82,7 @@ assert_container_state() {
         cd "$workspace_folder"
         nvim --headless "+luafile tests/nvim/startup_policy.lua" \
             "+luafile tests/nvim/smoke.lua" +qa
+        nvim -n --headless "+luafile tests/nvim/run_contract.lua" "tests/nvim/completion_contract.lua"
         nvim -n --headless "+luafile tests/nvim/production_visual_runtime.lua" +qa
         DOTFILES_STRICT_LSP=1 nvim -n --headless "+luafile tests/nvim/color_contract.lua" +qa
         nvim -n --headless "+luafile tests/nvim/binding_evidence.lua" +qa
@@ -97,6 +98,10 @@ assert_container_state() {
     grep -Fq "Neovim toolchain smoke tests passed" "$nvim_log" || {
         cat "$nvim_log" >&2
         fail "Neovim warm smoke did not complete"
+    }
+    grep -Fq "Completion interaction contract passed: explicit selection, menu-first Tab, Enter confirmation, adaptive snippets." "$nvim_log" || {
+        cat "$nvim_log" >&2
+        fail "Completion interaction contract did not complete"
     }
     grep -Fq "M2A binding-topology evidence passed: 28/28 cases, 15/15 comparisons." "$nvim_log" || {
         cat "$nvim_log" >&2
