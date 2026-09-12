@@ -21,11 +21,6 @@ typeset -gx HOMEBREW_REPOSITORY="$HOMEBREW_PREFIX"
 # idempotent while preserving first priority.
 typeset -gU path fpath
 
-# 清理从长生命周期终端进程继承的 Runtime 管理器路径与环境覆盖。
-path=("${(@)path:#${HOME}/.local/share/mise/*}")
-unset GOROOT RUSTUP_TOOLCHAIN
-unset ${(M)${(k)parameters}:#(MISE_*|__MISE_*)} 2>/dev/null
-
 {{- if .is_linux }}
 # A Linux shell inherited from a long-lived cross-platform host must never
 # retain Apple Silicon Homebrew locations.
@@ -34,15 +29,34 @@ path=("${(@)path:#/opt/homebrew/*}")
 fpath=("${(@)fpath:#/opt/homebrew}")
 fpath=("${(@)fpath:#/opt/homebrew/*}")
 {{- end }}
-path=(
-    "$HOMEBREW_PREFIX/opt/llvm/bin"
-    "$HOMEBREW_PREFIX/bin"
-    "$HOMEBREW_PREFIX/sbin"
-    "$HOME/.cargo/bin"
-    "$HOME/.local/bin"
-    "$HOME/go/bin"
-    $path
-)
+# Preserve inherited project/toolchain priority. Add only missing defaults before
+# the first system directory; if there is no system entry, append the defaults.
+() {
+    local entry
+    local -a defaults=(
+        "$HOMEBREW_PREFIX/opt/llvm/bin"
+        "$HOMEBREW_PREFIX/bin"
+        "$HOMEBREW_PREFIX/sbin"
+        "${CARGO_HOME:-$HOME/.cargo}/bin"
+        "$HOME/.local/bin"
+    ) missing=() ordered=()
+    for entry in "${(@s/:/)${GOPATH:-$HOME/go}}"; do
+        defaults+=("$entry/bin")
+    done
+    for entry in "${defaults[@]}"; do
+        (( ${path[(Ie)$entry]} )) || missing+=("$entry")
+    done
+    for entry in "${path[@]}"; do
+        case "$entry" in
+            /usr/bin|/bin|/usr/sbin|/sbin)
+                ordered+=("${missing[@]}")
+                missing=()
+                ;;
+        esac
+        ordered+=("$entry")
+    done
+    path=("${ordered[@]}" "${missing[@]}")
+}
 fpath=("$HOMEBREW_PREFIX/share/zsh/site-functions" $fpath)
 export PATH FPATH
 

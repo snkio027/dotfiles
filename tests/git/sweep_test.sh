@@ -29,6 +29,28 @@ git -C "$WORK" add base.txt
 git -C "$WORK" commit -m base >/dev/null
 git -C "$WORK" push -u origin main >/dev/null
 
+# Ordinary fetch prunes stale remote branches, never unpublished or other-remote tags.
+git -C "$WORK" tag -a local-unpublished -m "Unpublished local milestone"
+local_tag="$(git -C "$WORK" rev-parse refs/tags/local-unpublished)"
+git init --bare --initial-branch=main "$TEST_ROOT/archive.git" >/dev/null
+git -C "$WORK" remote add archive "$TEST_ROOT/archive.git"
+git -C "$WORK" tag -a archive-only -m "Archive remote milestone"
+archive_tag="$(git -C "$WORK" rev-parse refs/tags/archive-only)"
+git -C "$WORK" push --no-follow-tags archive main refs/tags/archive-only >/dev/null
+git -C "$WORK" tag -d archive-only >/dev/null
+git -C "$WORK" fetch archive >/dev/null
+git --git-dir="$REMOTE" update-ref refs/heads/stale main
+git -C "$WORK" fetch origin >/dev/null
+git -C "$WORK" show-ref --verify --quiet refs/remotes/origin/stale
+git --git-dir="$REMOTE" update-ref -d refs/heads/stale
+git -C "$WORK" fetch origin >/dev/null
+[ "$(git -C "$WORK" rev-parse refs/tags/local-unpublished)" = "$local_tag" ]
+[ "$(git -C "$WORK" rev-parse refs/tags/archive-only)" = "$archive_tag" ]
+if git -C "$WORK" show-ref --verify --quiet refs/remotes/origin/stale; then
+    echo "Ordinary fetch did not prune a deleted remote branch" >&2
+    exit 1
+fi
+
 git -C "$WORK" switch -c merged-gone >/dev/null
 printf 'merged\n' >"$WORK/merged.txt"
 git -C "$WORK" add merged.txt

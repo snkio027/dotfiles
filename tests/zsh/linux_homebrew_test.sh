@@ -8,6 +8,7 @@ trap 'rm -rf -- "$TEST_ROOT"' EXIT
 
 LINUX_DATA='{"is_mac":false,"is_linux":true,"is_arm64":false,"machine_profile":"workstation"}'
 MACOS_DATA='{"is_mac":true,"is_linux":false,"is_arm64":true,"machine_profile":"workstation"}'
+INTEL_DATA='{"is_mac":true,"is_linux":false,"is_arm64":false,"machine_profile":"workstation"}'
 DEVCONTAINER_DATA='{"is_mac":false,"is_linux":true,"is_arm64":false,"machine_profile":"devcontainer"}'
 LINUX_PREFIX="/home/linuxbrew/.linuxbrew"
 
@@ -35,6 +36,7 @@ render_profile() {
 
 render_profile linux "$LINUX_DATA"
 render_profile macos "$MACOS_DATA"
+render_profile intel "$INTEL_DATA"
 render_profile devcontainer "$DEVCONTAINER_DATA"
 
 LINUX_RENDER="$TEST_ROOT/render-linux"
@@ -166,7 +168,7 @@ assert_unique_entries FPATH "${fpath[@]}"
 [[ "${(j/:/)fpath}" != *'/opt/homebrew'* ]] || fail "macOS Homebrew polluted FPATH"
 EOF
 
-if ! env -u HOMEBREW_PREFIX -u HOMEBREW_CELLAR -u HOMEBREW_REPOSITORY \
+if ! env -u HOMEBREW_PREFIX -u HOMEBREW_CELLAR -u HOMEBREW_REPOSITORY -u CARGO_HOME -u GOPATH \
     HOME="$RUNTIME_HOME" \
     ZDOTDIR="$RUNTIME_HOME" \
     XDG_CONFIG_HOME="$RUNTIME_HOME/.config" \
@@ -181,6 +183,61 @@ if ! env -u HOMEBREW_PREFIX -u HOMEBREW_CELLAR -u HOMEBREW_REPOSITORY \
     cat "$TEST_ROOT/non-login.stderr" >&2
     exit 1
 fi
+
+# Exercise the rendered owners with an explicit project environment on every platform.
+PROJECT_BIN="$TEST_ROOT/project/.venv/bin"
+mkdir -p "$PROJECT_BIN"
+ln -s /usr/bin/true "$PROJECT_BIN/python"
+ln -s /usr/bin/true "$PROJECT_BIN/clang"
+for profile in linux macos intel devcontainer; do
+    env PROJECT_BIN="$PROJECT_BIN" OWNER_DIR="$TEST_ROOT/render-$profile" \
+        CFLAGS='-fsanitize=address' CXXFLAGS='-DPROJECT=1' RUSTFLAGS='-C debuginfo=2' \
+        ZIG_FLAGS='-Doptimize=Debug' RUSTUP_TOOLCHAIN='nightly-project' GOROOT='/project/go' \
+        CARGO_HOME='/project/cargo' GOPATH='/project/gopath' UV_PYTHON_PREFERENCE='only-managed' \
+        PATH="$PROJECT_BIN:/usr/bin:/bin" \
+        "$RUNTIME_ZSH" -dfc '
+            source "$OWNER_DIR/homebrew.zsh"
+            source "$OWNER_DIR/exports.zsh"
+            [[ "$CFLAGS" == "-fsanitize=address" && "$CXXFLAGS" == "-DPROJECT=1" ]] || exit 51
+            [[ "$RUSTFLAGS" == "-C debuginfo=2" && "$ZIG_FLAGS" == "-Doptimize=Debug" ]] || exit 52
+            [[ "$RUSTUP_TOOLCHAIN" == nightly-project && "$GOROOT" == /project/go ]] || exit 53
+            [[ "$CARGO_HOME" == /project/cargo && "$GOPATH" == /project/gopath ]] || exit 54
+            [[ "$UV_PYTHON_PREFERENCE" == only-managed ]] || exit 55
+            [[ "$commands[python]" == "$PROJECT_BIN/python" && "$commands[clang]" == "$PROJECT_BIN/clang" ]] || exit 56
+            before_path="$PATH"
+            source "$OWNER_DIR/homebrew.zsh"
+            [[ "$PATH" == "$before_path" ]] || exit 57
+            [[ "${path[(Ie)/project/cargo/bin]}" -gt 0 && "${path[(Ie)/project/gopath/bin]}" -gt 0 ]] || exit 58
+
+            path=("$PROJECT_BIN" "$HOMEBREW_PREFIX/bin" "$PROJECT_BIN/SDK [1]" /usr/bin /bin)
+            source "$OWNER_DIR/homebrew.zsh"
+            [[ "${path[1]}" == "$PROJECT_BIN" && "${path[2]}" == "$HOMEBREW_PREFIX/bin" &&
+                "${path[3]}" == "$PROJECT_BIN/SDK [1]" ]] || exit 59
+            path=("$PROJECT_BIN")
+            export GOPATH=/project/go-a:/project/go-b
+            source "$OWNER_DIR/homebrew.zsh"
+            [[ "${path[1]}" == "$PROJECT_BIN" && "${path[(Ie)/project/go-a/bin]}" -gt 0 &&
+                "${path[(Ie)/project/go-b/bin]}" -gt 0 ]] || exit 60
+        '
+done
+
+# A full interactive child must retain a project environment activated in its parent.
+env -u HOMEBREW_PREFIX -u HOMEBREW_CELLAR -u HOMEBREW_REPOSITORY \
+    HOME="$RUNTIME_HOME" ZDOTDIR="$RUNTIME_HOME" \
+    XDG_CONFIG_HOME="$RUNTIME_HOME/.config" XDG_DATA_HOME="$RUNTIME_HOME/.local/share" \
+    XDG_STATE_HOME="$RUNTIME_HOME/.local/state" XDG_CACHE_HOME="$RUNTIME_HOME/.cache" \
+    TERM=xterm-256color PROJECT_BIN="$PROJECT_BIN" RUNTIME_ZSH="$RUNTIME_ZSH" \
+    PATH=/usr/bin:/bin "$RUNTIME_ZSH" -d -ic '
+        export PATH="$PROJECT_BIN:$PATH"
+        export CXXFLAGS="-DPROJECT=1" RUSTFLAGS="-C debuginfo=2" RUSTUP_TOOLCHAIN=nightly-project
+        export EXPECTED_PROJECT_PATH="$PATH"
+        "$RUNTIME_ZSH" -d -ic '\''
+            [[ "$commands[python]" == "$PROJECT_BIN/python" && "$commands[clang]" == "$PROJECT_BIN/clang" ]] || exit 61
+            [[ "$CXXFLAGS" == "-DPROJECT=1" && "$RUSTFLAGS" == "-C debuginfo=2" ]] || exit 62
+            [[ "$RUSTUP_TOOLCHAIN" == nightly-project ]] || exit 63
+            [[ "$PATH" == "$EXPECTED_PROJECT_PATH" ]] || exit 64
+        '\''
+    '
 
 BOOTSTRAP="$TEST_ROOT/linux-bootstrap.sh"
 BOOTSTRAP_PREFIX="$TEST_ROOT/bootstrap-linuxbrew"
