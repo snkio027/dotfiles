@@ -275,8 +275,8 @@ local rust_analyzer = rust.server.default_settings["rust-analyzer"]
 assert(rust_analyzer.check.command == "clippy", "rust-analyzer is not using Clippy")
 
 local cmake = LazyVim.opts("cmake-tools.nvim")
-assert(contains(cmake.cmake_generate_options, "-DCMAKE_EXPORT_COMPILE_COMMANDS=1"), "CMake compile DB is disabled")
-assert(contains(cmake.cmake_generate_options, "-DCMAKE_CXX_COMPILER_LAUNCHER=ccache"), "CMake is not using ccache")
+assert(vim.deep_equal(cmake.cmake_generate_options, {}), "CMake adds global overrides after the project preset")
+assert(cmake.cmake_compile_commands_options.action == "none", "CMake creates an extra root compile database")
 assert(cmake.cmake_executor.name == "overseer", "CMake executor is not Overseer")
 assert(cmake.cmake_runner.name == "overseer", "CMake runner is not Overseer")
 assert(cmake.cmake_dap_configuration.type == "codelldb", "CMake debugger is not codelldb")
@@ -289,5 +289,7 @@ require("lazy").load({ plugins = { "nvim-dap" } })
 local dap = require("dap")
 assert(dap.adapters.codelldb, "codelldb adapter is unavailable")
 assert(#(dap.configurations.zig or {}) >= 2, "Zig launch/attach configurations are unavailable")
+
+dofile("tests/nvim/cmake_presets.lua")
 
 print("Neovim toolchain smoke tests passed")
