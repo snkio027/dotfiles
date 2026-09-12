@@ -23,6 +23,16 @@ exercise_llvm() {
     "$llvm_bin" --version >/dev/null 2>&1 || fail "$PROFILE profile LLVM command is unusable: $llvm_bin"
 }
 
+# Executable provenance, not merely a matching version from a runner's PATH.
+rust_bin="$(brew --prefix)/opt/rustup/bin"
+for tool in rustup rustc cargo rustfmt cargo-clippy; do
+    [[ "$(command -v "$tool")" == "$rust_bin/$tool" ]] || fail "Rust command is not a managed proxy: $tool"
+    exercise "$tool" --version
+done
+sysroot="$(rustc --print sysroot)"
+[[ -f "$sysroot/lib/rustlib/src/rust/library/core/src/lib.rs" ]] || fail "Rust standard-library source is unavailable"
+"$(brew --prefix)/bin/rust-analyzer" --version >/dev/null || fail "Brew rust-analyzer is unavailable"
+
 case "$PROFILE" in
     core)
         exercise age --version
@@ -43,7 +53,6 @@ case "$PROFILE" in
         exercise python3 --version
         exercise cargo --version
         exercise rustc --version
-        exercise rust-analyzer --version
         exercise sops --version
         exercise tree-sitter --version
         exercise uv --version
@@ -66,7 +75,6 @@ case "$PROFILE" in
         exercise ninja --version
         exercise python3 --version
         exercise rg --version
-        exercise rust-analyzer --version
         exercise shellcheck --version
         exercise shfmt --version
         exercise starship --version

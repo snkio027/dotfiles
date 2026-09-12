@@ -167,11 +167,23 @@ else
     check_status "Node.js Environment" "warn" "Node.js missing"
 fi
 
-if command -v rustc &>/dev/null; then
-    RUST_VER="$(rustc --version 2>/dev/null | awk '{print $2}' || echo "installed")"
-    check_status "Rust Toolchain" "pass" "v$RUST_VER"
+RUSTUP_BIN="$BREW_PREFIX/opt/rustup/bin/rustup"
+if [ -x "$RUSTUP_BIN" ] &&
+    RUST_ACTIVE="$(RUSTUP_AUTO_INSTALL=0 "$RUSTUP_BIN" show active-toolchain 2>/dev/null)" &&
+    RUST_REAL="$(RUSTUP_AUTO_INSTALL=0 "$RUSTUP_BIN" which rustc 2>/dev/null)" &&
+    CARGO_REAL="$(RUSTUP_AUTO_INSTALL=0 "$RUSTUP_BIN" which cargo 2>/dev/null)" &&
+    RUST_VER="$(RUSTUP_AUTO_INSTALL=0 rustc --version 2>/dev/null)" &&
+    CARGO_VER="$(RUSTUP_AUTO_INSTALL=0 cargo --version 2>/dev/null)"; then
+    rust_path="$(command -v rustc)"
+    cargo_path="$(command -v cargo)"
+    if [[ ("$rust_path" == "${RUSTUP_BIN%/*}/rustc" || "$rust_path" == "$RUST_REAL") &&
+        ("$cargo_path" == "${RUSTUP_BIN%/*}/cargo" || "$cargo_path" == "$CARGO_REAL") ]]; then
+        check_status "Rust Toolchain (rustup)" "pass" "$RUST_VER; $CARGO_VER; $RUST_ACTIVE"
+    else
+        check_status "Rust Toolchain (rustup)" "warn" "PATH selects $rust_path / $cargo_path; expected rustup or its selected toolchain"
+    fi
 else
-    check_status "Rust Toolchain" "warn" "Rust toolchain missing"
+    check_status "Rust Toolchain (rustup)" "warn" "Manager/toolchain missing or unusable; no automatic installation attempted"
 fi
 
 if command -v go &>/dev/null; then
@@ -248,7 +260,7 @@ RUNTIME_SOURCE_OK=true
 if [ -z "$BREW_PREFIX" ]; then
     RUNTIME_SOURCE_OK=false
 else
-    for tool in uv python3 node rustc go zig clang cmake ninja ccache terraform kubectl helm; do
+    for tool in uv python3 node go zig clang cmake ninja ccache terraform kubectl helm; do
         tool_path="$(command -v "$tool" 2>/dev/null || true)"
         case "$tool_path" in
             "$BREW_PREFIX"/*) ;;
@@ -257,7 +269,7 @@ else
     done
 fi
 if [ "$RUNTIME_SOURCE_OK" = true ]; then
-    check_status "Runtime Ownership" "pass" "All runtimes resolve from $BREW_PREFIX"
+    check_status "Runtime Ownership" "pass" "Non-Rust runtimes resolve from $BREW_PREFIX; Rust checked separately"
 else
     check_status "Runtime Ownership" "warn" "A runtime is outside Homebrew; inspect with 'whence -a <tool>'"
 fi

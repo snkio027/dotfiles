@@ -20,8 +20,8 @@ brew "ninja"  # CMake 高性能构建后端
 brew "node"  # 最新稳定版 Node.js
 brew "pkgconf"  # 原生依赖发现
 brew "python"  # 最新稳定版 Python
-brew "rust"  # Rust 与 Cargo
 brew "rust-analyzer"  # Rust 语义分析
+brew "rustup"  # Rust 工具链管理器；编译器与组件由 rustup 管理
 brew "sops"  # 结构化配置加密
 brew "tree-sitter-cli"  # Tree-sitter 解析器工具链
 brew "uv"  # Python 包与虚拟环境管理

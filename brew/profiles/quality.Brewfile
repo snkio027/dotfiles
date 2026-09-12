@@ -12,6 +12,7 @@ brew "neovim"  # Neovim
 brew "ninja"  # CMake 高性能构建后端
 brew "python"  # 最新稳定版 Python
 brew "rust-analyzer"  # Rust 语义分析
+brew "rustup"  # Rust 工具链管理器；编译器与组件由 rustup 管理
 brew "tree-sitter-cli"  # Tree-sitter 解析器工具链
 brew "uv"  # Python 包与虚拟环境管理
 

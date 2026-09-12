@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Provision after Brew bundle, without upgrading an installed toolchain.
+# Provisioner: {{ include "../scripts/rust/provision.sh" | sha256sum }}
+set -euo pipefail
+{{- if .is_mac }}
+{{-   if .is_arm64 }}
+BREW_PREFIX="/opt/homebrew"
+{{-   else }}
+BREW_PREFIX="/usr/local"
+{{-   end }}
+{{- else if .is_linux }}
+BREW_PREFIX="/home/linuxbrew/.linuxbrew"
+{{- else }}
+{{-   fail (printf "unsupported Rust platform: %s/%s" .chezmoi.os .chezmoi.arch) }}
+{{- end }}
+bash "{{ .chezmoi.workingTree }}/scripts/rust/provision.sh" "$BREW_PREFIX"
