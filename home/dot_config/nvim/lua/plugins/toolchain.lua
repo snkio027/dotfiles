@@ -211,11 +211,13 @@ return {
     optional = true,
     dependencies = { "stevearc/overseer.nvim" },
     opts = {
-      cmake_generate_options = {
-        "-DCMAKE_EXPORT_COMPILE_COMMANDS=1",
-        "-DCMAKE_C_COMPILER_LAUNCHER=ccache",
-        "-DCMAKE_CXX_COMPILER_LAUNCHER=ccache",
-      },
+      -- CMakeTools appends these after --preset. An explicit empty list also
+      -- clears its default EXPORT_COMPILE_COMMANDS override, leaving cache
+      -- variables (including compiler launchers) under project ownership.
+      cmake_generate_options = {},
+      -- Projects select the database through .clangd (build/dev for cxx).
+      -- Avoid an extra root entry that follows the editor's selected preset.
+      cmake_compile_commands_options = { action = "none" },
       cmake_executor = { name = "overseer" },
       cmake_runner = { name = "overseer" },
       cmake_dap_configuration = {
