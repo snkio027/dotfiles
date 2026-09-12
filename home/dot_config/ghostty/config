@@ -55,7 +55,8 @@ macos-option-as-alt = left
 # 3. 鼠标交互与剪贴板
 focus-follows-mouse = true
 mouse-hide-while-typing = true
-scrollback-limit = 100000
+# 32 MiB per surface, in bytes (including the active screen); allocated lazily.
+scrollback-limit = 33554432
 copy-on-select = true
 clipboard-read = ask
 clipboard-write = allow
