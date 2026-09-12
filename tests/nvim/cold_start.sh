@@ -53,7 +53,7 @@ run_nvim lazy-restore "+luafile tests/nvim/restore_lock.lua" "+Lazy! restore" \
     "+luafile tests/nvim/provision.lua" +qa
 run_nvim startup-policy "+luafile tests/nvim/startup_policy.lua" +qa
 run_nvim completion-contract "-n" "+luafile tests/nvim/run_contract.lua" "tests/nvim/completion_contract.lua"
-grep -Fq "Completion interaction contract passed: explicit selection, menu-first Tab, Enter confirmation, adaptive snippets." \
+grep -Fq "Completion interaction contract passed: LazyVim defaults, LuaSnip expansion, replacement plugin topology." \
     "$LOG_DIR/completion-contract.log" || {
     cat "$LOG_DIR/completion-contract.log" >&2
     echo "Completion interaction contract did not complete" >&2
