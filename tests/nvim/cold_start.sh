@@ -22,6 +22,7 @@ export XDG_STATE_HOME="$TEST_ROOT/state"
 export XDG_CACHE_HOME="$TEST_ROOT/cache"
 export DOTFILES_LAZY_LOCK_SNAPSHOT="$LOCK_SNAPSHOT"
 export DOTFILES_MASON_TIMEOUT_MS="${DOTFILES_MASON_TIMEOUT_MS:-900000}"
+export DOTFILES_TREESITTER_TIMEOUT_MS="${DOTFILES_TREESITTER_TIMEOUT_MS:-300000}"
 
 run_nvim() {
     local label="$1"
@@ -51,9 +52,15 @@ run_nvim_expected_failure() {
 cd "$REPO_ROOT"
 run_nvim lazy-restore "+luafile tests/nvim/restore_lock.lua" "+Lazy! restore" \
     "+luafile tests/nvim/provision.lua" +qa
+grep -Fq "Tree-sitter evidence parser provisioning 5/5: c,cpp,python,rust,zig" \
+    "$LOG_DIR/lazy-restore.log" || {
+    cat "$LOG_DIR/lazy-restore.log" >&2
+    echo "Tree-sitter evidence parser provisioning did not complete" >&2
+    exit 1
+}
 run_nvim startup-policy "+luafile tests/nvim/startup_policy.lua" +qa
 run_nvim completion-contract "-n" "+luafile tests/nvim/run_contract.lua" "tests/nvim/completion_contract.lua"
-grep -Fq "Completion interaction contract passed: explicit selection, menu-first Tab, Enter confirmation, adaptive snippets." \
+grep -Fq "Completion interaction contract passed: LazyVim defaults, LuaSnip expansion, replacement plugin topology." \
     "$LOG_DIR/completion-contract.log" || {
     cat "$LOG_DIR/completion-contract.log" >&2
     echo "Completion interaction contract did not complete" >&2

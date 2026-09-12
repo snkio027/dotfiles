@@ -29,7 +29,7 @@ return {
       end,
       integrations = {
         blink_cmp = true,
-        fzf = true,
+        fzf = false,
         gitsigns = true,
         mason = true,
         native_lsp = { enabled = true },

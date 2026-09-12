@@ -80,6 +80,7 @@ assert_container_state() {
     nvim_log="$(mktemp)"
     (
         cd "$workspace_folder"
+        nvim --headless "+luafile tests/nvim/provision.lua" +qa
         nvim --headless "+luafile tests/nvim/startup_policy.lua" \
             "+luafile tests/nvim/smoke.lua" +qa
         nvim -n --headless "+luafile tests/nvim/run_contract.lua" "tests/nvim/completion_contract.lua"
@@ -99,7 +100,11 @@ assert_container_state() {
         cat "$nvim_log" >&2
         fail "Neovim warm smoke did not complete"
     }
-    grep -Fq "Completion interaction contract passed: explicit selection, menu-first Tab, Enter confirmation, adaptive snippets." "$nvim_log" || {
+    grep -Fq "Tree-sitter evidence parser provisioning 5/5: c,cpp,python,rust,zig" "$nvim_log" || {
+        cat "$nvim_log" >&2
+        fail "Tree-sitter evidence parser provisioning did not complete"
+    }
+    grep -Fq "Completion interaction contract passed: LazyVim defaults, LuaSnip expansion, replacement plugin topology." "$nvim_log" || {
         cat "$nvim_log" >&2
         fail "Completion interaction contract did not complete"
     }

@@ -12,273 +12,167 @@ local function assert_equal(actual, expected, label)
 	end
 end
 
-local function find_snippet(snippets, prefix)
-	for _, snippet in ipairs(snippets) do
-		if snippet.prefix == prefix then
-			return snippet
-		end
+local lazy_config = require("lazy.core.config")
+for _, name in ipairs({ "LuaSnip", "blink.pairs", "nvim-dap-view", "octo.nvim", "snacks.nvim" }) do
+	if not lazy_config.plugins[name] then
+		fail(("replacement plugin is unavailable: %s"):format(name))
+	end
+end
+for _, name in ipairs({ "mini.snippets", "mini.pairs", "fzf-lua", "nvim-dap-ui", "gh.nvim", "litee.nvim" }) do
+	if lazy_config.plugins[name] then
+		fail(("retired plugin remains active: %s"):format(name))
 	end
 end
 
+assert_equal(vim.g.lazyvim_picker, "snacks", "LazyVim picker ownership")
+assert_equal(LazyVim.opts("octo.nvim").picker, "snacks", "Octo picker integration")
+assert_equal(LazyVim.opts("nvim-dap-view").auto_toggle, true, "DAP view session lifecycle")
+assert_equal(LazyVim.opts("blink.pairs").highlights.enabled, false, "Blink pairs rainbow highlights")
+
 local blink_opts = LazyVim.opts("blink.cmp")
-local selection = blink_opts.completion.list.selection
-assert_equal(selection.preselect, false, "Blink preselection")
-assert_equal(selection.auto_insert, false, "Blink preview insertion")
-if blink_opts.completion.trigger and blink_opts.completion.trigger.show_in_snippet == false then
-	fail("completion inside snippet sessions is disabled")
-end
-assert_equal(blink_opts.keymap.preset, "enter", "Blink keymap preset")
-assert_equal({ unpack(blink_opts.keymap["<Tab>"], 2) }, { "select_next", "snippet_forward", "fallback" }, "Tab order")
-assert_equal(
-	{ unpack(blink_opts.keymap["<S-Tab>"], 2) },
-	{ "select_prev", "snippet_backward", "fallback" },
-	"Shift-Tab order"
-)
-assert_equal({ unpack(blink_opts.keymap["<CR>"], 2) }, { "accept", "fallback" }, "Enter order")
+assert_equal(blink_opts.snippets.preset, "luasnip", "Blink snippet engine")
+assert_equal(blink_opts.keymap.preset, "enter", "LazyVim Blink keymap preset")
 
-local columns = blink_opts.completion.menu.draw.columns
-assert_equal(columns[#columns], { "source_name" }, "completion source label column")
-
-require("lazy").load({ plugins = { "mini.snippets", "blink.cmp" } })
+require("lazy").load({ plugins = { "LuaSnip", "blink.cmp", "blink.pairs" } })
 local blink_config = require("blink.cmp.config")
-assert_equal(blink_config.completion.list.selection.preselect({}), false, "runtime Blink preselection")
-assert_equal(blink_config.completion.list.selection.auto_insert({}), false, "runtime Blink preview insertion")
-assert_equal(blink_config.completion.trigger.show_in_snippet, true, "runtime completion inside snippet sessions")
-assert_equal(MiniSnippets.config.mappings.stop, "<C-c>", "explicit snippet cancellation")
+local luasnip = require("luasnip")
+
+assert_equal(blink_config.completion.list.selection.preselect({}), true, "default Blink preselection")
+assert_equal(blink_config.completion.list.selection.auto_insert({}), true, "default Blink preview insertion")
+assert_equal(blink_config.completion.trigger.show_in_snippet, true, "default completion inside snippets")
+assert_equal(blink_config.snippets.preset, "luasnip", "runtime Blink snippet engine")
+assert(require("blink.pairs").library_available(), "Blink pairs native library is unavailable")
 
 local function feed(keys)
 	vim.fn.feedkeys(vim.api.nvim_replace_termcodes(keys, true, false, true), "xt")
 end
 
-local function exercise_insert_key(keys, stubs)
-	local buffer = vim.api.nvim_create_buf(false, true)
-	vim.api.nvim_set_current_buf(buffer)
-	vim.bo[buffer].expandtab = false
-	vim.api.nvim_buf_set_lines(buffer, 0, -1, false, { "" })
-
-	local blink = require("blink.cmp")
-	local originals = {}
-	for name, replacement in pairs(stubs) do
-		originals[name] = blink[name]
-		blink[name] = replacement
-	end
-
-	local mappings = require("blink.cmp.keymap").get_mappings(blink_config.keymap, "default")
-	require("blink.cmp.keymap.apply").keymap_to_current_buffer(mappings)
-	feed("i" .. keys .. "<Esc>")
-
-	for name, original in pairs(originals) do
-		blink[name] = original
-	end
-	local lines = vim.api.nvim_buf_get_lines(buffer, 0, -1, false)
-	vim.api.nvim_buf_delete(buffer, { force = true })
-	return lines
-end
-
-local tab_trace = {}
-exercise_insert_key("<Tab>", {
-	select_next = function()
-		tab_trace[#tab_trace + 1] = "menu"
-		return true
-	end,
-	snippet_forward = function()
-		tab_trace[#tab_trace + 1] = "snippet"
-		return true
-	end,
-})
-assert_equal(tab_trace, { "menu" }, "Tab menu priority")
-
-local snippet_trace = {}
-exercise_insert_key("<Tab>", {
-	select_next = function()
-		snippet_trace[#snippet_trace + 1] = "menu"
-		return false
-	end,
-	snippet_forward = function()
-		snippet_trace[#snippet_trace + 1] = "snippet"
-		return true
-	end,
-})
-assert_equal(snippet_trace, { "menu", "snippet" }, "Tab snippet fallback")
-
-local reverse_trace = {}
-exercise_insert_key("<S-Tab>", {
-	select_prev = function()
-		reverse_trace[#reverse_trace + 1] = "menu"
-		return true
-	end,
-	snippet_backward = function()
-		reverse_trace[#reverse_trace + 1] = "snippet"
-		return true
-	end,
-})
-assert_equal(reverse_trace, { "menu" }, "Shift-Tab menu priority")
-
-local tab_fallback = exercise_insert_key("<Tab>", {
-	select_next = function()
-		return false
-	end,
-	snippet_forward = function()
-		return false
-	end,
-})
-assert_equal(tab_fallback, { "\t" }, "plain Tab fallback")
-
-local enter_fallback = exercise_insert_key("<CR>", {
-	accept = function()
-		return false
-	end,
-})
-assert_equal(enter_fallback, { "", "" }, "Enter newline fallback")
-
-local enter_accept = exercise_insert_key("<CR>", {
-	accept = function()
-		return true
-	end,
-})
-assert_equal(enter_accept, { "" }, "Enter selected-item acceptance")
-
-local function stop_all_sessions()
-	while MiniSnippets.session.get(false) do
-		MiniSnippets.session.stop()
+local function unlink_snippet()
+	if luasnip.in_snippet() then
+		luasnip.unlink_current()
 	end
 end
 
-local function native_choice_scenario(keys)
-	stop_all_sessions()
-	local previous_completeopt = vim.o.completeopt
-	vim.o.completeopt = "menu,menuone,noselect"
+local snippet_buffer = vim.api.nvim_create_buf(false, true)
+vim.api.nvim_set_current_buf(snippet_buffer)
+vim.bo[snippet_buffer].filetype = "cpp"
+vim.bo[snippet_buffer].expandtab = true
+vim.bo[snippet_buffer].shiftwidth = 4
+vim.bo[snippet_buffer].tabstop = 4
+vim.wo.virtualedit = "onemore"
 
-	local buffer = vim.api.nvim_create_buf(false, true)
-	vim.api.nvim_set_current_buf(buffer)
-	vim.api.nvim_buf_set_lines(buffer, 0, -1, false, { "" })
-	local mappings = require("blink.cmp.keymap").get_mappings(blink_config.keymap, "default")
-	require("blink.cmp.keymap.apply").keymap_to_current_buffer(mappings)
-
-	local observation = { steps = {} }
-	vim.keymap.set("i", "<F5>", function()
-		MiniSnippets.default_insert({ body = "${1|first,second|}$0" })
-	end, { buffer = buffer })
-	vim.keymap.set("i", "<F6>", function()
-		if observation.initial_selected == nil then
-			local initial = vim.fn.complete_info({ "selected", "items" })
-			observation.initial_selected = initial.selected
-			observation.words = vim.tbl_map(function(item)
-				return item.word
-			end, initial.items)
-			return
+local cpp_if
+local cpp_forr
+assert(
+	vim.wait(2000, function()
+		local if_candidates = {}
+		local forr_candidates = {}
+		for _, snippet in ipairs(luasnip.get_snippets("cpp")) do
+			if snippet.trigger == "if" then
+				table.insert(if_candidates, snippet)
+			elseif snippet.trigger == "forr" then
+				table.insert(forr_candidates, snippet)
+			end
 		end
-		if vim.fn.pumvisible() == 1 and vim.fn.complete_info({ "selected" }).selected >= 0 then
-			-- Headless feedkeys drains a whole queue without the UI loop boundary
-			-- that normally dispatches TextChangedP after a native choice changes.
-			vim.api.nvim_exec_autocmds("TextChangedP", { buffer = buffer })
+		if #if_candidates == 1 and #forr_candidates == 1 then
+			cpp_if = if_candidates[1]
+			cpp_forr = forr_candidates[1]
+			return true
 		end
-		observation.steps[#observation.steps + 1] = {
-			key = keys[#observation.steps + 1],
-			selected = vim.fn.complete_info({ "selected" }).selected,
-			lines = vim.api.nvim_buf_get_lines(buffer, 0, -1, false),
-			cursor = vim.api.nvim_win_get_cursor(0),
-		}
-	end, { buffer = buffer })
-
-	local sequence = "i<F5><F6>"
-	for _, lhs in ipairs(keys) do
-		sequence = sequence .. lhs .. "<F6>"
-	end
-	feed(sequence .. "<Esc>")
-	if observation.initial_selected == nil then
-		fail("mini.snippets did not expose its native choice menu")
-	end
-
-	stop_all_sessions()
-	vim.o.completeopt = previous_completeopt
-	vim.api.nvim_buf_delete(buffer, { force = true })
-	return observation
-end
-
-local choice_cycle = native_choice_scenario({ "<Tab>", "<Tab>", "<S-Tab>", "<CR>" })
-assert_equal(choice_cycle.initial_selected, -1, "native choice starts without a selection")
-assert_equal(choice_cycle.words, { "first", "second" }, "native choice candidates")
-assert_equal(choice_cycle.steps[1].selected, 0, "Tab selects the first native choice")
-assert_equal(choice_cycle.steps[1].lines, { "first" }, "first native choice text")
-assert_equal(choice_cycle.steps[2].selected, 1, "second Tab selects the next native choice")
-assert_equal(choice_cycle.steps[2].lines, { "second" }, "second native choice text")
-assert_equal(choice_cycle.steps[3].selected, 0, "Shift-Tab selects the previous native choice")
-assert_equal(choice_cycle.steps[3].lines, { "first" }, "previous native choice text")
-assert_equal(choice_cycle.steps[4].selected, -1, "selected native choice Enter closes completion")
-assert_equal(choice_cycle.steps[4].lines, { "first" }, "Enter accepts a selected native choice without a newline")
-assert_equal(choice_cycle.steps[4].cursor, { 1, 5 }, "selected native choice Enter cursor")
-
-local choice_enter = native_choice_scenario({ "<CR>" })
-assert_equal(choice_enter.initial_selected, -1, "native choice Enter starts without a selection")
-assert_equal(choice_enter.steps[1].selected, -1, "unselected native choice Enter does not select a candidate")
-assert_equal(choice_enter.steps[1].lines, { "", "first" }, "unselected native choice Enter preserves newline")
-assert_equal(choice_enter.steps[1].cursor, { 2, 0 }, "unselected native choice Enter cursor")
-
-local choice_reverse = native_choice_scenario({ "<S-Tab>", "<CR>" })
-assert_equal(choice_reverse.steps[1].selected, 1, "Shift-Tab initially selects the last native choice")
-assert_equal(choice_reverse.steps[1].lines, { "second" }, "last native choice text")
-assert_equal(choice_reverse.steps[2].selected, -1, "reverse-selected native choice Enter closes completion")
-assert_equal(choice_reverse.steps[2].lines, { "second" }, "Enter accepts the reverse-selected native choice")
-assert_equal(choice_reverse.steps[2].cursor, { 1, 6 }, "reverse-selected native choice Enter cursor")
-
-local mini_opts = LazyVim.opts("mini.snippets")
-local prepared = MiniSnippets.default_prepare(mini_opts.snippets, {
-	context = { buf_id = 0, lang = "cpp" },
-})
-local reverse = find_snippet(prepared, "forr")
-if not reverse then
-	fail("the C++ forr override is unavailable")
-end
-if reverse.body:find("size_t", 1, true) or reverse.body:find(">= 0", 1, true) then
-	fail("the unsafe unsigned reverse-loop snippet is still active")
-end
-if not reverse.body:find(".rbegin()", 1, true) or not reverse.body:find(".rend()", 1, true) then
-	fail("the C++ forr override is not iterator based")
-end
-
-local function expand_with_shiftwidth(width)
-	stop_all_sessions()
-	local buffer = vim.api.nvim_create_buf(false, true)
-	vim.api.nvim_set_current_buf(buffer)
-	vim.bo[buffer].filetype = "cpp"
-	vim.bo[buffer].expandtab = true
-	vim.bo[buffer].shiftwidth = width
-	vim.bo[buffer].tabstop = width
-	vim.api.nvim_buf_set_lines(buffer, 0, -1, false, { "" })
-	vim.api.nvim_win_set_cursor(0, { 1, 0 })
-	MiniSnippets.default_insert(vim.deepcopy(reverse))
-	vim.fn.feedkeys("", "x")
-	if not vim.wait(1000, function()
-		return MiniSnippets.session.get(false) ~= nil
-	end, 10) then
-		fail("snippet session did not start")
-	end
-
-	local lines = vim.api.nvim_buf_get_lines(buffer, 0, -1, false)
-	assert_equal(lines[2], string.rep(" ", width), ("snippet indentation at shiftwidth=%d"):format(width))
-
-	MiniSnippets.session.jump("next")
-	vim.fn.feedkeys("", "x")
-	if not vim.wait(1000, function()
-		return (MiniSnippets.session.get(false) or {}).cur_tabstop == "2"
-	end, 10) then
-		fail("snippet session did not advance to its second tabstop")
-	end
-	MiniSnippets.session.jump("next")
-	vim.fn.feedkeys("", "x")
-	if not vim.wait(1000, function()
-		return MiniSnippets.session.get(false) == nil
-	end, 10) then
-		fail("snippet session remained active after reaching its final tabstop")
-	end
-
-	vim.api.nvim_buf_delete(buffer, { force = true })
-end
-
-expand_with_shiftwidth(2)
-expand_with_shiftwidth(4)
-
-print(
-	"Completion interaction contract passed: explicit selection, menu-first Tab, Enter confirmation, adaptive snippets."
+		return false
+	end, 10),
+	"C++ snippet candidates did not settle to one if and one forr"
 )
+assert_equal(cpp_if.name, "if", "friendly-snippets C++ if candidate")
+assert_equal(cpp_forr.name, "Safe reverse iterator loop", "safe C++ forr candidate")
+
+local snippet_source = require("blink.cmp.sources.snippets.luasnip").new({})
+
+local function accept_snippet_candidate(trigger, indent, shiftwidth, expected)
+	unlink_snippet()
+	vim.bo[snippet_buffer].shiftwidth = shiftwidth
+	vim.bo[snippet_buffer].tabstop = shiftwidth
+	local line = indent .. trigger
+	vim.api.nvim_buf_set_lines(snippet_buffer, 0, -1, false, { line })
+	vim.api.nvim_win_set_cursor(0, { 1, #line })
+
+	local context = {
+		line = line,
+		cursor = { 1, #line },
+		get_cursor = function()
+			return vim.api.nvim_win_get_cursor(0)
+		end,
+		get_line = function()
+			return vim.api.nvim_get_current_line()
+		end,
+	}
+	local response
+	snippet_source:get_completions(context, function(value)
+		response = value
+	end)
+	assert(response, ("Blink snippet response unavailable for %s"):format(trigger))
+
+	local candidates = {}
+	for _, item in ipairs(response.items) do
+		if item.label == trigger then
+			table.insert(candidates, item)
+		end
+	end
+	assert_equal(#candidates, 1, ("Blink %s candidate count"):format(trigger))
+	local selected = candidates[1]
+	assert_equal(
+		luasnip.get_id_snippet(selected.data.snip_id).trigger,
+		trigger,
+		("Blink %s source identity"):format(trigger)
+	)
+
+	selected.textEdit = {
+		newText = trigger,
+		range = {
+			start = { line = 0, character = #indent },
+			["end"] = { line = 0, character = #line },
+		},
+	}
+	selected.cursor_column = #line
+	snippet_source:execute(context, selected)
+	assert_equal(
+		vim.api.nvim_buf_get_lines(snippet_buffer, 0, -1, false),
+		expected,
+		("Blink %s expansion"):format(trigger)
+	)
+	assert(luasnip.in_snippet(), ("LuaSnip session did not start for %s"):format(trigger))
+end
+
+accept_snippet_candidate("if", "    ", 4, {
+	"    if () {",
+	"        ",
+	"    }",
+})
+
+accept_snippet_candidate("forr", "  ", 2, {
+	"  for (auto it = container.rbegin(); it != container.rend(); ++it) {",
+	"    ",
+	"  }",
+})
+for _, line in ipairs(vim.api.nvim_buf_get_lines(snippet_buffer, 0, -1, false)) do
+	assert(not line:find("size_t", 1, true), "unsafe unsigned forr candidate remains")
+	assert(not line:find(">= 0", 1, true), "non-terminating forr condition remains")
+end
+unlink_snippet()
+vim.api.nvim_buf_delete(snippet_buffer, { force = true })
+feed("<Esc>")
+
+local pair_buffer = vim.api.nvim_create_buf(false, true)
+vim.api.nvim_set_current_buf(pair_buffer)
+vim.bo[pair_buffer].filetype = "cpp"
+vim.api.nvim_buf_set_lines(pair_buffer, 0, -1, false, { "" })
+vim.api.nvim_win_set_cursor(0, { 1, 0 })
+feed("i(<Esc>")
+assert_equal(vim.api.nvim_buf_get_lines(pair_buffer, 0, -1, false), { "()" }, "Blink pair insertion")
+vim.api.nvim_buf_set_lines(pair_buffer, 0, -1, false, { "" })
+vim.api.nvim_win_set_cursor(0, { 1, 0 })
+feed("i()<Esc>")
+assert_equal(vim.api.nvim_buf_get_lines(pair_buffer, 0, -1, false), { "()" }, "Blink closing-pair skip")
+vim.api.nvim_buf_delete(pair_buffer, { force = true })
+
+print("Completion interaction contract passed: LazyVim defaults, LuaSnip expansion, replacement plugin topology.")

@@ -1,91 +1,55 @@
-local function native_choice(direction)
-  return function()
-    if vim.fn.pumvisible() ~= 1 or not MiniSnippets or MiniSnippets.session.get(false) == nil then
-      return false
-    end
-
-    local key = direction == "next" and "<C-n>" or "<C-p>"
-    return vim.api.nvim_replace_termcodes(key, true, false, true)
-  end
-end
-
-local function accept_native_choice()
-  if vim.fn.pumvisible() ~= 1 or not MiniSnippets or MiniSnippets.session.get(false) == nil then
-    return false
-  end
-
-  if vim.fn.complete_info({ "selected" }).selected < 0 then
-    return false
-  end
-
-  return vim.api.nvim_replace_termcodes("<C-y>", true, false, true)
-end
-
 return {
   {
-    "saghen/blink.cmp",
-    opts = {
-      keymap = {
-        preset = "enter",
-        ["<Tab>"] = { native_choice("next"), "select_next", "snippet_forward", "fallback" },
-        ["<S-Tab>"] = { native_choice("prev"), "select_prev", "snippet_backward", "fallback" },
-        ["<CR>"] = { accept_native_choice, "accept", "fallback" },
-      },
-      completion = {
-        list = {
-          selection = {
-            preselect = false,
-            auto_insert = false,
-          },
-        },
-        menu = {
-          draw = {
-            columns = {
-              { "kind_icon" },
-              { "label", "label_description", gap = 1 },
-              { "source_name" },
-            },
-          },
-        },
-      },
-    },
+    "L3MON4D3/LuaSnip",
+    config = function(_, opts)
+      local luasnip = require("luasnip")
+      luasnip.setup(opts)
+
+      local safe_snippets = require("snippets.cpp")
+      luasnip.add_snippets("cpp", safe_snippets, { key = "dotfiles-cpp-safety" })
+      local safe_ids = {}
+      for _, snippet in ipairs(safe_snippets) do
+        safe_ids[snippet.id] = true
+      end
+
+      local function remove_unsafe_reverse_loops()
+        local removed = false
+        for _, snippet in ipairs(luasnip.get_snippets("cpp")) do
+          if snippet.trigger == "forr" and not safe_ids[snippet.id] then
+            snippet:invalidate()
+            removed = true
+          end
+        end
+        if removed then
+          luasnip.clean_invalidated()
+        end
+      end
+
+      remove_unsafe_reverse_loops()
+      local group = vim.api.nvim_create_augroup("DotfilesLuaSnipSafety", { clear = true })
+      vim.api.nvim_create_autocmd("User", {
+        pattern = "LuasnipSnippetsAdded",
+        callback = remove_unsafe_reverse_loops,
+        desc = "Keep only the safe C++ reverse-loop snippet",
+        group = group,
+      })
+    end,
   },
   {
-    "nvim-mini/mini.snippets",
-    opts = function(_, opts)
-      local snippets = require("mini.snippets")
-      local reverse_cpp_loop = {
-        prefix = "forr",
-        body = {
-          "for (auto ${1:it} = ${2:container}.rbegin(); ${1:it} != ${2:container}.rend(); ++${1:it}) {",
-          "\t${0}",
-          "}",
-        },
-        desc = "Safe iterator-based reverse loop",
-      }
-
-      opts.snippets = {
-        snippets.gen_loader.from_lang(),
-        function(context)
-          return context.lang == "cpp" and { reverse_cpp_loop } or {}
-        end,
-      }
-
-      local group = vim.api.nvim_create_augroup("DotfilesMiniSnippets", { clear = true })
-      -- <C-c> remains the explicit cancellation path. Normal completion stops
-      -- automatically instead of leaving a session that a later Tab can resume.
-      vim.api.nvim_create_autocmd("User", {
-        group = group,
-        pattern = "MiniSnippetsSessionJump",
-        desc = "Stop a snippet session when its final tabstop is reached",
-        callback = function(args)
-          if args.data.tabstop_to == "0" then
-            MiniSnippets.session.stop()
-          end
-        end,
-      })
-
-      return opts
+    "nvim-mini/mini.pairs",
+    enabled = false,
+  },
+  {
+    "saghen/blink.pairs",
+    version = "v0.7.1",
+    dependencies = { "saghen/blink.lib" },
+    build = function()
+      require("blink.pairs").download():pwait(60000)
     end,
+    opts = {
+      highlights = {
+        enabled = false,
+      },
+    },
   },
 }
