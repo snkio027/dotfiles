@@ -137,6 +137,10 @@ local function main()
 			{ "DxInfo", colors_rgb.info, "info" },
 			{ "DxHint", colors_rgb.hint, "hint" },
 		}
+		local role_style_assertions = {
+			DxComment = { italic = true },
+			DxDocComment = { italic = true },
+		}
 
 		for _, item in ipairs(role_assertions) do
 			local hl = get_resolved_hl(item[1])
@@ -149,6 +153,12 @@ local function main()
 						hl.fg and ("%06x"):format(hl.fg) or "nil"
 					)
 				)
+			end
+			local expected_style = role_style_assertions[item[1]] or {}
+			for _, attribute in ipairs({ "bold", "italic", "underline", "undercurl", "strikethrough", "nocombine" }) do
+				if (hl[attribute] == true) ~= (expected_style[attribute] == true) then
+					fail(("%s.%s runtime style mismatch"):format(item[1], attribute))
+				end
 			end
 		end
 
@@ -171,11 +181,14 @@ local function main()
 			{ "@property", colors_rgb.member },
 			{ "@variable.member", colors_rgb.member },
 			{ "@variable", colors_rgb.variable },
+			{ "@variable.parameter", colors_rgb.parameter },
 			{ "@function.macro", colors_rgb.meta },
 			{ "@constant.macro", colors_rgb.meta },
 			{ "@label", colors_rgb.label },
 			{ "@string", colors_rgb.string },
 			{ "@string.regexp", colors_rgb.string },
+			{ "@punctuation.bracket", colors_rgb.punctuation },
+			{ "@comment.documentation", colors_rgb.doc },
 			{ "@function.builtin.zig", colors_rgb.meta },
 		}
 		for _, item in ipairs(ts_assertions) do
@@ -201,6 +214,7 @@ local function main()
 			{ "@lsp.type.struct", colors_rgb.type },
 			{ "@lsp.type.typeParameter", colors_rgb.type },
 			{ "@lsp.type.property", colors_rgb.member },
+			{ "@lsp.type.variable", colors_rgb.variable },
 			{ "@lsp.type.string", colors_rgb.string },
 			{ "@lsp.type.regexp", colors_rgb.string },
 			{ "@lsp.type.label", colors_rgb.label },
@@ -289,6 +303,10 @@ local function main()
 		local diag_undercurl = get_resolved_hl("DiagnosticUnderlineError")
 		if not diag_undercurl.undercurl or diag_undercurl.sp ~= colors_rgb.error then
 			fail("DiagnosticUnderlineError must have undercurl with red special color")
+		end
+		local diag_warn_undercurl = get_resolved_hl("DiagnosticUnderlineWarn")
+		if not diag_warn_undercurl.undercurl or diag_warn_undercurl.sp ~= colors_rgb.warn then
+			fail("DiagnosticUnderlineWarn must have undercurl with yellow special color")
 		end
 
 		-- 7. Diff contract: verify subtle background exists without destroying code syntax foreground

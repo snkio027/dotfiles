@@ -79,17 +79,16 @@ assert_container_state() {
 
     nvim_log="$(mktemp)"
     (
-        cd "$workspace_folder"
-        nvim --headless "+luafile tests/nvim/startup_policy.lua" \
-            "+luafile tests/nvim/smoke.lua" +qa
-        nvim -n --headless "+luafile tests/nvim/production_visual_runtime.lua" +qa
-        DOTFILES_STRICT_LSP=1 nvim -n --headless "+luafile tests/nvim/color_contract.lua" +qa
-        nvim -n --headless "+luafile tests/nvim/binding_evidence.lua" +qa
-        nvim -u NONE -i NONE --headless "+set rtp^=$PWD/home/dot_config/nvim" \
-            "+luafile tests/nvim/run_contract.lua" "tests/nvim/python_provider_ownership_contract.lua"
-        DOTFILES_M2C_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}" \
-            bash tests/nvim/python_provider_ownership.sh
-        bash tests/nvim/color/validate_fixtures.sh
+        cd "$workspace_folder" &&
+            nvim --headless "+luafile tests/nvim/startup_policy.lua" \
+                "+luafile tests/nvim/smoke.lua" +qa &&
+            DOTFILES_STRICT_LSP=1 nvim -n --headless "+luafile tests/nvim/color_contract.lua" +qa &&
+            nvim -n --headless "+luafile tests/nvim/binding_evidence.lua" +qa &&
+            nvim -u NONE -i NONE --headless "+set rtp^=$PWD/home/dot_config/nvim" \
+                "+luafile tests/nvim/run_contract.lua" "tests/nvim/python_provider_ownership_contract.lua" &&
+            DOTFILES_M2C_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}" \
+                bash tests/nvim/python_provider_ownership.sh &&
+            bash tests/nvim/color/validate_fixtures.sh
     ) >"$nvim_log" 2>&1 || {
         cat "$nvim_log" >&2
         fail "Neovim warm smoke failed"
@@ -97,6 +96,10 @@ assert_container_state() {
     grep -Fq "Neovim toolchain smoke tests passed" "$nvim_log" || {
         cat "$nvim_log" >&2
         fail "Neovim warm smoke did not complete"
+    }
+    grep -Fq "Tier-2 Runtime Integration Contract passed cleanly." "$nvim_log" || {
+        cat "$nvim_log" >&2
+        fail "Tier-2 runtime color contract did not complete"
     }
     grep -Fq "M2A binding-topology evidence passed: 28/28 cases, 15/15 comparisons." "$nvim_log" || {
         cat "$nvim_log" >&2
@@ -121,10 +124,6 @@ assert_container_state() {
     grep -Fq "M2C-B decision implemented: ADOPT TY AS INTERACTIVE SEMANTIC PROVIDER" "$nvim_log" || {
         cat "$nvim_log" >&2
         fail "M2C-B provider-ownership decision was not implemented"
-    }
-    grep -Fq "M5 production C4.4 runtime contract passed against actual Normal.bg #1A1B2A." "$nvim_log" || {
-        cat "$nvim_log" >&2
-        fail "M5 production C4.4 runtime contract did not complete"
     }
     if grep -Eqi 'Package is already installing|^Installing tools:|^Updating tools:|MasonToolsUpdate' "$nvim_log"; then
         cat "$nvim_log" >&2

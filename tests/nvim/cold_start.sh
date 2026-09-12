@@ -39,7 +39,6 @@ run_nvim lazy-restore "+luafile tests/nvim/restore_lock.lua" "+Lazy! restore" \
     "+luafile tests/nvim/provision.lua" +qa
 run_nvim startup-policy "+luafile tests/nvim/startup_policy.lua" +qa
 run_nvim color-unit "-n" "+set rtp^=$PWD/home/dot_config/nvim" "+luafile tests/nvim/run_contract.lua" "tests/nvim/color_unit_contract.lua"
-run_nvim production-visual "-n" "+luafile tests/nvim/production_visual_runtime.lua" +qa
 run_nvim python-provider-unit "-n" "+set rtp^=$PWD/home/dot_config/nvim" \
     "+luafile tests/nvim/run_contract.lua" "tests/nvim/python_provider_ownership_contract.lua"
 run_nvim smoke "+luafile tests/nvim/smoke.lua" +qa
@@ -50,8 +49,7 @@ DOTFILES_M2C_CONFIG_HOME="$CONFIG_HOME" DOTFILES_M2C_LOG_DIR="$LOG_DIR" \
 
 if grep -ERni 'Package is already installing|MasonToolsStartingInstall|MasonToolsUpdateCompleted|^Installing tools:|^Updating tools:' \
     "$LOG_DIR/lazy-restore.log" "$LOG_DIR/startup-policy.log" "$LOG_DIR/smoke.log" \
-    "$LOG_DIR/color-unit.log" "$LOG_DIR/production-visual.log" \
-    "$LOG_DIR/python-provider-unit.log" "$LOG_DIR/color-contract.log" \
+    "$LOG_DIR/color-unit.log" "$LOG_DIR/python-provider-unit.log" "$LOG_DIR/color-contract.log" \
     "$LOG_DIR/binding-evidence.log" "$LOG_DIR/python-provider-production.log"; then
     echo "Unexpected Mason background installation or update detected" >&2
     exit 1
