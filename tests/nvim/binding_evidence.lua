@@ -295,7 +295,7 @@ local function decode_modifier_bits(bits, legend, provider)
 	return modifiers
 end
 
-local function request_raw_semantic_tokens(bufnr, client)
+local function request_raw_semantic_tokens(bufnr, client, allow_pending)
 	local semantic_provider = client.server_capabilities.semanticTokensProvider
 	local legend = semantic_provider and semantic_provider.legend
 	if type(legend) ~= "table" or type(legend.tokenTypes) ~= "table" or type(legend.tokenModifiers) ~= "table" then
@@ -313,6 +313,9 @@ local function request_raw_semantic_tokens(bufnr, client)
 	end
 	if response.err then
 		fail(("raw semantic-token response failed for %s: %s"):format(client.name, vim.inspect(response.err)))
+	end
+	if allow_pending and (response.result == nil or response.result == vim.NIL) then
+		return nil -- Protocol null is not evidence; the bounded alias readiness check retries it.
 	end
 	if type(response.result) ~= "table" or type(response.result.data) ~= "table" then
 		fail(("raw semantic-token response has no full token data for %s"):format(client.name))
@@ -400,6 +403,52 @@ local function tokens_at_position(bufnr, row, column, clients_by_name)
 		return left_key < right_key
 	end)
 	return tokens
+end
+
+-- Initialized is not the same as semantically ready: rust-analyzer can first
+-- report use-as declarations as syntax-only variable tokens. Wait on the whole
+-- review matrix, not elapsed time, and retain both independent protocol/native checks.
+local function settled_alias_tokens(bufnr, cases, lang, clients_by_name)
+	local raw_tokens_by_name = {}
+	local pending
+	local function matches(read_tokens)
+		for _, case in ipairs(cases) do
+			local row, column = locate_case(bufnr, case, lang)
+			local tokens = read_tokens(row, column)
+			if not vim.deep_equal(tokens, { case.evidence.lsp }) then
+				pending = case.tag .. ": " .. vim.inspect(tokens)
+				return false
+			end
+		end
+		return true
+	end
+	local ready = vim.wait(15000, function()
+		for name, client in pairs(clients_by_name) do
+			if client.server_capabilities.semanticTokensProvider then
+				raw_tokens_by_name[name] = request_raw_semantic_tokens(bufnr, client, true)
+				if not raw_tokens_by_name[name] then
+					pending = name .. ": semanticTokens/full returned null"
+					return false
+				end
+			end
+		end
+		return matches(function(row, column)
+			return raw_tokens_at_position(raw_tokens_by_name, row, column)
+		end)
+	end, 250)
+	if not ready then
+		fail("alias raw evidence did not settle: " .. tostring(pending))
+	end
+	vim.lsp.semantic_tokens.force_refresh(bufnr)
+	ready = vim.wait(15000, function()
+		return matches(function(row, column)
+			return tokens_at_position(bufnr, row, column, clients_by_name)
+		end)
+	end, 100)
+	if not ready then
+		fail("alias native evidence did not settle: " .. tostring(pending))
+	end
+	return raw_tokens_by_name
 end
 
 local function capture_case(bufnr, case, lang, spec, clients_by_name, raw_tokens_by_name)
@@ -565,6 +614,8 @@ local function main()
 	assert_equal(domain.roles.DxModuleBinding, nil, "M2A must not admit DxModuleBinding")
 
 	local manifest = dofile(repo_root .. "/tests/nvim/color_manifest.lua")
+	local alias_review = assert(manifest.classification_reviews.alias_identity, "alias review missing")
+	assert_equal(alias_review.decision, "PENDING — EVIDENCE ONLY", "alias classification requires separate approval")
 	pcall(require("lazy").load, { plugins = { "nvim-lspconfig" } })
 
 	-- Recursive workspace watchers are irrelevant to immutable fixtures and can
@@ -580,6 +631,7 @@ local function main()
 	local observations = {}
 	local classification_observations = {}
 	local correction_observations = {}
+	local alias_observations = {}
 	local case_count = 0
 	local classification_count = 0
 	local correction_count = 0
@@ -644,6 +696,27 @@ local function main()
 			end
 		end
 
+		local alias_cases = {}
+		for _, case in ipairs(alias_review.cases) do
+			if case.language == lang then
+				alias_cases[#alias_cases + 1] = case
+			end
+		end
+		if #alias_cases > 0 then
+			local settled_tokens = settled_alias_tokens(bufnr, alias_cases, lang, clients_by_name)
+			for _, case in ipairs(alias_cases) do
+				if
+					observations[case.tag]
+					or classification_observations[case.tag]
+					or correction_observations[case.tag]
+					or alias_observations[case.tag]
+				then
+					fail("duplicate alias evidence tag: " .. case.tag)
+				end
+				alias_observations[case.tag] = capture_case(bufnr, case, lang, spec, clients_by_name, settled_tokens)
+			end
+		end
+
 		local attached_clients = vim.lsp.get_clients({ bufnr = bufnr })
 		vim.cmd.bdelete({ bang = true })
 		vim.lsp.stop_client(attached_clients, false)
@@ -661,6 +734,7 @@ local function main()
 	end
 
 	assert_equal(case_count, 28, "binding evidence case count changed")
+	assert_equal(vim.tbl_count(alias_observations), 14, "alias evidence case count changed")
 	for _, comparison in ipairs(manifest.binding_comparisons or {}) do
 		local left = observations[comparison.left]
 		local right = observations[comparison.right]
@@ -744,6 +818,7 @@ local function main()
 			correction.decision
 		)
 	)
+	print("E alias identity observations passed: 14/14 cases; classification: PENDING.")
 end
 
 local ok, err = xpcall(main, debug.traceback)

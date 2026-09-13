@@ -4,6 +4,252 @@
 
 local M = {
 	classification_reviews = {
+		alias_identity = {
+			question = "Do module and type aliases retain entity identity at declarations, references and qualifiers?",
+			decision = "PENDING — EVIDENCE ONLY",
+			-- Settled runtime snapshots, not approved semantic corrections.
+			-- Initial rust-analyzer syntax fallback is not the semantic oracle.
+			cases = {
+				{
+					tag = "cpp.alias.namespace_declaration",
+					language = "cpp",
+					token = "route",
+					semantic_description = "C++ namespace alias declaration",
+					source_identity = "module",
+					occurrence = "declaration",
+					evidence = {
+						treesitter = { "module" },
+						lsp = { provider = "clangd", type = "namespace", modifiers = { "declaration", "fileScope" } },
+						applied_foregrounds = {
+							{ group = "@lsp.type.namespace.cpp", priority_delta = 0, role = "DxNamespace" },
+						},
+						effective = { group = "@lsp.type.namespace.cpp", source = "lsp", role = "DxNamespace" },
+						require_unique_top_foreground = true,
+					},
+				},
+				{
+					tag = "cpp.alias.type_declaration",
+					language = "cpp",
+					token = "AliasPayload",
+					semantic_description = "explicit alias of a user-defined type",
+					source_identity = "type",
+					occurrence = "declaration",
+					evidence = {
+						treesitter = { "type", "type.definition" },
+						lsp = { provider = "clangd", type = "class", modifiers = { "declaration", "fileScope" } },
+						applied_foregrounds = {
+							{ group = "@lsp.type.class.cpp", priority_delta = 0, role = "DxType" },
+						},
+						effective = { group = "@lsp.type.class.cpp", source = "lsp", role = "DxType" },
+						require_unique_top_foreground = true,
+					},
+				},
+				{
+					tag = "cpp.alias.namespace_reference",
+					language = "cpp",
+					token = "route",
+					semantic_description = "namespace alias in a qualified type path",
+					source_identity = "module",
+					occurrence = "reference",
+					evidence = {
+						treesitter = { "module" },
+						lsp = { provider = "clangd", type = "namespace", modifiers = { "fileScope" } },
+						applied_foregrounds = {
+							{ group = "@lsp.type.namespace.cpp", priority_delta = 0, role = "DxNamespace" },
+						},
+						effective = { group = "@lsp.type.namespace.cpp", source = "lsp", role = "DxNamespace" },
+						require_unique_top_foreground = true,
+					},
+				},
+				{
+					tag = "cpp.alias.qualified_terminal_type",
+					language = "cpp",
+					token = "Payload",
+					semantic_description = "terminal type reached through an aliased organization path",
+					source_identity = "type",
+					occurrence = "reference",
+					evidence = {
+						treesitter = { "type" },
+						lsp = { provider = "clangd", type = "class", modifiers = { "globalScope" } },
+						applied_foregrounds = {
+							{ group = "@lsp.type.class.cpp", priority_delta = 0, role = "DxType" },
+						},
+						effective = { group = "@lsp.type.class.cpp", source = "lsp", role = "DxType" },
+						require_unique_top_foreground = true,
+					},
+				},
+				{
+					tag = "cpp.alias.type_reference",
+					language = "cpp",
+					token = "AliasPayload",
+					semantic_description = "explicit type alias used in a local type annotation",
+					source_identity = "type",
+					occurrence = "reference",
+					evidence = {
+						treesitter = { "type" },
+						lsp = { provider = "clangd", type = "class", modifiers = { "fileScope" } },
+						applied_foregrounds = {
+							{ group = "@lsp.type.class.cpp", priority_delta = 0, role = "DxType" },
+						},
+						effective = { group = "@lsp.type.class.cpp", source = "lsp", role = "DxType" },
+						require_unique_top_foreground = true,
+					},
+				},
+				{
+					tag = "cpp.alias.type_qualifier",
+					language = "cpp",
+					token = "AliasPayload",
+					semantic_description = "type alias qualifying a nested type or associated constant",
+					source_identity = "type",
+					occurrence = "qualifier",
+					evidence = {
+						treesitter = { "module", "type" },
+						lsp = { provider = "clangd", type = "class", modifiers = { "fileScope" } },
+						applied_foregrounds = {
+							{ group = "@lsp.type.class.cpp", priority_delta = 0, role = "DxType" },
+						},
+						effective = { group = "@lsp.type.class.cpp", source = "lsp", role = "DxType" },
+						require_unique_top_foreground = true,
+					},
+				},
+				{
+					tag = "rust.alias.module_declaration",
+					language = "rust",
+					token = "route",
+					semantic_description = "Rust use-as alias of a module",
+					source_identity = "module",
+					occurrence = "declaration",
+					evidence = {
+						treesitter = { "variable" },
+						lsp = { provider = "rust-analyzer", type = "namespace", modifiers = { "declaration" } },
+						applied_foregrounds = {
+							{ group = "@lsp.type.namespace.rust", priority_delta = 0, role = "DxNamespace" },
+						},
+						effective = { group = "@lsp.type.namespace.rust", source = "lsp", role = "DxNamespace" },
+						require_unique_top_foreground = true,
+					},
+				},
+				{
+					tag = "rust.alias.type_declaration",
+					language = "rust",
+					token = "AliasPayload",
+					semantic_description = "explicit alias of a user-defined type",
+					source_identity = "type",
+					occurrence = "declaration",
+					evidence = {
+						treesitter = { "type" },
+						lsp = { provider = "rust-analyzer", type = "typeAlias", modifiers = { "declaration" } },
+						applied_foregrounds = {
+							{ group = "@lsp.type.typeAlias.rust", priority_delta = 0, role = "DxType" },
+						},
+						effective = { group = "@lsp.type.typeAlias.rust", source = "lsp", role = "DxType" },
+						require_unique_top_foreground = true,
+					},
+				},
+				{
+					tag = "rust.alias.module_reference",
+					language = "rust",
+					token = "route",
+					semantic_description = "module alias in a qualified type path",
+					source_identity = "module",
+					occurrence = "reference",
+					evidence = {
+						treesitter = { "module", "variable" },
+						lsp = { provider = "rust-analyzer", type = "namespace", modifiers = {} },
+						applied_foregrounds = {
+							{ group = "@lsp.type.namespace.rust", priority_delta = 0, role = "DxNamespace" },
+						},
+						effective = { group = "@lsp.type.namespace.rust", source = "lsp", role = "DxNamespace" },
+						require_unique_top_foreground = true,
+					},
+				},
+				{
+					tag = "rust.alias.qualified_terminal_type",
+					language = "rust",
+					token = "Payload",
+					semantic_description = "terminal type reached through an aliased organization path",
+					source_identity = "type",
+					occurrence = "reference",
+					evidence = {
+						treesitter = { "type" },
+						lsp = { provider = "rust-analyzer", type = "struct", modifiers = { "public" } },
+						applied_foregrounds = {
+							{ group = "@lsp.type.struct.rust", priority_delta = 0, role = "DxType" },
+						},
+						effective = { group = "@lsp.type.struct.rust", source = "lsp", role = "DxType" },
+						require_unique_top_foreground = true,
+					},
+				},
+				{
+					tag = "rust.alias.type_reference",
+					language = "rust",
+					token = "AliasPayload",
+					semantic_description = "explicit type alias used in a local type annotation",
+					source_identity = "type",
+					occurrence = "reference",
+					evidence = {
+						treesitter = { "type" },
+						lsp = { provider = "rust-analyzer", type = "typeAlias", modifiers = {} },
+						applied_foregrounds = {
+							{ group = "@lsp.type.typeAlias.rust", priority_delta = 0, role = "DxType" },
+						},
+						effective = { group = "@lsp.type.typeAlias.rust", source = "lsp", role = "DxType" },
+						require_unique_top_foreground = true,
+					},
+				},
+				{
+					tag = "rust.alias.type_qualifier",
+					language = "rust",
+					token = "AliasPayload",
+					semantic_description = "type alias qualifying a nested type or associated constant",
+					source_identity = "type",
+					occurrence = "qualifier",
+					evidence = {
+						treesitter = { "module", "type", "variable" },
+						lsp = { provider = "rust-analyzer", type = "typeAlias", modifiers = {} },
+						applied_foregrounds = {
+							{ group = "@lsp.type.typeAlias.rust", priority_delta = 0, role = "DxType" },
+						},
+						effective = { group = "@lsp.type.typeAlias.rust", source = "lsp", role = "DxType" },
+						require_unique_top_foreground = true,
+					},
+				},
+				{
+					tag = "rust.alias.imported_type_declaration",
+					language = "rust",
+					token = "ImportedPayload",
+					semantic_description = "Rust use-as alias of a struct, not a module",
+					source_identity = "type",
+					occurrence = "declaration",
+					evidence = {
+						treesitter = { "type", "variable" },
+						lsp = { provider = "rust-analyzer", type = "struct", modifiers = { "declaration", "public" } },
+						applied_foregrounds = {
+							{ group = "@lsp.type.struct.rust", priority_delta = 0, role = "DxType" },
+						},
+						effective = { group = "@lsp.type.struct.rust", source = "lsp", role = "DxType" },
+						require_unique_top_foreground = true,
+					},
+				},
+				{
+					tag = "rust.alias.imported_type_reference",
+					language = "rust",
+					token = "ImportedPayload",
+					semantic_description = "imported struct alias in a local type annotation",
+					source_identity = "type",
+					occurrence = "reference",
+					evidence = {
+						treesitter = { "type" },
+						lsp = { provider = "rust-analyzer", type = "struct", modifiers = { "public" } },
+						applied_foregrounds = {
+							{ group = "@lsp.type.struct.rust", priority_delta = 0, role = "DxType" },
+						},
+						effective = { group = "@lsp.type.struct.rust", source = "lsp", role = "DxType" },
+						require_unique_top_foreground = true,
+					},
+				},
+			},
+		},
 		cpp_static_data_member = {
 			question = "Should a C++ static data member be classified as DxMember or DxVariable?",
 			decision = "RECLASSIFY STATIC DATA MEMBER TO DxMember",
