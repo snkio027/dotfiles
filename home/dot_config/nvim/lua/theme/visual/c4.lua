@@ -1,5 +1,5 @@
 --- DX Semantic Color System (DX-COLOR-003)
---- C4.4 High-Chroma Night visual projection.
+--- E visual projection; the existing module path is retained, not a runtime profile selector.
 --- Palette iteration is owned by palette.code.
 
 local M = {}
@@ -7,7 +7,7 @@ local M = {}
 ---@param p table Unified palette returned by palette.resolve()
 ---@return table<string, vim.api.keyset.highlight>
 function M.roles(p)
-  local code = assert(p.code, "C4.4 code palette is unavailable")
+  local code = assert(p.code, "E code palette is unavailable")
 
   return {
     DxKeyword = { fg = code.keyword, bold = false, italic = false },

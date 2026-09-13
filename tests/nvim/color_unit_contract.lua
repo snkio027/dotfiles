@@ -82,8 +82,8 @@ local p = palette_mod.resolve(colors)
 local roles = visual.roles(p)
 local full_hl = theme.highlights(colors)
 local composed_hl = compose.highlights(p, visual)
-assert(vim.deep_equal(full_hl, composed_hl), "theme.highlights() must resolve directly to C4.4")
-print("M5 single-production-visual contract passed: theme.highlights() -> C4.4.")
+assert(vim.deep_equal(full_hl, composed_hl), "theme.highlights() must resolve directly to E")
+print("Single-production-visual contract passed: theme.highlights() -> E.")
 
 local groups = {}
 for group, spec in pairs(full_hl) do
@@ -135,7 +135,7 @@ for _, role in ipairs(required_semantic_roles) do
 		fail("Domain role is missing semantic description: " .. role)
 	end
 	if not roles[role] then
-		fail("C4.4 production visual is missing required semantic role: " .. role)
+		fail("E production visual is missing required semantic role: " .. role)
 	end
 	role_count = role_count + 1
 end
@@ -147,13 +147,13 @@ for role in pairs(domain.roles) do
 end
 for role in pairs(roles) do
 	if not domain.roles[role] then
-		fail("C4.4 production visual defines role outside the domain closure: " .. role)
+		fail("E production visual defines role outside the domain closure: " .. role)
 	end
 end
 assert_eq(role_count, 23, "Expected exactly 23 semantic roles in DX-COLOR-003")
 
 -- ==========================================================================
--- 3. C4.4 Production Visual Contract and Negative Controls
+-- 3. E Production Visual Contract and Negative Controls
 -- ==========================================================================
 
 local repo_root = vim.fs.root(0, ".git") or vim.fn.getcwd()
@@ -174,7 +174,7 @@ c4_contract.verify_negative_controls({
 	domain = domain,
 	host_colors = colors,
 })
-print("C4.4 High-Chroma Night visual contract and negative controls passed.")
+print("E visual contract and negative controls passed.")
 
 -- ==========================================================================
 -- 4. No Raw Source Hex Outside Palette Gate & Namespace Disjointness Gate
@@ -473,7 +473,7 @@ for group, _ in pairs(groups) do
 end
 
 -- ==========================================================================
--- 6. M5 Production Graph and Historical Provenance
+-- 6. E Production Graph and Historical Provenance
 -- ==========================================================================
 
 local expected_layers = {
@@ -591,9 +591,21 @@ local C4_3_GRAPH_SHA256 = "12d9299d27f50cc96bc056662ce13eed1bb1e46d7fc154f7bd565
 local M4_C4_4_BASE_SHA = M4_C4_3_HEAD_SHA
 local C4_4_GRAPH_COUNT = 226
 local C4_4_GRAPH_SHA256 = "1ac13a349234d5926a250a82c6beb1135fe4483bfe1208f0e24245d4f0022fc8"
-local M5_BASE_SHA = "65b61ee03bef0bc0bb8bee945d1bbc32a6a829b5"
 local M5_PRODUCTION_GRAPH_COUNT = 226
 local M5_PRODUCTION_GRAPH_SHA256 = "51cfaae3c02ec25551f1a8afd27427d3919d6b53c3b05f5ae26ff6c125aa6666"
+local E_BASE_SHA = "41423d77b31f72e886300add6be56127e35fb68e"
+local E_GRAPH_COUNT = 226
+local E_GRAPH_SHA256 = "44df09042fd6fcb77f4421244a9eb1336c124ce394828cc67e5160cba314c701"
+local E_AUTHORIZED_FOREGROUND_DELTA = {
+	DxKeyword = "#BB9AF7",
+	DxFunctionKeyword = "#7DCFFF",
+	DxCallable = "#E6B35C",
+	DxType = "#2AC3DE",
+	DxMeta = "#D16DDB",
+	DxNamespace = "#5EA1FF",
+	DxNumber = "#F09A6C",
+	DxConstant = "#DCC66A",
+}
 local C4_4_AUTHORIZED_FOREGROUND_DELTA = {
 	DxVariable = "#C9D4F2",
 	DxKeyword = "#C08CFF",
@@ -706,22 +718,37 @@ local function normalized_graph_digest(graph)
 end
 
 local production_count, production_digest = normalized_graph_digest(full_hl)
+assert_eq(production_count, E_GRAPH_COUNT, "E must retain the production group count")
+assert_eq(production_digest, E_GRAPH_SHA256, "E production resolved graph changed")
+print(("E production graph frozen: %d groups, sha256=%s"):format(production_count, production_digest))
+
+-- Only these eight role foregrounds may differ. Rolling them back must restore
+-- the complete base graph, including every UI definition, link and style authority.
+local historical_m5_graph = vim.deepcopy(full_hl)
+assert_eq(vim.tbl_count(E_AUTHORIZED_FOREGROUND_DELTA), 8, "E must change exactly eight role foregrounds")
+for role, old_foreground in pairs(E_AUTHORIZED_FOREGROUND_DELTA) do
+	local spec = historical_m5_graph[role]
+	assert(spec and spec.fg, "E authorized foreground role is missing: " .. role)
+	assert(spec.fg:lower() ~= old_foreground:lower(), "E authorized foreground did not change: " .. role)
+	spec.fg = old_foreground
+end
+local m5_count, m5_digest = normalized_graph_digest(historical_m5_graph)
 assert_eq(
-	production_count,
+	m5_count,
 	M5_PRODUCTION_GRAPH_COUNT,
-	("M5 production highlight-group count changed from %s"):format(M5_BASE_SHA)
+	("E rollback changed M5 highlight-group count from %s"):format(E_BASE_SHA)
 )
 assert_eq(
-	production_digest,
+	m5_digest,
 	M5_PRODUCTION_GRAPH_SHA256,
-	("M5 production resolved graph changed from %s"):format(M5_BASE_SHA)
+	("E eight-foreground rollback did not restore M5 graph from %s"):format(E_BASE_SHA)
 )
-print(("M5 production C4.4 graph frozen: %d groups, sha256=%s"):format(production_count, production_digest))
+print(("M5 C4.4 graph reconstructed after E visual rollback: %d groups, sha256=%s"):format(m5_count, m5_digest))
 
 assert_eq(full_hl.Normal.bg, p.ui.normal_bg, "M5 production Normal background does not use its owned canvas token")
 assert_eq(vim.tbl_count(full_hl.Normal), 1, "M5 production Normal override must own only the canvas background")
 
-local accepted_c4_4_graph = vim.deepcopy(full_hl)
+local accepted_c4_4_graph = vim.deepcopy(historical_m5_graph)
 local consumer_delta_count = 0
 for group, old_foreground in pairs(M5_AUTHORIZED_CONSUMER_DELTA) do
 	local spec = accepted_c4_4_graph[group]
@@ -796,7 +823,7 @@ assert_eq(
 )
 print(("C4.0 graph reconstructed after C4.4 visual rollback: %d groups, sha256=%s"):format(c4_0_count, c4_0_digest))
 
-local historical_m2b_graph = vim.deepcopy(full_hl)
+local historical_m2b_graph = vim.deepcopy(historical_m5_graph)
 for group, old_foreground in pairs(M5_AUTHORIZED_CONSUMER_DELTA) do
 	historical_m2b_graph[group].fg = old_foreground
 end
@@ -844,21 +871,21 @@ print(("M1 historical graph reconstructed from M5 production: %d groups, sha256=
 
 local function assert_production_graph(candidate)
 	local count, digest = normalized_graph_digest(candidate)
-	assert_eq(count, M5_PRODUCTION_GRAPH_COUNT, "M5 production graph count changed")
-	assert_eq(digest, M5_PRODUCTION_GRAPH_SHA256, "M5 production graph digest changed")
+	assert_eq(count, E_GRAPH_COUNT, "E production graph count changed")
+	assert_eq(digest, E_GRAPH_SHA256, "E production graph digest changed")
 end
 
 local bad_graph_extra = vim.deepcopy(full_hl)
 bad_graph_extra.DxUnauthorized = { fg = p.code.variable }
-assert(not pcall(assert_production_graph, bad_graph_extra), "M5 production graph must reject added groups")
+assert(not pcall(assert_production_graph, bad_graph_extra), "E production graph must reject added groups")
 
 local bad_graph_link = vim.deepcopy(full_hl)
 bad_graph_link["@lsp.type.variable"].link = "DxMember"
-assert(not pcall(assert_production_graph, bad_graph_link), "M5 production graph must reject link drift")
+assert(not pcall(assert_production_graph, bad_graph_link), "E production graph must reject link drift")
 
 local bad_graph_authority = vim.deepcopy(full_hl)
 bad_graph_authority["@lsp.mod.deprecated"].strikethrough = false
-assert(not pcall(assert_production_graph, bad_graph_authority), "M5 production graph must reject style-authority drift")
+assert(not pcall(assert_production_graph, bad_graph_authority), "E production graph must reject style-authority drift")
 
 local bad_graph_field = vim.deepcopy(full_hl)
 bad_graph_field.DxVariable.reverse = true

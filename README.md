@@ -38,6 +38,7 @@ Homebrew 负责全局 CLI 与语言 Runtime；`brew/ownership.toml` 是工具所
 - Zsh 将原生历史持久化到 `$XDG_STATE_HOME/zsh/history`；Atuin 独占 `Ctrl-R` 并负责加密同步，选中命令只回填供复核，fzf 仅管理 `Ctrl-T/Alt-C`。
 - Neovim 是唯一编辑器；Git、Yazi、sudo、systemd 与 kubectl 的编辑入口统一指向 Neovim。
 - Neovim/LazyVim、LazyGit、Yazi 与全部颜色配置均由 chezmoi 纳管。
+- Neovim 使用 Catppuccin Mocha 宿主与单一 DX E 源码投影；19 个源码角色允许两组有意共色，角色身份独立验证。背景、状态与装饰 UI 保持既有基线；[E 迁移记录与验收边界](tests/nvim/E-VISUAL-MIGRATION.md)单独记录，自动化通过不等于人眼验收完成。
 - `icons/contract.toml` 是 Neovim `mini.icons` 与 eza 的版本化图标契约；87 项显式映射使用“精确文件名 > 扩展名 > 消费者默认值”的优先级，glyph 和 Catppuccin 语义 RGB 由同一份数据生成，不跟随任一工具的实时内置表漂移。
 - Markdown 在普通模式渲染标题、任务、表格与代码块，插入模式自动显示原文；Ghostty 直连及其承载的 Zellij 0.45+ 会话均支持文档内图片、数学公式与 Mermaid 预览。
 - markdownlint-cli2 明确归 Mason 所有，仅供 Neovim lint/format 使用；XDG 配置保留结构与语义检查，只关闭对表格、URL 和 CJK 文档噪音较大的 `MD013` 行宽规则。Shell 不声明全局 markdownlint 命令。

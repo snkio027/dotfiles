@@ -99,7 +99,7 @@ local function main()
 	end
 
 	-- Verify the production theme uses the canvas owned by theme.palette.
-	-- Catppuccin Mocha remains the host theme, while C4.4 intentionally owns
+	-- Catppuccin Mocha remains the host theme, while E preserves
 	-- a dedicated Normal background.
 	local normal = get_resolved_hl("Normal")
 	if normal.bg ~= colors_rgb.normal_bg then
