@@ -1262,6 +1262,44 @@ end
 vim.api.nvim_buf_delete(cpp_buf, { force = true })
 print("Verified M2B-B behavior closure: 6 corrected static members, 2 member controls, 5 variable controls.")
 
+local alias_review = assert(manifest.classification_reviews.alias_identity, "Alias review missing")
+assert_eq(alias_review.decision, "PENDING — EVIDENCE ONLY", "Alias classification must remain separately reviewed")
+assert_eq(#alias_review.cases, 14, "Expected 14 alias observations")
+local alias_counts = { cpp = 0, rust = 0, module = 0, type = 0 }
+local alias_tags = {}
+for _, case in ipairs(alias_review.cases) do
+	assert(case.language == "cpp" or case.language == "rust", "Alias review escaped C++/Rust scope")
+	assert(not alias_tags[case.tag] and not binding_tags[case.tag], "Duplicate alias tag: " .. case.tag)
+	alias_tags[case.tag] = true
+	assert(case.tag:find(case.language .. ".alias.", 1, true) == 1, "Alias tag/language mismatch")
+	assert(case.semantic_description and #case.semantic_description > 0, "Alias semantic description missing")
+	assert(vim.tbl_contains({ "declaration", "reference", "qualifier" }, case.occurrence), "Invalid alias occurrence")
+	local role = ({ module = "DxNamespace", type = "DxType" })[case.source_identity]
+	assert(role, "Invalid alias source identity")
+	local spec = manifest.languages[case.language]
+	local evidence = case.evidence
+	assert_eq(evidence.lsp.provider, spec.evidence_client, "Alias provider drift: " .. case.tag)
+	assert_eq(evidence.effective.role, role, "Settled alias observation escaped its entity kind: " .. case.tag)
+	assert_eq(evidence.effective.source, "lsp", "Settled alias authority drift")
+	assert_eq(evidence.require_unique_top_foreground, true, "Alias foreground winner must be unique")
+	assert_eq(#evidence.applied_foregrounds, 1, "Alias must have one semantic foreground owner")
+	assert(
+		vim.deep_equal(evidence.applied_foregrounds[1], {
+			group = evidence.effective.group,
+			role = role,
+			priority_delta = 0,
+		}),
+		"Alias applied foreground drift"
+	)
+	local buf = vim.fn.bufadd(repo_root .. "/" .. spec.path)
+	vim.fn.bufload(buf)
+	locate_symbolic_sentinel(buf, case.tag, case.token, case.language)
+	alias_counts[case.language] = alias_counts[case.language] + 1
+	alias_counts[case.source_identity] = alias_counts[case.source_identity] + 1
+end
+assert(vim.deep_equal(alias_counts, { cpp = 6, rust = 8, module = 4, type = 10 }), "Alias boundary coverage drift")
+print("Verified all 14/14 alias review locators; no classification change authorized.")
+
 assert(
 	verified_sentinels == expected_total and verified_sentinels > 0,
 	("Sentinel count mismatch: verified %d, expected %d"):format(verified_sentinels, expected_total)

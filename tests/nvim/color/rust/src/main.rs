@@ -1,6 +1,31 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
+mod alias_source {
+    pub struct Payload;
+    impl Payload {
+        pub const SIZE: usize = 1;
+    }
+}
+// DX:E3 rust.alias.module_declaration
+use alias_source as route;
+// DX:E3 rust.alias.imported_type_declaration
+use alias_source::Payload as ImportedPayload;
+// DX:E3 rust.alias.type_declaration
+type AliasPayload = alias_source::Payload;
+
+pub fn observe_alias_identity() -> usize {
+    // DX:E3 rust.alias.module_reference
+    // DX:E3 rust.alias.qualified_terminal_type
+    let value: route::Payload = alias_source::Payload;
+    // DX:E3 rust.alias.type_reference
+    let direct: AliasPayload = value;
+    // DX:E3 rust.alias.imported_type_reference
+    let imported: ImportedPayload = direct;
+    // DX:E3 rust.alias.type_qualifier
+    AliasPayload::SIZE + std::mem::size_of_val(&imported)
+}
+
 // DX:M2 rust.binding.static_item
 pub static MODULE_COUNTER: u32 = 7;
 

@@ -147,6 +147,26 @@ void log_diagnostic(const T& message, std::uint32_t severity) {
 
 } // namespace dx::network
 
+// Alias evidence: organization paths and type names remain different entities.
+namespace alias_source {
+struct Payload { using Inner = int; };
+}
+// DX:E3 cpp.alias.namespace_declaration
+namespace route = alias_source;
+// DX:E3 cpp.alias.type_declaration
+using AliasPayload = alias_source::Payload;
+
+int observe_alias_identity() {
+    // DX:E3 cpp.alias.namespace_reference
+    // DX:E3 cpp.alias.qualified_terminal_type
+    route::Payload value{};
+    // DX:E3 cpp.alias.type_reference
+    AliasPayload direct{};
+    // DX:E3 cpp.alias.type_qualifier
+    AliasPayload::Inner code = 0;
+    return static_cast<int>(sizeof(value) + sizeof(direct)) + code;
+}
+
 // Sentinel: primitive scalar type (Builtin = Steel Blue)
 // DX:SENTINEL cpp.int.builtin
 int main() {
