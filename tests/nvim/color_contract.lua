@@ -15,6 +15,8 @@
 ---    @type.lifetime.rust while leaving normal attributes (#[must_use]) as DxMeta.
 
 local function main()
+	local repo_root = vim.fs.root(0, ".git") or vim.fn.getcwd()
+	local highlight_evidence = dofile(repo_root .. "/tests/nvim/highlight_evidence.lua")
 	local function fail(msg)
 		error("COLOR_RUNTIME_CONTRACT_FAILURE: " .. msg, 2)
 	end
@@ -158,6 +160,17 @@ local function main()
 		end
 
 		-- 2. Tree-sitter link resolution
+		-- These pairs may share RGB, but must keep distinct live identities.
+		for group, role in pairs({
+			["@keyword"] = "DxKeyword",
+			["@keyword.function"] = "DxFunctionKeyword",
+			["@number"] = "DxNumber",
+			["@constant"] = "DxConstant",
+			["@lsp.type.number"] = "DxNumber",
+			["@lsp.type.enumMember"] = "DxConstant",
+		}) do
+			highlight_evidence.assert_role(group, role, get_resolved_hl(group).fg)
+		end
 		local ts_assertions = {
 			{ "@keyword", colors_rgb.keyword },
 			{ "@keyword.function", colors_rgb.keyword_function },
@@ -511,7 +524,7 @@ local function main()
 	end
 
 	--- Four-level verification:
-	--- 1. ROLE_ASSERT: asserts that the effective highlight's fg matches expected role
+	--- 1. ROLE_ASSERT: verifies the winning group's real link identity AND foreground
 	--- 2. CAPTURE_PROOF: asserts required or forbidden Tree-sitter captures (e.g. lifetime vs attribute)
 	--- 3. PROTOCOL_CONTRACT: asserts raw LSP token type, modifiers, and foreground authority
 	--- 4. TOKEN_OBSERVE: logs active Tree-sitter captures and raw LSP tokens from get_at_pos()
@@ -546,31 +559,8 @@ local function main()
 			fail(("No effective highlight found at %s (line: %s)"):format(pos_desc, vim.trim(target_line)))
 		end
 
-		-- 1. ROLE_ASSERT: True position-level color check
-		if eff_hl.fg ~= expected_hl.fg then
-			local cand_summary = {}
-			for _, c in ipairs(candidates or {}) do
-				table.insert(
-					cand_summary,
-					("%s(src=%s, prio=%d, fg=%06x, ord=%d)"):format(c.hl_name, c.source, c.priority, c.fg, c.order or 0)
-				)
-			end
-			fail(
-				(
-					"ROLE_ASSERT mismatch for %s:\n"
-					.. "  Expected fg: %06x (%s)\n"
-					.. "  Actual fg:   %06x (from group: %s)\n"
-					.. "  Candidates:  %s"
-				):format(
-					pos_desc,
-					expected_hl.fg,
-					sentinel.role,
-					eff_hl.fg,
-					eff_group or "nil",
-					table.concat(cand_summary, " -> ")
-				)
-			)
-		end
+		-- 1. ROLE_ASSERT: Same RGB is not proof of the same semantic identity.
+		highlight_evidence.assert_role(eff_group, sentinel.role, eff_hl.fg)
 
 		-- 2. CAPTURE_PROOF: Tree-sitter query extension validation
 		if sentinel.required_ts_capture then
@@ -843,8 +833,6 @@ local function main()
 			)
 		)
 	end
-
-	local repo_root = vim.fs.root(0, ".git") or vim.fn.getcwd()
 
 	local ok_manifest, manifest = pcall(dofile, repo_root .. "/tests/nvim/color_manifest.lua")
 	if not ok_manifest or not manifest.languages then
