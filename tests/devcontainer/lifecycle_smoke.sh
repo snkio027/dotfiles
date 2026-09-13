@@ -122,6 +122,10 @@ assert_container_state() {
         cat "$nvim_log" >&2
         fail "Alias identity evidence did not complete"
     }
+    grep -Fq "E value-binding observations passed: 13/13 new positions, 11/11 declaration/reference pairs; classification: PENDING." "$nvim_log" || {
+        cat "$nvim_log" >&2
+        fail "Value-binding evidence did not complete"
+    }
     grep -Fq "M2B static-data-member evidence passed: 7/7 cases; decision: RECLASSIFY STATIC DATA MEMBER TO DxMember" "$nvim_log" || {
         cat "$nvim_log" >&2
         fail "M2B static-data-member classification evidence did not complete"

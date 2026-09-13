@@ -43,11 +43,14 @@ pub fn observe_binding_topology(
     parameter_value: u32,
 ) -> u32 {
     // DX:M2 rust.binding.local_let
+    // DX:E3 rust.value.static_reference
     let local_value = parameter_value + MODULE_COUNTER;
     // DX:M2 rust.binding.local_let_mut
+    // DX:E3 rust.value.let_reference
     let mut mutable_value = local_value;
     mutable_value += 1;
     let probe = BindingProbe { field_value: 2 };
+    // DX:E3 rust.value.let_mut_reference
     mutable_value + probe.field_value
 }
 
@@ -122,6 +125,7 @@ impl<'a> FrameReader<'a> {
 /// Sentinel: async free function (Callable = Muted Amber, Parameters = Muted Violet-Gray)
 // DX:SENTINEL rust.fetch_stream.fn
 pub async fn fetch_stream<'a>(uri: &'a str, retries: u32) -> Result<DownloadSummary, String> {
+    // DX:E3 rust.value.const_reference
     let initial_size: u64 = MAX_CAPACITY as u64;
     let mut summary = DownloadSummary::with_capacity(initial_size);
 
