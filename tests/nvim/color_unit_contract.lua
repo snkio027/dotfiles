@@ -157,6 +157,8 @@ assert_eq(role_count, 23, "Expected exactly 23 semantic roles in DX-COLOR-003")
 -- ==========================================================================
 
 local repo_root = vim.fs.root(0, ".git") or vim.fn.getcwd()
+-- Common colors must not weaken group identity or foreground evidence.
+dofile(repo_root .. "/tests/nvim/shared_color_contract.lua")(full_hl)
 local c4_contract = dofile(repo_root .. "/tests/nvim/visual_contracts/c4.lua")
 c4_contract.verify({
 	palette = p,

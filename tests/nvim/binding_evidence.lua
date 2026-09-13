@@ -132,16 +132,8 @@ local function foreground_candidates(inspected)
 	return candidates
 end
 
-local function roles_for_foreground(foreground)
-	local roles = {}
-	for role in pairs(require("theme.domain").roles) do
-		if vim.api.nvim_get_hl(0, { name = role, link = false }).fg == foreground then
-			roles[#roles + 1] = role
-		end
-	end
-	table.sort(roles)
-	return roles
-end
+local repo_root = vim.fs.root(0, ".git") or vim.fn.getcwd()
+local highlight_evidence = dofile(repo_root .. "/tests/nvim/highlight_evidence.lua")
 
 local function expected_semantic_groups(token, filetype)
 	local priorities = vim.hl and vim.hl.priorities or {}
@@ -182,20 +174,12 @@ local function semantic_application(inspected, token, filetype, tag)
 			groups[#groups + 1] = { group = group, priority = priority }
 			local highlight = vim.api.nvim_get_hl(0, { name = group, link = false })
 			if highlight.fg then
-				local roles = roles_for_foreground(highlight.fg)
-				if #roles ~= 1 then
-					fail(
-						("semantic foreground for %s does not resolve to exactly one Dx role: %s -> %s"):format(
-							tag,
-							group,
-							vim.inspect(roles)
-						)
-					)
-				end
+				local role = highlight_evidence.role_for_group(group)
+				highlight_evidence.assert_role(group, role, highlight.fg)
 				foregrounds[#foregrounds + 1] = {
 					group = group,
 					priority_delta = priority - base_priority,
-					role = roles[1],
+					role = role,
 				}
 			end
 		end
@@ -483,11 +467,7 @@ local function capture_case(bufnr, case, lang, spec, clients_by_name, raw_tokens
 	end
 	assert_equal(winner.group, expected.effective.group, "effective highlight group drift for " .. case.tag)
 	assert_equal(winner.source, expected.effective.source, "effective authority drift for " .. case.tag)
-	assert_equal(
-		roles_for_foreground(winner.foreground),
-		{ expected.effective.role },
-		"effective Dx role drift for " .. case.tag
-	)
+	local role = highlight_evidence.assert_role(winner.group, expected.effective.role, winner.foreground)
 
 	local application
 	if expected.applied_foregrounds then
@@ -523,7 +503,7 @@ local function capture_case(bufnr, case, lang, spec, clients_by_name, raw_tokens
 		effective = {
 			group = winner.group,
 			source = winner.source,
-			role = expected.effective.role,
+			role = role,
 		},
 		application = application,
 	}
@@ -584,7 +564,6 @@ local function main()
 	assert_equal(vim.tbl_count(domain.roles), 23, "M2A must preserve the 23-role domain closure")
 	assert_equal(domain.roles.DxModuleBinding, nil, "M2A must not admit DxModuleBinding")
 
-	local repo_root = vim.fs.root(0, ".git") or vim.fn.getcwd()
 	local manifest = dofile(repo_root .. "/tests/nvim/color_manifest.lua")
 	pcall(require("lazy").load, { plugins = { "nvim-lspconfig" } })
 

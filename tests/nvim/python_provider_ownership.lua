@@ -190,15 +190,8 @@ local function neovim_at_position(bufnr, row, column, known_clients)
 	return found
 end
 
-local function roles_for_foreground(foreground)
-	local roles = {}
-	for role in pairs(require("theme.domain").roles) do
-		if vim.api.nvim_get_hl(0, { name = role, link = false }).fg == foreground then
-			roles[#roles + 1] = role
-		end
-	end
-	return sorted(roles)
-end
+local evidence_root = vim.fs.root(0, ".git") or vim.fn.getcwd()
+local highlight_evidence = dofile(evidence_root .. "/tests/nvim/highlight_evidence.lua")
 
 local function semantic_application(bufnr, row, column)
 	vim.api.nvim_win_set_cursor(0, { row + 1, column })
@@ -214,16 +207,9 @@ local function semantic_application(bufnr, row, column)
 			groups[#groups + 1] = { group = group, priority = priority }
 			local highlight = vim.api.nvim_get_hl(0, { name = group, link = false })
 			if highlight.fg then
-				local roles = roles_for_foreground(highlight.fg)
-				if #roles ~= 1 then
-					fail(
-						("semantic foreground does not resolve to one DX role: %s -> %s"):format(
-							group,
-							vim.inspect(roles)
-						)
-					)
-				end
-				foregrounds[#foregrounds + 1] = { group = group, priority = priority, role = roles[1] }
+				local role = highlight_evidence.role_for_group(group)
+				highlight_evidence.assert_role(group, role, highlight.fg)
+				foregrounds[#foregrounds + 1] = { group = group, priority = priority, role = role }
 			end
 		end
 	end
