@@ -111,8 +111,8 @@ end
 -- Independent design oracle: never read expected HEX values from production.
 local expected_code = {
 	variable = "#C4CAE0",
-	keyword = "#79AAFF",
-	keyword_function = "#79AAFF",
+	keyword = "#DB8FEE",
+	keyword_function = "#DB8FEE",
 	callable = "#FFB266",
 	type = "#3DD1BB",
 	builtin = "#9ECE6A",
@@ -120,7 +120,7 @@ local expected_code = {
 	lifetime = "#67D4C7",
 	parameter = "#C8B2E3",
 	meta = "#FF8F7D",
-	namespace = "#DB8FEE",
+	namespace = "#79AAFF",
 	string = "#B8D07A",
 	number = "#F2D675",
 	constant = "#F2D675",
@@ -304,15 +304,15 @@ local function verify_policy(context)
 		fail("DxMember and DxParameter must remain subordinate to DxVariable")
 	end
 
-	assert_ratio_range("DxKeyword", ratios.keyword, 7.1, 7.6)
-	assert_ratio_range("DxFunctionKeyword", ratios.keyword_function, 7.1, 7.6)
+	assert_ratio_range("DxKeyword", ratios.keyword, 7.2, 7.7)
+	assert_ratio_range("DxFunctionKeyword", ratios.keyword_function, 7.2, 7.7)
 	assert_ratio_range("DxCallable", ratios.callable, 9.3, 9.9)
 	assert_ratio_range("DxType", ratios.type, 8.7, 9.2)
 	assert_ratio_range("DxBuiltin", ratios.builtin, 9.0, 9.6)
 	assert_ratio_range("DxLifetime", ratios.lifetime, 9.3, 9.9)
 	assert_ratio_range("DxMember", ratios.member, 8.0, 8.6)
 	assert_ratio_range("DxParameter", ratios.parameter, 8.5, 9.2)
-	assert_ratio_range("DxNamespace", ratios.namespace, 7.2, 7.7)
+	assert_ratio_range("DxNamespace", ratios.namespace, 7.1, 7.6)
 	assert_ratio_range("DxMeta", ratios.meta, 7.4, 8.0)
 	assert_ratio_range("DxString", ratios.string, 9.7, 10.3)
 	assert_ratio_range("DxNumber", ratios.number, 11.6, 12.1)
@@ -347,17 +347,17 @@ local function verify_policy(context)
 	local type_r, type_g, type_b = hex_to_rgb(code.type)
 	local callable_r, _, callable_b = hex_to_rgb(code.callable)
 	if
-		keyword_b - keyword_r < 100
-		or keyword_b - keyword_g < 60
-		or function_b - function_r < 100
-		or function_b - function_g < 60
-		or namespace_r - namespace_g < 60
-		or namespace_b - namespace_r < 10
+		keyword_r - keyword_g < 60
+		or keyword_b - keyword_r < 10
+		or function_r - function_g < 60
+		or function_b - function_r < 10
+		or namespace_b - namespace_r < 100
+		or namespace_b - namespace_g < 60
 		or type_g <= type_b
 		or type_b - type_r < 100
 		or callable_r - callable_b < 100
 	then
-		fail("E lost its shared blue grammar / redward purple namespace / teal type / orange callable axes")
+		fail("E_COLOR_AXES: shared purple grammar / blue namespace / teal type / orange callable required")
 	end
 
 	if code.operator:lower() == palette.state.error:lower() or code.operator:lower() == palette.state.warn:lower() then
@@ -452,8 +452,8 @@ function M.verify_negative_controls(context)
 			verify = M.verify,
 			mutate = function(palette)
 				-- Preserve sharing and relational bounds; only the exact E oracle rejects this.
-				palette.code.keyword = "#7AABFF"
-				palette.code.keyword_function = "#7AABFF"
+				palette.code.keyword = "#DC90EF"
+				palette.code.keyword_function = "#DC90EF"
 			end,
 		},
 		{
@@ -463,7 +463,15 @@ function M.verify_negative_controls(context)
 				verify_fixed_palette(candidate.palette.code)
 			end,
 			mutate = function(palette)
-				palette.code.keyword_function = "#7AABFF"
+				palette.code.keyword_function = "#DC90EF"
+			end,
+		},
+		{
+			name = "bad_grammar_namespace_swap",
+			expected = "E_COLOR_AXES:",
+			mutate = function(palette)
+				palette.code.keyword, palette.code.namespace = palette.code.namespace, palette.code.keyword
+				palette.code.keyword_function = palette.code.keyword
 			end,
 		},
 		{
