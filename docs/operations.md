@@ -1,0 +1,349 @@
+# 配置与维护手册
+
+[返回项目首页](../README.md)
+
+本页保留部署、工具归属、更新与恢复的操作细节。首次使用先阅读[初始化](#初始化)，日常查阅可直接跳到[维护命令](#日常维护)、[快捷键](#功能与快捷键速查)或 [SSH 与提交签名](#ssh-与提交签名)。
+
+## 初始化
+
+```bash
+chezmoi init --apply https://github.com/snkio027/dotfiles
+```
+
+初始化会询问 Git 姓名和邮箱，安装 Homebrew/Linuxbrew，并按机器类型安装 `workstation` 或 `devcontainer` profile 的缺失依赖，配置 SSH 签名与 gitleaks hook；macOS workstation 还会安装 Ghostty 并应用键盘、Finder、Dock 和截图偏好。日常 `chezmoi apply` 不更新 Homebrew 元数据、不主动批量升级已安装工具，也不会因 Ghostty 配置变化而重新应用 macOS defaults；安装新依赖所必需的依赖链升级仍由 Homebrew 决定，Homebrew 全量更新由 `brewup` 显式触发。Linux 使用现有终端模拟器，只部署跨平台的 Shell、TUI 与 Neovim 配置。本地新建的长期 SSH key 必须由用户设置口令；启用 1Password Agent 时不会生成磁盘私钥。
+
+Linux 工作站由 Brewfile 显式安装 `/home/linuxbrew/.linuxbrew/bin/zsh`，新建的非登录交互 Shell 也会直接获得 Linuxbrew PATH、FPATH、插件与补全，不依赖 `.zprofile`。安装 Zsh 与选择登录 Shell 是两个独立行为：本仓库不会执行 `chsh` 或修改 `/etc/shells`。需要切换时，应先确认该路径存在，再由用户按发行版要求将它加入 `/etc/shells` 并显式运行 `chsh -s /home/linuxbrew/.linuxbrew/bin/zsh`。
+
+Dev Container 使用 `CHEZMOI_PROFILE=devcontainer` 和独立的 `devcontainer.Brewfile`，通过 Linuxbrew 获得与 Linux workstation 相同的 60 个公式声明，但不会生成宿主密钥、修改宿主 Git hooks 或应用 macOS 偏好。基础镜像保留 `resolute` tag 便于 Dependabot 识别，同时固定其覆盖 Linux amd64/arm64 的 OCI manifest digest；镜像内的 chezmoi bootstrap 固定到 `2.72.1` 双架构制品，下载后先比对由上游 Sigstore 签名 checksum 得出的 SHA-256，再检查二进制自身版本，失败时不会留下可执行文件或成功 receipt。该固定制品只负责无 Homebrew 时的首次引导，稳态命令仍由 core profile 的 Homebrew owner 提供。post-create 是缺失 Neovim/Mason 工具的唯一 provisioning owner：瞬时失败最多重试三次，只有插件锁未漂移且 21 项 Mason receipt 完整时才返回成功；后续 lifecycle 只观察状态，不补装工具或重新 apply。CI 使用 Dev Container CLI 真实执行 post-create、非 root Shell、chezmoi、Neovim warm smoke 和二次 `up` 幂等验证。可用 `GIT_AUTHOR_NAME` 与 `GIT_AUTHOR_EMAIL` 覆盖缺省身份。
+
+## 体验设计
+
+- `.zshenv` 只定义 XDG Base Directory；`~/.config/zsh/homebrew.zsh` 是 Homebrew PATH/FPATH 的唯一所有者，由 `.zprofile` 与 `.zshrc` 共同加载且不执行启动期子进程；`.zshrc` 其余部分只处理交互功能。
+- Starship、Atuin、fzf、direnv、zoxide 与 Carapace 每次按当前命令、参数与环境直接初始化；Zsh 补全缓存仍保留。
+- Starship 使用 Quiet Ops Prompt：默认只显示目录、Git 状态和低频高价值反馈；语言、构建工具、包版本、Python 环境、容器、Docker context 与 Kubernetes 保持静默。非零退出只将输入箭头变红，后台任务数与超过 2 秒的命令耗时显示在第二行右侧。
+- Ghostty 固定使用 Catppuccin Mocha 暗色主题；MonoLisa customizer 输出的 `MonoLisaCode Variable-cv04-cv08-ss03-ss07-ss11` 变量字体负责拉丁文字与真实字重/斜体，PingFang SC 负责中文，Maple Mono NF CN 是 Nerd Font 图标的首选 fallback，`Symbols Nerd Font Mono` 保留为单字符宽度末级兜底，并提供 GPU 渲染和原生分屏。
+- Zellij 默认处于 locked mode，避免在 macOS 和 Linux 上占用 Shell、Neovim 的 Alt 快捷键。
+- Zsh 将原生历史持久化到 `$XDG_STATE_HOME/zsh/history`；Atuin 独占 `Ctrl-R` 并负责加密同步，选中命令只回填供复核，fzf 仅管理 `Ctrl-T/Alt-C`。
+- Neovim 是唯一编辑器；Git、Yazi、sudo、systemd 与 kubectl 的编辑入口统一指向 Neovim。
+- Neovim/LazyVim、LazyGit、Yazi 与全部颜色配置均由 chezmoi 纳管。
+- Neovim 使用 Catppuccin Mocha 宿主与单一 DX E 源码投影；19 个源码角色允许两组有意共色，角色身份独立验证。背景、状态与装饰 UI 保持既有基线；[E 迁移记录与验收边界](../tests/nvim/E-VISUAL-MIGRATION.md)单独记录，自动化通过不等于人眼验收完成。
+- `icons/contract.toml` 是 Neovim `mini.icons` 与 eza 的版本化图标契约；87 项显式映射使用“精确文件名 > 扩展名 > 消费者默认值”的优先级，glyph 和 Catppuccin 语义 RGB 由同一份数据生成，不跟随任一工具的实时内置表漂移。
+- Markdown 在普通模式渲染标题、任务、表格与代码块，插入模式自动显示原文；Ghostty 直连及其承载的 Zellij 0.45+ 会话均支持文档内图片、数学公式与 Mermaid 预览。
+- markdownlint-cli2 明确归 Mason 所有，仅供 Neovim lint/format 使用；XDG 配置保留结构与语义检查，只关闭对表格、URL 和 CJK 文档噪音较大的 `MD013` 行宽规则。Shell 不声明全局 markdownlint 命令。
+- `CMakeLists.txt` 是 CMake 源文件而非 Markdown；neocmake 负责语义和 100 列诊断，gersemi 按同一宽度统一格式。
+- `cxx init <name>` 从离线内置模板创建 C++23/CMake/Ninja 项目，生成后直接使用标准工具链，不依赖 cxx-init 运行。
+- uv 项目中存在 `uv.lock` 和 `.venv` 时，Neovim 会自动将 Ty、Ruff、DAP、Neotest 与内置终端统一到项目 Python；Pyright 保留安装但默认不启用，作为回滚资产。
+- C/C++、Python、Zig、Go 与 Rust 共用 LSP、格式化、测试、任务和 DAP 工作流；项目的 `.vscode/launch.json` 也可直接复用。
+
+## 目录
+
+```text
+dotfiles/
+├── .chezmoiroot                    # 将 chezmoi source state 指向 home/
+├── .devcontainer/                  # Ubuntu 26.04 + Linuxbrew 开发环境
+├── .github/
+│   └── workflows/ci.yml            # 模板、配置、安全与 profile 安装校验
+├── brew/
+│   ├── ownership.toml              # 工具 owner、profile 成员关系与验证边界
+│   ├── generate.py                 # 生成并检查四个 Brewfile profile
+│   └── profiles/                   # core/workstation/devcontainer/quality
+├── Brewfile                        # 生成的 workstation 兼容入口
+├── fonts/                          # 授权字体的公开特性清单（不包含字体文件）
+├── icons/                           # 跨 Neovim/eza 的声明式 Icon Contract 与生成器
+├── scripts/supply-chain/            # 镜像、bootstrap 签名与漏洞状态门禁
+├── supply-chain/                    # chezmoi 上游签名公钥等信任根
+├── tests/fonts/                    # MonoLisa 清单与授权字体构建验证
+├── tests/icons/                     # 72 类审计、87 项显式映射、字体与宽度验证
+├── tests/supply-chain/              # 不可变输入与 fail-closed 故障注入
+└── home/                           # 唯一会映射到 $HOME 的 source state
+    ├── .chezmoi.toml.tmpl          # 本机数据与仓库 sourceDir
+    ├── .chezmoidata.yaml           # Git 默认值与功能开关
+    ├── .chezmoiscripts/            # Homebrew、身份、迁移、hook、macOS defaults
+    ├── dot_zshenv.tmpl             # 最小 XDG 引导层
+    ├── dot_zprofile.tmpl           # 登录 Shell 入口
+    ├── dot_zshrc.tmpl              # 交互式 Shell 入口
+    ├── private_dot_ssh/             # OpenSSH 原生固定目录
+    └── dot_config/
+        ├── atuin/                  # 历史检索
+        ├── eza/theme.yml           # 由 Icon Contract 生成的文件图标主题
+        ├── ghostty/                # macOS Ghostty 外观与宿主快捷键
+        ├── git/                    # Git 全局配置与 ignore
+        ├── lazygit/                # Git TUI 与 Catppuccin 主题
+        ├── markdownlint-cli2/      # Neovim/Mason 的 Markdown 规则
+        ├── nvim/                   # LazyVim 16 与插件锁
+        ├── starship.toml
+        ├── yazi/yazi.toml
+        ├── zellij/config.kdl
+        └── zsh/                    # Homebrew 环境、Shell 模块、缓存逻辑与诊断脚本
+```
+
+## XDG 目录策略
+
+| 类型 | 默认目录 | 当前用途 |
+| --- | --- | --- |
+| 配置 | `~/.config` | Neovim、Ghostty、Git、Zsh 模块及所有支持 XDG 的 TUI |
+| 数据 | `~/.local/share` | Atuin 数据库、Neovim 插件和工具持久数据 |
+| 状态 | `~/.local/state` | Zsh 历史、Neovim 日志及可跨会话恢复的状态 |
+| 缓存 | `~/.cache` | Zsh 初始化缓存、补全、uv 与可安全重建的数据 |
+| 可执行文件 | `~/.local/bin` | 用户级引导程序与脚本 |
+
+`~/.zshenv`、`~/.zprofile`、`~/.zshrc` 是 Zsh 原生启动入口，`~/.ssh` 是 OpenSSH 固定发现位置，因此保留在 HOME。首次应用会把旧 `~/.zsh_history` 无损迁移到 XDG state，并保留兼容 symlink。Neovim 的 markdownlint-cli2 显式加载 XDG 主配置，项目内规则仍可覆盖。Cargo 与 Go 保留各自官方数据目录，避免破坏已安装工具和升级机制。
+
+## 日常维护
+
+```bash
+devdoctor                         # 只读环境与工具来源诊断
+scan-secrets                      # 扫描暂存内容中的凭据泄漏
+chezmoi diff                      # 审核目标状态差异
+chezmoi apply                     # 应用配置、安装缺失依赖；不主动全局升级
+HOMEBREW_NO_AUTO_UPDATE=1 brew bundle install --no-upgrade --file="$(chezmoi source-path)/../brew/profiles/workstation.Brewfile"
+brewup                            # update + upgrade + cleanup
+uv tool install --upgrade --no-config cxx-init # 显式更新全局 cxx-init
+devup                             # 独立 XDG Neovim 候选；不更新日用环境或源锁
+python3 brew/generate.py --write # 修改 ownership 后重建四个 Brewfile profile
+python3 brew/generate.py --check # 验证 profile 与根 Brewfile 入口未漂移
+python3 icons/generate.py --write # 修改契约后重建 Neovim、eza 与测试制品
+python3 icons/generate.py --check # 验证生成制品未漂移
+```
+
+`devdoctor` 检查 Homebrew、chezmoi、age、SSH、gitleaks、语言 Runtime、LLVM/CMake/Ninja、cxx-init、IaC/Kubernetes CLI 和终端工具。非 Rust Runtime 检查 Homebrew 路径；Rust 单独检查 rustup 所选工具链及 cargo/rustc 的实际入口，禁用诊断期间的自动安装；它不会自动修改系统。
+
+### Rust 工具链职责
+
+Homebrew 管理通用 CLI 和 `rustup` 管理器；rustup 管理 `rustc`、Cargo、rustfmt、Clippy、rust-src 与编译 targets。Brew 的 `rust` 不再是声明的编译器 owner，但迁移不会自动卸载旧安装、删除 `~/.cargo`/`~/.rustup` 或执行 `brew cleanup`。
+
+Shell 将 `$HOMEBREW_PREFIX/opt/rustup/bin` 放在全局 Brew/Cargo 入口之前，保留已继承的项目 shim 优先级、`RUSTUP_TOOLCHAIN`、`CARGO_HOME` 和 `RUSTUP_HOME`。不使用 alias、全局 `RUSTUP_TOOLCHAIN=stable` 或自建版本切换器。Neovim 仍通过固定的 `$HOMEBREW_PREFIX/bin/rust-analyzer` 使用独立的 Brew 语言服务器，避免 rustup 同名代理改变 owner；命令行直接调用 analyzer 时也使用该完整路径。
+
+Brew bundle 后，chezmoi 与 CI 共用 `scripts/rust/provision.sh`：新环境采用 Brew rustup 的 stable 默认值；已有用户 default 保持不变。只安装缺失的默认工具链与 rustfmt/Clippy/rust-src 组件，之后验证实际可执行入口和标准库源码。重复 apply 不运行 `rustup update`、不重设 default，不改项目工具链文件。工具链更新由用户显式运行 `rustup update stable`；管理器更新由 Homebrew 负责。
+
+需要固定 Rust 环境的项目自行提交 `rust-toolchain.toml`，例如：
+
+```toml
+[toolchain]
+channel = "1.98.1" # 示例：按项目验证结果选择，不是 dotfiles 的全局锁
+profile = "minimal"
+components = ["rustfmt", "clippy", "rust-src"]
+```
+
+`rustup show active-toolchain`、`rustup which rustc` 和 `rustc --print sysroot` 用于核对当前项目选择。项目声明的缺失工具链仍遵循 rustup 原生安装行为；旧版本与当前 rust-analyzer 的兼容性需单独验证。Neovim 保存继续运行 Clippy，通过 `check.allTargets=true` 覆盖全部 targets，不再在 `extraArgs` 中重复添加 `--all-targets`。
+
+本次迁移不引入 nextest 或改变测试/调试 UI；PR 合并和 CI 通过也不等于本机已激活。激活须单独授权，在新 Shell/Neovim 中核对工具来源后，再决定是否卸载旧 Brew Rust。
+
+### Neovim 隔离更新候选
+
+`devup` 需要完整 source checkout。它把 Neovim/neocmake/markdownlint 配置复制到新的临时目录，独立设置 config/data/state/cache、日志与 `NVIM_APPNAME`；先更新候选插件，再在新进程安装缺失 Mason 工具/五语言 parser，最后复用 toolchain smoke。任一步失败或缺少完成标记都返回非零，目录和日志保留；不会升级 Homebrew/cxx-init、改写源 `lazy-lock.json` 或复制候选工具到日用目录。这是 Neovim 状态隔离，不是文件系统沙箱：仍使用本机 Homebrew 工具，第三方安装器可能使用自身的共享下载缓存。
+
+候选目录记录 `baseline-lock.json`、新的 `config/nvim/lazy-lock.json`、`state/*.log`（含 Neovim 版本）和 `data/nvim/mason/packages/*/mason-receipt.json`。Mason receipt 是已安装版本的观测，不是可重现的版本锁；插件锁回退也不能还原全局工具。候选目录用于短期体验，可能被系统清理，不保证整体搬移后仍可运行。需要长期保存时保留 lock、receipt 和日志；需要可运行环境时，在最终位置重新创建。
+
+```bash
+candidate=/tmp/dotfiles-nvim-candidate.XXXXXX # 替换为 devup 实际输出
+"$candidate/nvim" /path/to/project            # 仅体验候选；普通 nvim 仍使用日用环境
+diff -u "$candidate/baseline-lock.json" "$candidate/config/nvim/lazy-lock.json"
+```
+
+下载与 smoke 成功不等于完整 CI 或交互验收。确认体验后，在独立维护分支审核并手动复制候选锁到 `$(chezmoi source-path)/dot_config/nvim/lazy-lock.json`，提交 PR，等待 Locked Cold Start/Lifecycle 等实际门禁。合并后才单独授权定向部署并用 `:Lazy restore` 恢复新锁；不自动搬运候选 Mason 安装。如需更新日用 Mason，另行显式执行 `:MasonToolsUpdateSync` 并验收。放弃候选只需退出其 Neovim，普通入口无需回滚。
+
+### 工具归属与验证边界
+
+工具 owner 与安装目标是两个维度：每个工具在 `ownership.toml` 中只有一个 owner，但可以进入多个 profile。`core`、`quality` 和 `devcontainer` 均由 Ubuntu CI 真实安装并执行命令探针；macOS CI 还真实安装并验证 Ghostty 与公开字体。完整 `workstation` 中的 1Password、OrbStack、GUI、字体和手工安装的授权 MonoLisa 保留真实主机验证边界，不在无交互 runner 上伪装成已验证。
+
+Homebrew 的非官方来源审计目前只有 `hashicorp/tap/terraform`；Brewfile 只信任这个公式，不信任整个 tap、其他 formula、cask 或 command。`brew bundle cleanup` 会把全局 trust store 重置为当前 Brewfile 声明，因此普通 apply 与 CI 均不执行它；维护命令中的显式 cleanup 仍属于用户主动升级边界。PR/push 只用故障注入验证 `brew vulns` 的状态判定、有限重试与 fail-closed 逻辑；schedule/manual 维护任务才真实查询 `quality` 与 `devcontainer` profile，后者包含 `core` 并与 workstation 的 formula 集合一致。维护查询会从受审 Brewfile 读取对象级 trust 声明，在一次性 `XDG_CONFIG_HOME` 中授权后随任务清除，不读取或改写 runner/宿主机的默认 trust store。检查使用 Homebrew 的 OSV formula 数据，cask 与被上游标记为 skipped 的 formula 不在覆盖范围；结果严格区分 `PASS`、`VULNERABLE`、`UNAVAILABLE`，高危发现、无效响应或三次查询仍不可用都会让维护任务告警，但不会因一次外部网络故障阻塞普通 PR。
+
+Icon Contract 固定采用“精确文件名 > 扩展名 > 消费者默认值”的解析顺序。生成器拒绝重复键、非法码点、缺失颜色角色和非单字符宽度 glyph；CI 验证 `72/72` 审计范围、`87/87` 显式消费者映射、`47/72` 真实项目观察与 `45/45` 唯一 glyph 字体覆盖，并解析 Neovim 最终 highlight RGB。eza 的未知无扩展名文件、空目录、`.github` 与 `build` 专用图标，以及 `mini.icons` 的对应默认值，明确属于消费者上游观察，不进入 87 项共享映射；两者无法表达的空目录差异不会被假装成已统一。其余 25 类合成 fixture 不表述为真实项目样本；升级 eza 或 `mini.icons` 时只报告上游差异，不自动改写本仓库拥有的契约。
+
+GitHub Actions 会在每次提交验证 Brew ownership/profile 生成结果，真实安装并使用安全可自动化的 `core`、`quality` 与 `devcontainer` profile，同时验证模板、Shell、安全策略、macOS 配置、cxx-init、Dev Container 镜像与完整 lifecycle。常规 bootstrap 只验证仓库固定的 SHA-256，不下载公钥或签名验证器；schedule/manual 维护任务才使用提交 SHA 固定的临时 Cosign Action 复验上游 chezmoi checksum bundle，Cosign 不进入运行时镜像。基础镜像仍会连续解析两次并确认得到同一个多平台对象。macOS GUI/字体只声明真实可覆盖的边界；1Password、OrbStack 与授权 MonoLisa 不做虚假 CI 安装声明。每周一还会从空缓存同步上游最新 Neovim 插件与 Mason 工具，运行语义冒烟测试，并在插件锁落后时提示执行 `devup`。Dependabot 每周更新 GitHub Actions 与 `.devcontainer/Dockerfile` 中的 Docker 镜像；当前没有 Dev Container Features，因此不配置 Feature 专用 updater。
+
+### 历史视觉研究恢复
+
+DX-COLOR-003 的历史视觉研究文档已从生产树归档。这只移除 active tree 中的资料，不缩减 Git 历史体积。删除前的完整资料保留在：
+
+```text
+a4b3f109556ea89d19a437e11a034a935276be75:dx-color-003-docs/
+```
+
+恢复命令：
+
+```bash
+git archive --format=tar.gz \
+  --output=/tmp/dx-color-003-docs.tar.gz \
+  a4b3f109556ea89d19a437e11a034a935276be75 \
+  dx-color-003-docs/
+```
+
+当前行为由主题源码与 `tests/nvim/` 的生产契约定义。
+
+## 功能与快捷键速查
+
+修饰键按作用层解释，不把 macOS 的物理按键名称与终端协议混用：
+
+| 文档记法 | macOS | Linux | 作用范围 |
+| --- | --- | --- | --- |
+| `Cmd` | Command（⌘） | 无对应绑定 | 仅 macOS Ghostty 宿主快捷键 |
+| `Alt` | Ghostty 中的左 Option（⌥）；右 Option 保留字符输入 | Alt | Shell 与 Zellij 收到的 Alt/Meta |
+| `Ctrl` | Control | Ctrl | Shell、Neovim 与 Zellij |
+| `<leader>` | 空格 | 空格 | 仅 Neovim |
+
+除明确标为 macOS Ghostty 的 `Cmd` 项以外，本节的 Shell、Neovim 与 Zellij 快捷键均适用于 macOS 和 Linux。在 macOS 上换用其他终端模拟器时，需要自行启用“Option 作为 Alt/Meta”，否则 `Alt-C`、`Alt-F` 和 Zellij 的 Alt 快捷键可能不会发送预期序列。Zellij 默认处于 locked mode，不会在启动后立即占用 Shell 或 Neovim 按键。
+
+### Shell 与终端工具
+
+兼容性敏感的 `find`、`grep` 与 `cd` 保留原始语义；现代搜索使用 `ff`（fd）、`rgg`（ripgrep）和 `z`（zoxide）。交互展示命令仍会在工具存在时增强：`ls` → `eza`、`cat` → `bat`、`top` → `btop`、`vi`/`vim` → `nvim`。
+
+Quiet Ops Prompt 将第一行留给位置与 Git 状态，第二行留给命令输入。Node、Go、Rust、Zig、C/C++、CMake、Helm、package、Python 环境、容器与 Kubernetes 信息默认永不显示；需要时使用对应工具的专用命令查询。
+
+| 快捷键或命令 | 功能 |
+| --- | --- |
+| `Ctrl-R` | 使用 Atuin 检索加密同步历史；Enter 只回填命令行，复核后再执行 |
+| `Ctrl-T` | 使用 FZF 选择文件并插入命令行 |
+| `Alt-C` | 使用 FZF 选择并进入目录 |
+| `Ctrl-F` | 接受完整的 Zsh 自动建议 |
+| `Alt-F` | 向前移动/接受一个单词 |
+| `ll` / `lt` | 详细文件列表 / 目录树 |
+| `ff` / `rgg` | 使用 fd 查找路径 / 使用 ripgrep 检索内容 |
+| `z <keyword>` / `cdi` | 按使用频率跳转目录 / 交互式选择目录 |
+| `y` | 启动 Yazi，退出后进入最后访问的目录 |
+| `mkcd <dir>` / `up <n>` | 创建并进入目录 / 向上跳转 n 层 |
+| `port <port>` / `fkill [signal]` | 查找端口占用 / 模糊选择进程并默认发送 SIGTERM |
+| `ghc <owner/repo>` | 克隆 GitHub 仓库 |
+| `dotenv [file]` | 导出 `.env` 的字面量赋值；支持空值、整行注释和成对引号，拒绝命令替换、续行与非法键名 |
+| `reload` | 重新加载 Zsh 配置 |
+
+### Neovim 导航与检索
+
+| 快捷键 | 功能 |
+| --- | --- |
+| `<leader><space>` / `<leader>ff` | 查找项目根目录中的文件 |
+| `<leader>fF` / `<leader>fg` | 查找当前目录文件 / Git 文件 |
+| `<leader>fr` / `<leader>fb` | 最近文件 / Buffer 列表 |
+| `<leader>e` / `<leader>fE` | 打开项目根目录 / 当前目录文件树 |
+| `<leader>/` / `<leader>sg` | 在项目根目录全文检索 |
+| `<leader>sG` | 在当前目录全文检索 |
+| `<leader>sk` / `<leader>sR` | 搜索所有快捷键 / 恢复上一次搜索 |
+| `s` / `S` | Flash 跳转 / Tree-sitter 结构跳转 |
+| `H` / `L` | 上一个 / 下一个 Buffer |
+| `Ctrl-H/J/K/L` | 在 Neovim 窗口间移动 |
+| `<leader>uW` | 切换当前窗口的自动换行 |
+
+### 代码、LSP 与诊断
+
+| 快捷键 | 功能 |
+| --- | --- |
+| `grn` / `gra` | 重命名符号 / Code Action |
+| `grr` / `gri` / `grt` | 查找引用 / 实现 / 类型定义 |
+| `gO` | 文档符号与大纲 |
+| `[d` / `]d` | 上一个 / 下一个诊断 |
+| `<leader>sd` / `<leader>sD` | Buffer / 工作区诊断检索 |
+| `<leader>xx` / `<leader>xX` | Trouble 工作区 / Buffer 诊断 |
+| `gcc` / `gc` | 注释当前行 / 选区或动作范围 |
+| `gsa` / `gsd` / `gsr` | 添加 / 删除 / 替换包围符号 |
+| `<leader>p` | 打开 Yank 历史；`[y`、`]y` 切换记录 |
+
+### 测试、调试与 Git
+
+| 快捷键 | 功能 |
+| --- | --- |
+| `<leader>tr` / `<leader>tt` | 运行最近测试 / 当前文件测试 |
+| `<leader>tT` / `<leader>tl` | 运行全部测试文件 / 重新运行上次测试 |
+| `<leader>td` / `<leader>ts` | 调试最近测试 / 测试摘要 |
+| `<leader>tw` / `<leader>to` | Watch 模式 / 测试输出 |
+| `<leader>db` / `<leader>dc` | 设置断点 / 继续调试 |
+| `<leader>di` / `<leader>dO` / `<leader>do` | 步入 / 步过 / 步出 |
+| `<leader>du` / `<leader>de` / `<leader>dt` | DAP UI / 计算表达式 / 终止调试 |
+| `<leader>oo` / `<leader>ow` / `<leader>ot` | 运行任务 / 任务列表 / 对任务执行操作 |
+| `<leader>gs` / `<leader>gd` | Git 状态 / 当前文件 Diff |
+| `<leader>gc` / `<leader>gS` | 提交历史 / Stash |
+| `lg` | 在终端中启动 LazyGit |
+
+### 多语言开发环境
+
+| 语言 | 语义、检查与格式化 | 构建、测试与调试 |
+| --- | --- | --- |
+| C/C++ | clangd、clang-tidy、clang-format | cxx-init、CMake、Ninja、ccache、Overseer、codelldb |
+| Python | uv、Ty、Ruff；`<leader>cT` 运行 `ty check` | pytest、Neotest、debugpy |
+| Zig | zls、`zig fmt` | `zig build test`、Neotest、codelldb |
+| Go | gopls、gofumpt、goimports、golangci-lint | `go test`、Neotest、Delve |
+| Rust | rust-analyzer、rustaceanvim、rustfmt、Clippy | Cargo、Neotest、codelldb |
+
+Mason 只安装编辑器侧的 LSP、格式化器与调试适配器；Rust 编译工具链由 rustup 提供，其余声明的全局编译器和构建系统由 Homebrew 提供。C/C++ 的 clangd 与 clang-format 是例外：两者显式使用 Homebrew LLVM 的同一滚动版本，避免 Mason 与终端工具链发生版本漂移。CMake 使用 neocmake 与 gersemi，两者统一为 100 列；neocmake 保留内置语义和样式诊断，不再额外启动固定 80 列且维护停滞的 cmakelint。CMake 和通用任务输出统一进入 Overseer，测试统一进入 Neotest，原生语言统一使用 codelldb。调试配置优先读取项目的 `.vscode/launch.json`，也可以使用内置的 launch/attach 配置。
+
+新建规范 C++ 项目时直接运行：
+
+```bash
+cxx init hello
+cd hello
+cmake --workflow --preset dev
+```
+
+模板内置 C++23、CMake Presets、Ninja、clangd、clang-format、clang-tidy、CTest 与 Sanitizer 配置；创建过程不访问网络，生成项目也不依赖 `cxx` 命令。
+
+`cmake --workflow --preset dev` 不只是首次构建：它还会生成 clangd 所需的 `build/dev/compile_commands.json`。对于包含 `.cxx.toml` 的受管项目，若该固定位置的文件不存在，Neovim 会报告缺失事实并提示项目 flags 可能不完整；workflow 完成后执行 `:lsp restart clangd` 即可重新载入精确的 C++23、SDK、include 与 warning 配置。其他项目的 `.clangd` 语义不由 dotfiles 解析或改写。C/C++ Buffer 默认使用 4 空格实时缩进，与 cxx 模板的 `.clang-format` 保持一致；项目自己的 EditorConfig 仍可覆盖该默认值，保存时由 clang-format 作最终格式化。
+
+### Markdown 与 Python
+
+Markdown 在普通、命令和终端模式渲染标题、任务、表格、代码块、图片和数学公式，进入插入模式后显示原始文本，兼顾阅读与编辑。
+
+| 快捷键 | 功能 |
+| --- | --- |
+| `<leader>um` | 切换 Neovim 内 Markdown 渲染 |
+| `<leader>cp` | 切换 Markdown 浏览器预览，适合 Mermaid 和 Zellij 会话 |
+| `[[` / `]]` | 跳转到上一节 / 下一节 |
+| `gO` | 打开 Markdown 文档大纲 |
+| `<leader>cv` | 在 Python Buffer 中手动选择虚拟环境 |
+| `<leader>cT` | 使用 ty 对整个 Python 项目做补充类型检查 |
+
+新 uv 项目先执行 `uv sync`，再打开 Neovim。打开项目中的 Python 文件时，会依据 `uv.lock` 自动激活 `.venv/bin/python`，并把同一环境交给 Ty、Ruff、DAP 与 Neotest；Ty 是主交互 LSP，负责补全、导航、重构与类型分析，Ruff 负责 Lint、修复与 Code Action。Pyright 仍由 Mason 安装，但默认禁用且不附着，作为显式回滚资产。
+
+### Ghostty（macOS）与 Zellij（macOS/Linux）
+
+Ghostty 固定使用 Catppuccin Mocha 暗色主题，并使用职责明确的字体栈：MonoLisa customizer 输出的 `MonoLisaCode Variable-cv04-cv08-ss03-ss07-ss11` 变量字体负责拉丁文字、代码、字重与斜体，PingFang SC 负责中文，Maple Mono NF CN 是 Nerd Font 图标的首选 fallback，`Symbols Nerd Font Mono` 保留为单字符宽度末级符号兜底。默认字面使用 MonoLisa 原生 `wght=600 / GRAD=25`，ANSI 强调使用 `wght=800 / GRAD=25`，斜体由独立 Italic 字形文件提供并使用相同的对应端点。OpenType 偏好记录在 `fonts/monolisa-opentype.toml`：启用标准/上下文连字、`cv04` 往返箭头、`cv08` 箭头、`ss03` 直立体 alternate g、`ss07` traditional `*` 与 `ss11` alternate braces；禁用 discretionary coding ligatures、slashed zero，以及其余 alternates。该策略由 MonoLisa customizer 固化到用户授权字体，并通过 `tests/fonts/test_monolisa_manifest.py --upright <font> --italic <font>` 验证；Ghostty 1.3 的 feature 会作用于全部 fallback，因此终端配置不直接设置 `font-feature`。配置同时关闭字体增重和合成字形，不额外缩放图标；fallback 仅按缺字与配置顺序发生，不按 Git、Prompt 或 Neovim 等语义强制分配，也不维护脆弱的码点映射。MonoLisa 字体文件不进入本仓库；Maple 与 Symbols Nerd Font 由 Brewfile 管理。终端同时提供透明模糊背景、10 万行回滚、剪贴板读取确认和失焦窗口长命令完成通知。Zellij 保留会话结构恢复，但不把 Pane 可见内容序列化到缓存。
+
+Ghostty 标题文字同样使用授权的 MonoLisa customizer family；保留 macOS 红黄绿窗口按钮，隐藏只能显示或关闭、无法自定义的当前目录代理文件夹图标。
+
+| 平台与程序 | 快捷键 | 功能 |
+| --- | --- | --- |
+| macOS · Ghostty | `Cmd-Alt-Space` | 显示/隐藏 Quick Terminal；此处 Alt 是左 Option |
+| macOS · Ghostty | `Cmd-D` / `Cmd-Shift-D` | 向右 / 向下创建分屏 |
+| macOS · Ghostty | `Cmd-H/J/K/L` | 在分屏间移动 |
+| macOS · Ghostty | `Cmd-Z` | 放大/恢复当前分屏 |
+| macOS/Linux · Zellij | `Ctrl-G` | 解锁或重新锁定 Zellij |
+| macOS/Linux · Zellij | `Alt-H/J/K/L` | 在已解锁的 Pane 间移动 |
+| macOS/Linux · Zellij | `Alt-N` / `Alt-F` | 新建 Pane / 切换浮动 Pane |
+| macOS/Linux · Zellij | `Ctrl-P` / `Ctrl-T` | 进入 Pane / Tab 模式 |
+| macOS/Linux · Zellij | `Ctrl-S`，然后 `e` | 进入滚动模式并用 Neovim 编辑滚动缓冲区 |
+| macOS/Linux · Zellij | `Ctrl-O`，然后 `w` / `d` | 打开 Session Manager / Detach |
+
+Ghostty 与 Zellij 0.45+ 均支持 Kitty Graphics Protocol；Zellij 会按 Pane 跟踪图片位置，因此内联图片在缩放、重排、滚动、全屏和浮动 Pane 中仍能正确显示。浏览器预览继续作为 Mermaid 交互查看和非兼容终端的通用回退。
+
+### Git 同步、chezmoi 与维护
+
+`git pull` 仅允许 fast-forward，不会隐式创建 Merge Commit 或自动 Rebase。需要把当前分支显式更新到远端主干时，分步执行：
+
+```bash
+git fetch origin
+git rebase origin/main
+```
+
+`fetch.prune` 会在同步时清理已经从远端删除的跟踪引用；`rerere` 会复用曾经人工解决过的冲突；`zdiff3` 冲突标记会同时展示共同祖先。新分支首次执行 `git push` 时会自动建立 upstream，新仓库默认使用 `main`。
+
+| 命令 | 功能 |
+| --- | --- |
+| `git lg` / `git st` / `git dfs` | 图形日志 / 状态 / 已暂存 Diff |
+| `git amend` / `git undo` | 修改上次提交 / 撤销提交并保留文件 |
+| `git rescue` | 查看 Reflog |
+| `git sweep` / `git sweep-delete` / `git sweep-force` | 预览失去远端的分支 / 安全删除已合并分支 / 显式强制删除 |
+| `cz` / `cza` / `czd` | chezmoi 命令入口 / 应用目标状态 / 查看目标差异 |
+| `cze` / `czu` | 编辑受管文件 / 更新 source state 并显示差异（不应用） |
+| `brewup` / `devup` | 更新并清理 Homebrew / 隔离准备与冒烟验证 Neovim 更新候选，不自动采用 |
+| `devdoctor` | 只读检查配置、Runtime 来源、签名和关键工具 |
+| `scan-secrets` | 使用 gitleaks 扫描暂存内容 |
+
+## SSH 与提交签名
+
+- Workstation 默认启用 SSH 提交签名，但不再把所有 GitHub HTTPS URL 全局改写为 SSH；`ghc` 仍显式使用 SSH 克隆。
+- Dev Container 不强制签名、不固定本地 IdentityFile，也不改写 URL，允许使用转发凭据或项目级 Git 配置。
+- 本地模式使用 `~/.ssh/keys/` 下相互独立且有口令的 Ed25519 认证/签名 key；已有无口令 key 不会被脚本自动轮换。
+- 缺少本地 key 时，非交互 `chezmoi apply` 会立即失败并提示操作方式，不会等待 `ssh-keygen` 输入。
+- Fresh apply 在 Brew bundle 后通过确定的 Homebrew/Linuxbrew 入口运行 `gitleaks`，本地磁盘 key 模式也以同样方式运行 `gh`，两者均不依赖父进程 `PATH`。GitHub 目标固定为 `github.com`；`gh` 只在已认证时同步公钥，API 查询或上传失败会保留非零状态以允许 run-once 重试。未认证时会明确说明本次未同步且 run-once 不会自动重试，并输出完整的手动同步命令。`gitleaks` 缺失、不可执行或扫描失败均会非零退出；已有非 chezmoi 管理的 pre-commit hook，以及符号链接或非普通文件均会原样保留并显式告警。
+- 启用 `features.use_1password` 后，SSH 统一使用 1Password Agent 且初始化脚本不生成私钥；导出的 `~/.ssh/keys/git_signing.pub` 会内联为 Git `key::` 配置，并在 apply 时验证 Agent 确实提供同一 key。
+- `git.rewrite_github_https_to_ssh` 是显式 opt-in，默认关闭；可在初始化前通过 `OP_SSH_AUTH_SOCK` 覆盖 1Password Agent socket。
+- 全局 Git ignore 只处理 OS 与编辑器垃圾；依赖缓存、环境文件和 SOPS/age 文件由仓库级 `.gitignore` 与 gitleaks 管理。
