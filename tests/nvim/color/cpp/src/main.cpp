@@ -51,11 +51,23 @@ int observe_binding_topology(
 ) {
     // DX:M2 cpp.binding.local_variable
     // DX:M2B-B cpp.behavior.ordinary_local_variable
+    // DX:E3 cpp.value.namespace_reference
+    // DX:E3 cpp.value.namespace_static_reference
     int local_value = parameter_value + namespace_counter + namespace_static_counter;
     // DX:M2B-B cpp.behavior.function_local_static_variable
     static int function_static_count = 8;
     const BindingProbe probe{};
+    // DX:E3 cpp.value.local_reference
+    // DX:E3 cpp.value.local_static_reference
+    // DX:E3 cpp.value.constexpr_reference
     int result = local_value + function_static_count + namespace_readonly;
+    // DX:E3 cpp.value.runtime_const_declaration
+    const int runtime_readonly = parameter_value;
+    // DX:E3 cpp.value.local_constexpr_declaration
+    constexpr int local_constant = 9;
+    // DX:E3 cpp.value.runtime_const_reference
+    // DX:E3 cpp.value.local_constexpr_reference
+    result += runtime_readonly + local_constant;
     // DX:M2B cpp.classification.qualified_static_member_access
     result += BindingProbe::shared_count;
     // DX:M2B cpp.classification.instance_member_access

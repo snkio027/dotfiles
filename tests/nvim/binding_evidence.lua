@@ -315,7 +315,7 @@ local function request_raw_semantic_tokens(bufnr, client, allow_pending)
 		fail(("raw semantic-token response failed for %s: %s"):format(client.name, vim.inspect(response.err)))
 	end
 	if allow_pending and (response.result == nil or response.result == vim.NIL) then
-		return nil -- Protocol null is not evidence; the bounded alias readiness check retries it.
+		return nil -- Protocol null is not evidence; the bounded review check retries it.
 	end
 	if type(response.result) ~= "table" or type(response.result.data) ~= "table" then
 		fail(("raw semantic-token response has no full token data for %s"):format(client.name))
@@ -408,7 +408,7 @@ end
 -- Initialized is not the same as semantically ready: rust-analyzer can first
 -- report use-as declarations as syntax-only variable tokens. Wait on the whole
 -- review matrix, not elapsed time, and retain both independent protocol/native checks.
-local function settled_alias_tokens(bufnr, cases, lang, clients_by_name)
+local function settled_review_tokens(bufnr, cases, lang, clients_by_name, topic)
 	local raw_tokens_by_name = {}
 	local pending
 	local function matches(read_tokens)
@@ -437,7 +437,7 @@ local function settled_alias_tokens(bufnr, cases, lang, clients_by_name)
 		end)
 	end, 250)
 	if not ready then
-		fail("alias raw evidence did not settle: " .. tostring(pending))
+		fail(topic .. " raw evidence did not settle: " .. tostring(pending))
 	end
 	vim.lsp.semantic_tokens.force_refresh(bufnr)
 	ready = vim.wait(15000, function()
@@ -446,7 +446,7 @@ local function settled_alias_tokens(bufnr, cases, lang, clients_by_name)
 		end)
 	end, 100)
 	if not ready then
-		fail("alias native evidence did not settle: " .. tostring(pending))
+		fail(topic .. " native evidence did not settle: " .. tostring(pending))
 	end
 	return raw_tokens_by_name
 end
@@ -616,6 +616,8 @@ local function main()
 	local manifest = dofile(repo_root .. "/tests/nvim/color_manifest.lua")
 	local alias_review = assert(manifest.classification_reviews.alias_identity, "alias review missing")
 	assert_equal(alias_review.decision, "PENDING — EVIDENCE ONLY", "alias classification requires separate approval")
+	local value_review = assert(manifest.classification_reviews.value_binding, "value-binding review missing")
+	assert_equal(value_review.decision, "PENDING — EVIDENCE ONLY", "value classification requires separate approval")
 	pcall(require("lazy").load, { plugins = { "nvim-lspconfig" } })
 
 	-- Recursive workspace watchers are irrelevant to immutable fixtures and can
@@ -632,6 +634,7 @@ local function main()
 	local classification_observations = {}
 	local correction_observations = {}
 	local alias_observations = {}
+	local value_observations = {}
 	local case_count = 0
 	local classification_count = 0
 	local correction_count = 0
@@ -703,7 +706,7 @@ local function main()
 			end
 		end
 		if #alias_cases > 0 then
-			local settled_tokens = settled_alias_tokens(bufnr, alias_cases, lang, clients_by_name)
+			local settled_tokens = settled_review_tokens(bufnr, alias_cases, lang, clients_by_name, "alias")
 			for _, case in ipairs(alias_cases) do
 				if
 					observations[case.tag]
@@ -714,6 +717,28 @@ local function main()
 					fail("duplicate alias evidence tag: " .. case.tag)
 				end
 				alias_observations[case.tag] = capture_case(bufnr, case, lang, spec, clients_by_name, settled_tokens)
+			end
+		end
+
+		local value_cases = {}
+		for _, case in ipairs(value_review.cases) do
+			if case.language == lang then
+				value_cases[#value_cases + 1] = case
+			end
+		end
+		if #value_cases > 0 then
+			local settled_tokens = settled_review_tokens(bufnr, value_cases, lang, clients_by_name, "value binding")
+			for _, case in ipairs(value_cases) do
+				if
+					observations[case.tag]
+					or classification_observations[case.tag]
+					or correction_observations[case.tag]
+					or alias_observations[case.tag]
+					or value_observations[case.tag]
+				then
+					fail("duplicate value-binding evidence tag: " .. case.tag)
+				end
+				value_observations[case.tag] = capture_case(bufnr, case, lang, spec, clients_by_name, settled_tokens)
 			end
 		end
 
@@ -735,6 +760,31 @@ local function main()
 
 	assert_equal(case_count, 28, "binding evidence case count changed")
 	assert_equal(vim.tbl_count(alias_observations), 14, "alias evidence case count changed")
+	assert_equal(vim.tbl_count(value_observations), 13, "value-binding evidence case count changed")
+	local all_values =
+		vim.tbl_extend("error", observations, classification_observations, correction_observations, value_observations)
+	local value_pairs = 0
+	for _, case in ipairs(value_review.cases) do
+		if case.declaration_tag then
+			local declaration = assert(all_values[case.declaration_tag], "missing value declaration: " .. case.tag)
+			assert_equal(
+				value_observations[case.tag].effective.role,
+				declaration.effective.role,
+				"value declaration/reference identity drift: " .. case.tag
+			)
+			value_pairs = value_pairs + 1
+		end
+	end
+	assert_equal(value_pairs, 11, "value declaration/reference pair count changed")
+	for _, occurrence in ipairs({ "declaration", "reference" }) do
+		for _, producer in ipairs({ "lsp", "treesitter" }) do
+			assert_equal(
+				signature(value_observations["cpp.value.runtime_const_" .. occurrence], producer),
+				signature(value_observations["cpp.value.local_constexpr_" .. occurrence], producer),
+				"same-scope const/constexpr evidence distinction changed: " .. producer .. "/" .. occurrence
+			)
+		end
+	end
 	for _, comparison in ipairs(manifest.binding_comparisons or {}) do
 		local left = observations[comparison.left]
 		local right = observations[comparison.right]
@@ -819,6 +869,9 @@ local function main()
 		)
 	)
 	print("E alias identity observations passed: 14/14 cases; classification: PENDING.")
+	print(
+		"E value-binding observations passed: 13/13 new positions, 11/11 declaration/reference pairs; classification: PENDING."
+	)
 end
 
 local ok, err = xpcall(main, debug.traceback)

@@ -1300,6 +1300,53 @@ end
 assert(vim.deep_equal(alias_counts, { cpp = 6, rust = 8, module = 4, type = 10 }), "Alias boundary coverage drift")
 print("Verified all 14/14 alias review locators; no classification change authorized.")
 
+local value_review = assert(manifest.classification_reviews.value_binding, "Value-binding review missing")
+assert_eq(value_review.decision, "PENDING — EVIDENCE ONLY", "Value classification requires separate approval")
+assert_eq(#value_review.cases, 13, "Expected 13 new value-binding observations")
+local value_cases_by_tag = vim.tbl_extend("error", {}, behavior_cases_by_tag)
+for _, spec in pairs(manifest.languages) do
+	for _, case in ipairs(spec.binding_cases or {}) do
+		assert(not value_cases_by_tag[case.tag], "Duplicate reused value tag")
+		value_cases_by_tag[case.tag] = case
+	end
+end
+local value_counts = { cpp = 0, rust = 0, pairs = 0 }
+for _, case in ipairs(value_review.cases) do
+	assert(case.language == "cpp" or case.language == "rust", "Value review escaped C++/Rust scope")
+	assert(not value_cases_by_tag[case.tag] and not alias_tags[case.tag], "Duplicate value tag: " .. case.tag)
+	value_cases_by_tag[case.tag] = case
+	assert(case.tag:find(case.language .. ".value.", 1, true) == 1, "Value tag/language mismatch")
+	assert(case.semantic_description and #case.semantic_description > 0, "Value description missing")
+	local role = ({ variable = "DxVariable", ["const-item"] = "DxConstant", ["static-item"] = "DxConstant" })[case.source_identity]
+	assert(role and (case.language == "rust" or role == "DxVariable"), "Invalid value source identity")
+	local spec, evidence = manifest.languages[case.language], case.evidence
+	assert_eq(evidence.lsp.provider, spec.evidence_client, "Value provider drift")
+	assert_eq(evidence.effective.role, role, "Value observation escaped its recorded role")
+	local lsp_owned = role == "DxVariable"
+	assert_eq(evidence.effective.source, lsp_owned and "lsp" or "treesitter", "Value authority drift")
+	assert_eq(evidence.require_unique_top_foreground, lsp_owned, "Value foreground tie policy drift")
+	assert_eq(#evidence.applied_foregrounds, lsp_owned and 1 or 0, "Value semantic foreground ownership drift")
+	local buf = vim.fn.bufadd(repo_root .. "/" .. spec.path)
+	vim.fn.bufload(buf)
+	locate_symbolic_sentinel(buf, case.tag, case.token, case.language)
+	value_counts[case.language] = value_counts[case.language] + 1
+end
+for _, case in ipairs(value_review.cases) do
+	if case.occurrence == "reference" then
+		local declaration = assert(value_cases_by_tag[case.declaration_tag], "Value declaration missing: " .. case.tag)
+		assert(declaration.occurrence ~= "reference", "Value pair must not target another reference")
+		assert_eq(declaration.token, case.token, "Value pair names differ")
+		assert_eq(declaration.evidence.lsp.provider, case.evidence.lsp.provider, "Value pair providers differ")
+		assert_eq(declaration.evidence.effective.role, case.evidence.effective.role, "Value pair roles differ")
+		value_counts.pairs = value_counts.pairs + 1
+	else
+		assert_eq(case.occurrence, "declaration", "Invalid value occurrence")
+		assert_eq(case.declaration_tag, nil, "Declaration must not link to another declaration")
+	end
+end
+assert(vim.deep_equal(value_counts, { cpp = 9, rust = 4, pairs = 11 }), "Value boundary coverage drift")
+print("Verified 13/13 new value locators and 11/11 declaration/reference pairs; no classification change authorized.")
+
 assert(
 	verified_sentinels == expected_total and verified_sentinels > 0,
 	("Sentinel count mismatch: verified %d, expected %d"):format(verified_sentinels, expected_total)
