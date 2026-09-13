@@ -11,8 +11,8 @@ function M.resolve(c)
   local code = {
     -- High-frequency semantic axes
     variable = "#C4CAE0",
-    keyword = "#79AAFF",
-    keyword_function = "#79AAFF",
+    keyword = "#DB8FEE",
+    keyword_function = "#DB8FEE",
     callable = "#FFB266",
     type = "#3DD1BB",
     builtin = "#9ECE6A",
@@ -22,7 +22,7 @@ function M.resolve(c)
     lifetime = "#67D4C7",
     parameter = "#C8B2E3",
     meta = "#FF8F7D",
-    namespace = "#DB8FEE",
+    namespace = "#79AAFF",
     string = "#B8D07A",
     number = "#F2D675",
     constant = "#F2D675",
