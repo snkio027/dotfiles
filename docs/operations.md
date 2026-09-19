@@ -278,6 +278,24 @@ cmake --workflow --preset dev
 
 `cmake --workflow --preset dev` 不只是首次构建：它还会生成 clangd 所需的 `build/dev/compile_commands.json`。对于包含 `.cxx.toml` 的受管项目，若该固定位置的文件不存在，Neovim 会报告缺失事实并提示项目 flags 可能不完整；workflow 完成后执行 `:lsp restart clangd` 即可重新载入精确的 C++23、SDK、include 与 warning 配置。其他项目的 `.clangd` 语义不由 dotfiles 解析或改写。C/C++ Buffer 默认使用 4 空格实时缩进，与 cxx 模板的 `.clang-format` 保持一致；项目自己的 EditorConfig 仍可覆盖该默认值，保存时由 clang-format 作最终格式化。
 
+#### C++ 代码骨架与语义补全
+
+clangd 负责符号、成员及函数／模板调用参数；LuaSnip 负责可编辑的代码骨架，Blink 统一展示。若项目为避免 clangd `if` 等代码模式的缩进问题而设置了 `Completion.CodePatterns: None`，可保持该设置；不要关闭整个 LSP `snippetSupport`，以免丢失调用参数占位符。本仓库不会自动改写项目的 `.clangd`。
+
+在 C++ Buffer 输入以下触发词，从 Blink 的 Snippets 候选确认后，用 `Tab` / `Shift-Tab` 前后跳转；重复出现的模板参数名会联动更新，最后一站是正文或片段末尾。
+
+| 触发词 | 代码骨架 |
+| --- | --- |
+| `tfn` / `tclass` | 函数模板 / `struct` 类模板 |
+| `tusing` | 别名模板 |
+| `concept` | 带类型要求的概念定义（C++20） |
+| `requires` | requires 表达式（C++20；用于概念定义时自行补结尾分号） |
+| `ifce` | `if constexpr`（C++17） |
+| `tpack` | 转发参数包与逗号折叠（C++17；需要 `<utility>` 和实际的消费函数） |
+| `tspec` | 类模板显式特化（需先声明主模板） |
+
+这些是小型骨架，不自动插入头文件，也不推断业务约束。`tpack` 保留实参的值类别，丢弃调用返回值以避免重载逗号运算符干扰折叠，并支持空参数包。缩进随 Buffer 的 `shiftwidth` / `expandtab`，不会在展开后格式化整个文件。常用反向循环 `forr` 继续使用安全的反向迭代器版本。
+
 ### Markdown 与 Python
 
 Markdown 在普通、命令和终端模式渲染标题、任务、表格、代码块、图片和数学公式，进入插入模式后显示原始文本，兼顾阅读与编辑。
