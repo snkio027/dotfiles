@@ -85,6 +85,7 @@ assert_container_state() {
         nvim --headless "+luafile tests/nvim/startup_policy.lua" \
             "+luafile tests/nvim/smoke.lua" +qa
         nvim -n --headless "+luafile tests/nvim/run_contract.lua" "tests/nvim/completion_contract.lua"
+        python3 tests/nvim/comment_keys.py || exit "$?"
         nvim -n --headless "+luafile tests/nvim/run_contract.lua" "tests/nvim/rust_toolchain.lua" || exit "$?"
         nvim -n --headless "+luafile tests/nvim/production_visual_runtime.lua" +qa
         DOTFILES_STRICT_LSP=1 nvim -n --headless "+luafile tests/nvim/color_contract.lua" +qa
@@ -113,6 +114,10 @@ assert_container_state() {
     grep -Fq "Completion interaction contract passed: LazyVim defaults, LuaSnip expansion, replacement plugin topology." "$nvim_log" || {
         cat "$nvim_log" >&2
         fail "Completion interaction contract did not complete"
+    }
+    grep -Fq "Native comment key contract passed:" "$nvim_log" || {
+        cat "$nvim_log" >&2
+        fail "Native comment key contract did not complete"
     }
     grep -Fq "M2A binding-topology evidence passed: 28/28 cases, 15/15 comparisons." "$nvim_log" || {
         cat "$nvim_log" >&2

@@ -74,6 +74,11 @@ grep -Fq "COMPLETION_CONTRACT_NEGATIVE_CONTROL" "$LOG_DIR/completion-contract-ne
     echo "Completion contract negative control did not reach the injected assertion" >&2
     exit 1
 }
+if ! python3 tests/nvim/comment_keys.py >"$LOG_DIR/comment-keys.log" 2>&1; then
+    cat "$LOG_DIR/comment-keys.log" >&2
+    exit 1
+fi
+grep -Fq "Native comment key contract passed:" "$LOG_DIR/comment-keys.log"
 run_nvim color-unit "-n" "+set rtp^=$PWD/home/dot_config/nvim" "+luafile tests/nvim/run_contract.lua" "tests/nvim/color_unit_contract.lua"
 run_nvim production-visual "-n" "+luafile tests/nvim/production_visual_runtime.lua" +qa
 run_nvim python-provider-unit "-n" "+set rtp^=$PWD/home/dot_config/nvim" \
