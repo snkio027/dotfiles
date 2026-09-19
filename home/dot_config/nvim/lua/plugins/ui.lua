@@ -53,6 +53,24 @@ return {
     },
   },
   {
+    "folke/which-key.nvim",
+    opts = {
+      -- Auto-triggering Normal-mode `g` can split native gcc into gc + c
+      -- (upstream #968). Keep native dispatch; :WhichKey g still shows help.
+      triggers = {
+        { "<auto>", mode = "xso" },
+        { "<leader>", mode = "n" },
+        { "<localleader>", mode = "n" },
+        { "<C-w>", mode = "n" },
+        { "z", mode = "n" },
+        { "[", mode = "n" },
+        { "]", mode = "n" },
+        { "<", mode = "n" },
+        { ">", mode = "n" },
+      },
+    },
+  },
+  {
     "nvim-mini/mini.icons",
     opts = require("config.icon_contract"),
   },
