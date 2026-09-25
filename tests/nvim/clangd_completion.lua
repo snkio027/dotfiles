@@ -275,7 +275,18 @@ local ok, err = xpcall(function()
 end, debug.traceback)
 
 local exit_log = root .. "/exit.log"
-lua("vim.o.verbosefile = ...; vim.o.verbose = 9", { exit_log })
+lua(
+	[[local path = ...
+  vim.ui_attach(vim.api.nvim_create_namespace('clangd_exit_trace'),
+    {ext_messages=true, set_cmdheight=false}, function(event, ...)
+      if event ~= 'msg_show' and event ~= 'cmdline_show' then return end
+      local f = assert(io.open(path, 'a'))
+      f:write(event, ' ', vim.inspect({...}), '\n', debug.traceback(), '\n')
+      f:close()
+    end)
+]],
+	{ exit_log }
+)
 -- Observe graceful fixture LSP shutdown before requesting editor exit; both
 -- the shutdown deadline and the final child exit status remain hard assertions.
 local cleanup_ok, cleanup_err = pcall(
@@ -303,7 +314,7 @@ if status == -1 then
 	io.stderr:write("Embedded editor exit state: " .. vim.inspect(mode_ok and mode or "unavailable") .. "\n")
 	if vim.fn.filereadable(exit_log) == 1 then
 		local trace = vim.fn.readfile(exit_log)
-		io.stderr:write(table.concat(vim.list_slice(trace, math.max(1, #trace - 50)), "\n") .. "\n")
+		io.stderr:write(table.concat(vim.list_slice(trace, math.max(1, #trace - 100)), "\n") .. "\n")
 	end
 	vim.fn.jobstop(channel)
 	vim.wait(2000, function()
