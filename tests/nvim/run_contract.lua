@@ -4,9 +4,11 @@
 vim.opt.swapfile = false
 
 local args = vim.fn.argv()
-local test_file = nil
+-- An explicit path does not open the test itself as a Lua editing buffer (and
+-- accidentally start lua_ls). Keep argv support for existing contract callers.
+local test_file = vim.g.dotfiles_contract_file
 
-for _, arg in ipairs(args) do
+for _, arg in ipairs(test_file and {} or args) do
 	if arg:match("%.lua$") and arg ~= "tests/nvim/run_contract.lua" then
 		test_file = arg
 		break

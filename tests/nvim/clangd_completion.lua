@@ -290,20 +290,14 @@ local ok, err = xpcall(function()
 	equal(lua("return _G.dotfiles_warm_installs"), {}, "warm UI must not start Mason installations")
 end, debug.traceback)
 
--- Observe graceful fixture LSP shutdown before requesting editor exit; both
--- the shutdown deadline and the final child exit status remain hard assertions.
+-- Observe actual fixture client retirement before requesting editor exit; both
+-- the retirement deadline and the final child exit status remain hard assertions.
 local cleanup_ok, cleanup_err = pcall(
 	lua,
 	[[
-  local clients = vim.lsp.get_clients()
-  for _, client in ipairs(clients) do client:stop(false) end
-  assert(vim.wait(10000, function()
-    for _, client in ipairs(clients) do
-      if not client:is_stopped() then return false end
-    end
-    return true
-  end, 20), 'CLANGD_COMPLETION: fixture LSP shutdown timed out')
-]]
+  dofile(...)(vim.lsp.get_clients(), 'clangd-completion', 10000)
+]],
+	{ vim.fn.getcwd() .. "/tests/nvim/lsp_shutdown.lua" }
 )
 pcall(vim.rpcnotify, channel, "nvim_exec_lua", "vim.schedule(function() vim.cmd('qa!') end)", {})
 -- Keep the full event loop (including UI/RPC traffic) running while waiting
