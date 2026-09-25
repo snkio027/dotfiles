@@ -160,6 +160,21 @@ local ok, err = xpcall(function()
 	wait("clangd attached", function()
 		return lua("return #vim.lsp.get_clients({bufnr=0,name='clangd'})") == 1
 	end)
+	lua([[
+    local registry = require('mason-registry')
+    local tools = vim.deepcopy(LazyVim.opts('mason.nvim').ensure_installed)
+    local mapping = require('mason-lspconfig.mappings').get_mason_map().lspconfig_to_package
+    for _, server in ipairs(require('mason-lspconfig.settings').current.ensure_installed) do
+      local name = require('mason-core.package').Parse(server)
+      tools[#tools + 1] = assert(mapping[name], 'Unmapped Mason LSP server: ' .. name)
+    end
+    local pending = require('config.mason').pending(tools)
+    assert(#pending == 0, 'WARM_UI_MASON_NOT_READY: ' .. table.concat(pending, ', '))
+    _G.dotfiles_warm_installs = {}
+    registry:on('package:install:handle', function(handle)
+      table.insert(_G.dotfiles_warm_installs, handle.package.name)
+    end)
+  ]])
 	wait("initial parse", function()
 		return lua("return #vim.diagnostic.get(0) > 0")
 	end)
@@ -272,21 +287,9 @@ local ok, err = xpcall(function()
 	input("7")
 	jump(0)
 	equal(lines()[4], "    twice(7)", "constrained template argument replacement")
+	equal(lua("return _G.dotfiles_warm_installs"), {}, "warm UI must not start Mason installations")
 end, debug.traceback)
 
-local exit_log = root .. "/exit.log"
-lua(
-	[[local path = ...
-  vim.ui_attach(vim.api.nvim_create_namespace('clangd_exit_trace'),
-    {ext_messages=true, set_cmdheight=false}, function(event, ...)
-      if event ~= 'msg_show' and event ~= 'cmdline_show' then return end
-      local f = assert(io.open(path, 'a'))
-      f:write(event, ' ', vim.inspect({...}), '\n', debug.traceback(), '\n')
-      f:close()
-    end)
-]],
-	{ exit_log }
-)
 -- Observe graceful fixture LSP shutdown before requesting editor exit; both
 -- the shutdown deadline and the final child exit status remain hard assertions.
 local cleanup_ok, cleanup_err = pcall(
@@ -312,10 +315,6 @@ local status = exit_status or -1
 if status == -1 then
 	local mode_ok, mode = pcall(vim.rpcrequest, channel, "nvim_get_mode")
 	io.stderr:write("Embedded editor exit state: " .. vim.inspect(mode_ok and mode or "unavailable") .. "\n")
-	if vim.fn.filereadable(exit_log) == 1 then
-		local trace = vim.fn.readfile(exit_log)
-		io.stderr:write(table.concat(vim.list_slice(trace, math.max(1, #trace - 100)), "\n") .. "\n")
-	end
 	vim.fn.jobstop(channel)
 	vim.wait(2000, function()
 		return exit_status ~= nil

@@ -69,7 +69,7 @@ assert_container_state() {
     mason_data_root="${XDG_DATA_HOME:-$HOME/.local/share}/nvim/mason/packages"
     [[ -s "$mason_manifest" ]] || fail "Mason provisioning manifest is missing"
     mapfile -t mason_tools <"$mason_manifest"
-    [[ "${#mason_tools[@]}" -eq 21 ]] || fail "Mason provisioning manifest is not 21/21"
+    [[ "${#mason_tools[@]}" -eq 33 ]] || fail "Mason provisioning manifest is not 33/33 (tools + LSP servers)"
     unique_count="$(sort -u "$mason_manifest" | wc -l | tr -d ' ')"
     [[ "$unique_count" -eq "${#mason_tools[@]}" ]] || fail "Mason provisioning manifest contains duplicates"
     for mason_tool in "${mason_tools[@]}"; do
@@ -80,23 +80,23 @@ assert_container_state() {
 
     nvim_log="$(mktemp)"
     (
-        cd "$workspace_folder"
-        nvim --headless "+luafile tests/nvim/provision.lua" +qa
+        cd "$workspace_folder" || exit "$?"
+        nvim --headless "+luafile tests/nvim/provision.lua" +qa || exit "$?"
         nvim --headless "+luafile tests/nvim/startup_policy.lua" \
-            "+luafile tests/nvim/smoke.lua" +qa
-        nvim -n --headless "+luafile tests/nvim/run_contract.lua" "tests/nvim/completion_contract.lua"
+            "+luafile tests/nvim/smoke.lua" +qa || exit "$?"
+        nvim -n --headless "+luafile tests/nvim/run_contract.lua" "tests/nvim/completion_contract.lua" || exit "$?"
         nvim -u NONE -n -i NONE --headless "+luafile tests/nvim/run_contract.lua" \
             "tests/nvim/clangd_completion.lua" || exit "$?"
         python3 tests/nvim/comment_keys.py || exit "$?"
         nvim -n --headless "+luafile tests/nvim/run_contract.lua" "tests/nvim/rust_toolchain.lua" || exit "$?"
-        nvim -n --headless "+luafile tests/nvim/production_visual_runtime.lua" +qa
-        DOTFILES_STRICT_LSP=1 nvim -n --headless "+luafile tests/nvim/color_contract.lua" +qa
-        nvim -n --headless "+luafile tests/nvim/binding_evidence.lua" +qa
+        nvim -n --headless "+luafile tests/nvim/production_visual_runtime.lua" +qa || exit "$?"
+        DOTFILES_STRICT_LSP=1 nvim -n --headless "+luafile tests/nvim/color_contract.lua" +qa || exit "$?"
+        nvim -n --headless "+luafile tests/nvim/binding_evidence.lua" +qa || exit "$?"
         nvim -u NONE -i NONE --headless "+set rtp^=$PWD/home/dot_config/nvim" \
-            "+luafile tests/nvim/run_contract.lua" "tests/nvim/python_provider_ownership_contract.lua"
+            "+luafile tests/nvim/run_contract.lua" "tests/nvim/python_provider_ownership_contract.lua" || exit "$?"
         DOTFILES_M2C_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}" \
-            bash tests/nvim/python_provider_ownership.sh
-        bash tests/nvim/color/validate_fixtures.sh
+            bash tests/nvim/python_provider_ownership.sh || exit "$?"
+        bash tests/nvim/color/validate_fixtures.sh || exit "$?"
     ) >"$nvim_log" 2>&1 || {
         cat "$nvim_log" >&2
         fail "Neovim warm smoke failed"
@@ -233,7 +233,7 @@ log_line() {
 run_devcontainer up --workspace-folder "$WORKSPACE" 2>&1 | tee "$FIRST_LOG"
 START_LINE="$(log_line "$FIRST_LOG" 'Dev Container post-create start')"
 ATTEMPT_LINE="$(log_line "$FIRST_LOG" 'post-create Neovim provisioning attempt')"
-TOOLS_LINE="$(log_line "$FIRST_LOG" 'required tools complete: 21/21')"
+TOOLS_LINE="$(log_line "$FIRST_LOG" 'required tools complete: 33/33')"
 PROVISION_LINE="$(log_line "$FIRST_LOG" 'post-create Neovim provisioning complete')"
 POST_CREATE_LINE="$(log_line "$FIRST_LOG" 'Dev Container post-create complete')"
 OUTCOME_LINE="$(log_line "$FIRST_LOG" '"outcome":"success"')"
