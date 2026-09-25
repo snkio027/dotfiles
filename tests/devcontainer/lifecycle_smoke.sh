@@ -85,6 +85,8 @@ assert_container_state() {
         nvim --headless "+luafile tests/nvim/startup_policy.lua" \
             "+luafile tests/nvim/smoke.lua" +qa
         nvim -n --headless "+luafile tests/nvim/run_contract.lua" "tests/nvim/completion_contract.lua"
+        nvim -u NONE -n -i NONE --headless "+luafile tests/nvim/run_contract.lua" \
+            "tests/nvim/clangd_completion.lua" || exit "$?"
         python3 tests/nvim/comment_keys.py || exit "$?"
         nvim -n --headless "+luafile tests/nvim/run_contract.lua" "tests/nvim/rust_toolchain.lua" || exit "$?"
         nvim -n --headless "+luafile tests/nvim/production_visual_runtime.lua" +qa
@@ -114,6 +116,10 @@ assert_container_state() {
     grep -Fq "Completion interaction contract passed: LazyVim defaults, LuaSnip expansion, replacement plugin topology." "$nvim_log" || {
         cat "$nvim_log" >&2
         fail "Completion interaction contract did not complete"
+    }
+    grep -Fq "Clangd completion contract passed:" "$nvim_log" || {
+        cat "$nvim_log" >&2
+        fail "Clangd completion contract did not complete"
     }
     grep -Fq "Native comment key contract passed:" "$nvim_log" || {
         cat "$nvim_log" >&2

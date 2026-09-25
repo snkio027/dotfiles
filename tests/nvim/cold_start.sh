@@ -74,6 +74,13 @@ grep -Fq "COMPLETION_CONTRACT_NEGATIVE_CONTROL" "$LOG_DIR/completion-contract-ne
     echo "Completion contract negative control did not reach the injected assertion" >&2
     exit 1
 }
+run_nvim clangd-completion "-u" "NONE" "-n" "-i" "NONE" \
+    "+luafile tests/nvim/run_contract.lua" "tests/nvim/clangd_completion.lua"
+grep -Fq "Clangd completion contract passed:" "$LOG_DIR/clangd-completion.log" || {
+    cat "$LOG_DIR/clangd-completion.log" >&2
+    echo "Clangd completion contract did not complete" >&2
+    exit 1
+}
 if ! python3 tests/nvim/comment_keys.py >"$LOG_DIR/comment-keys.log" 2>&1; then
     cat "$LOG_DIR/comment-keys.log" >&2
     exit 1
@@ -93,7 +100,7 @@ DOTFILES_M2C_CONFIG_HOME="$CONFIG_HOME" DOTFILES_M2C_LOG_DIR="$LOG_DIR" \
 
 if grep -ERni 'Package is already installing|MasonToolsStartingInstall|MasonToolsUpdateCompleted|^Installing tools:|^Updating tools:' \
     "$LOG_DIR/lazy-restore.log" "$LOG_DIR/startup-policy.log" "$LOG_DIR/completion-contract.log" \
-    "$LOG_DIR/completion-contract-negative.log" "$LOG_DIR/smoke.log" \
+    "$LOG_DIR/completion-contract-negative.log" "$LOG_DIR/clangd-completion.log" "$LOG_DIR/smoke.log" \
     "$LOG_DIR/color-unit.log" "$LOG_DIR/production-visual.log" \
     "$LOG_DIR/python-provider-unit.log" "$LOG_DIR/color-contract.log" "$LOG_DIR/rust-ownership.log" \
     "$LOG_DIR/binding-evidence.log" "$LOG_DIR/python-provider-production.log"; then

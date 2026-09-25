@@ -280,7 +280,17 @@ cmake --workflow --preset dev
 
 #### C++ 代码骨架与语义补全
 
-clangd 负责符号、成员及函数／模板调用参数；LuaSnip 负责可编辑的代码骨架，Blink 统一展示。若项目为避免 clangd `if` 等代码模式的缩进问题而设置了 `Completion.CodePatterns: None`，可保持该设置；不要关闭整个 LSP `snippetSupport`，以免丢失调用参数占位符。本仓库不会自动改写项目的 `.clangd`。
+clangd 提供符号、成员、函数／模板参数及上下文代码模式，Blink 展示候选，LuaSnip 执行占位符展开。保留完整 LSP `snippetSupport`，不屏蔽 clangd 候选。针对 clangd 多行控制结构缺失相对缩进的问题，只在这些代码模式的独立正文占位符前补一层缩进；已有缩进、namespace、调用参数、头文件编辑与其他服务器候选保持原样，不在接受补全后格式化整个文件。
+
+如果旧项目为绕过缩进问题设置了 `Completion.CodePatterns: None`，需手动删除该项或改为下面的设置，再执行 `:lsp restart clangd`。不要覆盖项目原有的 `CompileFlags` 等配置；dotfiles 不会自动改写项目的 `.clangd`。
+
+```yaml
+Completion:
+  CodePatterns: All
+  ArgumentLists: FullPlaceholders
+```
+
+Enter 接受候选，Tab / Shift-Tab 前后跳转占位符；C/C++ 默认每层 4 空格，仍尊重项目 EditorConfig。LSP 代码模式与 Snippets 代码骨架可同时出现，按来源选择即可。恢复补全入口不等于 clangd 和所用标准库已实现全部 C++23 特性；语义能力仍取决于实际编译数据库、LLVM 和标准库版本。
 
 在 C++ Buffer 输入以下触发词，从 Blink 的 Snippets 候选确认后，用 `Tab` / `Shift-Tab` 前后跳转；重复出现的模板参数名会联动更新，最后一站是正文或片段末尾。
 
