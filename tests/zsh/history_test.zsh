@@ -167,4 +167,50 @@ for tool in direnv fzf atuin zoxide carapace starship; do
 done
 assert_init "$test_root/selected" second changed-environment "$test_root/zshrc"
 
+# Exercise real per-process soft/hard limits in disposable children; do not
+# change this runner's limits. No external hooks/config are loaded by the probe.
+parent_limit="$(ulimit -Sn)"
+for scenario in 'darwin-test 256 8192 4096' 'darwin-test 8192 8192 8192' \
+    'darwin-test 256 1024 1024' 'darwin-test 128 128 128' 'linux-test 256 8192 256'; do
+    env PATH=/nonexistent HOMEBREW_PREFIX='' XDG_CONFIG_HOME="$test_root/empty-config" \
+        "$zsh_binary" -dfi -c '
+            set -eu
+            OSTYPE=$1
+            ulimit -Sn "$2"
+            ulimit -Hn "$3"
+            source "$5"
+            [[ "$(ulimit -Sn)" == "$4" && "$(ulimit -Hn)" == "$3" ]]
+        ' _ ${=scenario} "$test_root/zshrc"
+done
+[[ "$(ulimit -Sn)" == "$parent_limit" ]]
+
+# Unlimited and a denied increase are simulated without requiring elevated
+# privileges. A denied increase must warn but not prevent Shell startup.
+for scenario in unlimited denied; do
+    env PATH=/nonexistent HOMEBREW_PREFIX='' XDG_CONFIG_HOME="$test_root/empty-config" \
+        "$zsh_binary" -dfi -c '
+            set -eu
+            OSTYPE=darwin-test
+            mode=$1
+            attempts=0
+            ulimit() {
+                case "$*" in
+                    "-Sn") [[ "$mode" == unlimited ]] && print unlimited || print 256 ;;
+                    "-Hn") print 8192 ;;
+                    "-Sn 4096") (( ++attempts )); return 1 ;;
+                    *) return 99 ;;
+                esac
+            }
+            source "$2"
+            [[ "$mode" == unlimited && "$attempts" == 0 ]] ||
+                [[ "$mode" == denied && "$attempts" == 1 ]]
+        ' _ "$scenario" "$test_root/zshrc" 2> "$test_root/limit.stderr"
+    if [[ "$scenario" == denied ]]; then
+        grep -q '无法提高文件句柄软上限' "$test_root/limit.stderr"
+    else
+        [[ ! -s "$test_root/limit.stderr" ]]
+    fi
+done
+print 'Zsh file descriptor policy 7/7: raise, preserve, cap, platform and failure controls passed'
+
 print "Zsh history, init freshness and key ownership tests passed"

@@ -91,7 +91,14 @@ local function accept(prefix, text, filter, match)
 	lua("require('blink.cmp').show({providers = {'lsp'}})")
 	local index
 	wait("clangd candidate " .. filter, function()
-		for i, candidate in ipairs(lua("return require('blink.cmp').get_items()")) do
+		-- Snippet provider items may contain functions/userdata. Keep the real
+		-- menu and its indices, but send only observable scalar fields over RPC.
+		local items = lua([[
+      return vim.tbl_map(function(item)
+        return {client_name=item.client_name, filterText=item.filterText, insertText=item.insertText}
+      end, require('blink.cmp').get_items())
+    ]])
+		for i, candidate in ipairs(items) do
 			if
 				candidate.client_name == "clangd"
 				and candidate.filterText == filter
@@ -113,7 +120,12 @@ local function accept(prefix, text, filter, match)
 	wait("menu selection", function()
 		return lua("return require('blink.cmp').get_selected_item_idx()") == index
 	end)
-	local chosen = lua("return require('blink.cmp').get_selected_item()")
+	local chosen = lua([[
+    local item = assert(require('blink.cmp').get_selected_item(), 'no selected candidate')
+    return {client_name=item.client_name, filterText=item.filterText,
+      insertText=item.insertText, insertTextFormat=item.insertTextFormat}
+  ]])
+	equal(chosen.client_name, "clangd", "selected real provider")
 	equal(chosen.filterText, filter, "selected real candidate")
 	local has_first_placeholder = (chosen.insertText or ""):find("${1:", 1, true) ~= nil
 	input("<CR>")
