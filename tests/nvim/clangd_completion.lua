@@ -274,6 +274,8 @@ local ok, err = xpcall(function()
 	equal(lines()[4], "    twice(7)", "constrained template argument replacement")
 end, debug.traceback)
 
+local exit_log = root .. "/exit.log"
+lua("vim.o.verbosefile = ...; vim.o.verbose = 9", { exit_log })
 -- Observe graceful fixture LSP shutdown before requesting editor exit; both
 -- the shutdown deadline and the final child exit status remain hard assertions.
 local cleanup_ok, cleanup_err = pcall(
@@ -297,6 +299,12 @@ vim.wait(5000, function()
 end, 20)
 local status = exit_status or -1
 if status == -1 then
+	local mode_ok, mode = pcall(vim.rpcrequest, channel, "nvim_get_mode")
+	io.stderr:write("Embedded editor exit state: " .. vim.inspect(mode_ok and mode or "unavailable") .. "\n")
+	if vim.fn.filereadable(exit_log) == 1 then
+		local trace = vim.fn.readfile(exit_log)
+		io.stderr:write(table.concat(vim.list_slice(trace, math.max(1, #trace - 50)), "\n") .. "\n")
+	end
 	vim.fn.jobstop(channel)
 	vim.wait(2000, function()
 		return exit_status ~= nil
