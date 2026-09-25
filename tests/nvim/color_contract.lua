@@ -856,6 +856,14 @@ local function main()
 		})
 	end
 
+	-- This contract observes immutable semantic/highlight fixtures, not builds.
+	-- On Linux ZLS 0.16 starts a build-on-save runner by default, then waits for
+	-- its cold compiler work even after shutdown/exit. Keep AST diagnostics and
+	-- semantic analysis active, but do not start that unrelated background build.
+	-- Production settings and the five-second retirement deadline are unchanged.
+	vim.lsp.config("zls", { settings = { zls = { enable_build_on_save = false } } })
+	local shutdown = dofile(repo_root .. "/tests/nvim/lsp_shutdown.lua")
+
 	for _, lang_key in ipairs(lang_order) do
 		local spec = manifest.languages[lang_key]
 		if not spec then
@@ -912,18 +920,7 @@ local function main()
 
 			local attached_clients = vim.lsp.get_clients({ bufnr = bufnr })
 			vim.cmd.bdelete({ bang = true })
-			vim.lsp.stop_client(attached_clients, false)
-			local stopped = vim.wait(5000, function()
-				for _, attached in ipairs(attached_clients) do
-					if vim.lsp.get_client_by_id(attached.id) then
-						return false
-					end
-				end
-				return true
-			end, 50)
-			if not stopped then
-				fail("LSP clients did not stop cleanly after fixture: " .. lang_key)
-			end
+			shutdown(attached_clients, lang_key, 5000)
 		else
 			fail(("Fixture file not found: %s"):format(fixture_path))
 		end

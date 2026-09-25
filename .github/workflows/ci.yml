@@ -472,7 +472,7 @@ jobs:
           {
             nvim --headless "+Lazy! sync" "+luafile tests/nvim/provision.lua" +qa
             nvim --headless "+MasonToolsUpdateSync" +qa
-            nvim --headless "+luafile tests/nvim/smoke.lua" +qa
+            nvim --headless "+lua vim.g.dotfiles_contract_file = 'tests/nvim/smoke.lua'" "+luafile tests/nvim/run_contract.lua"
             nvim -n --headless "+luafile tests/nvim/color_contract.lua" +qa
             nvim -n --headless "+luafile tests/nvim/binding_evidence.lua" +qa
           } 2>&1 | tee "$rolling_log"
