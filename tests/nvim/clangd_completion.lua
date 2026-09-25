@@ -62,10 +62,24 @@ local function node()
 		[[local n = require('luasnip').session.current_nodes[vim.api.nvim_get_current_buf()]; return n and n.pos]]
 	)
 end
+local function at_node(pos)
+	-- LuaSnip publishes the active node before its queued cursor/mode keys run.
+	-- Observe the actual editor state before typing or sending the next Tab.
+	return lua(
+		[[
+    local n = require('luasnip').session.current_nodes[vim.api.nvim_get_current_buf()]
+    if not n or n.pos ~= ... then return false end
+    local first, last = n.mark:pos_begin_end_raw()
+    return vim.deep_equal(vim.api.nvim_win_get_cursor(0), {first[1] + 1, first[2]})
+      and vim.api.nvim_get_mode().mode == (vim.deep_equal(first, last) and 'i' or 's')
+  ]],
+		{ pos }
+	)
+end
 local function jump(pos, key)
 	input(key or "<Tab>")
 	wait("placeholder " .. pos, function()
-		return node() == pos
+		return at_node(pos)
 	end)
 end
 local function accept(prefix, text, filter, match)
@@ -131,7 +145,7 @@ local function accept(prefix, text, filter, match)
 	input("<CR>")
 	wait("snippet accepted", function()
 		return (chosen.insertTextFormat ~= 2 or node() ~= nil)
-			and (not has_first_placeholder or (node() == 1 and lua("return vim.api.nvim_get_mode().mode") == "s"))
+			and (not has_first_placeholder or at_node(1))
 			and not lua("return require('blink.cmp').is_menu_visible()")
 			and lines()[#prefix - 1] ~= prefix[#prefix - 1] .. text
 	end)
