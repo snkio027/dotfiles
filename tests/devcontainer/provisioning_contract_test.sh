@@ -46,8 +46,8 @@ attempt=$((attempt + 1))
 printf '%d\n' "$attempt" >"$attempts"
 
 if [[ "${DOTFILES_TEST_NVIM_MODE:-fail}" == "recover" && "$attempt" -eq 2 ]]; then
-    printf 'Mason missing-tool provisioning 21/21\n'
-    printf 'Mason required tools: codelldb,debugpy,delve,gersemi,gofumpt,goimports,golangci-lint,gopls,hadolint,js-debug-adapter,markdown-toc,markdownlint-cli2,pyright,ruff,shellcheck,shfmt,sqlfluff,stylua,tflint,ty,zls\n'
+    printf 'Mason missing-tool provisioning 33/33\n'
+    printf 'Mason required tools: bash-language-server,codelldb,debugpy,delve,docker-compose-language-service,dockerfile-language-server,gersemi,gofumpt,goimports,golangci-lint,gopls,hadolint,helm-ls,js-debug-adapter,json-lsp,lua-language-server,markdown-toc,markdownlint-cli2,marksman,neocmakelsp,pyright,ruff,shellcheck,shfmt,sqlfluff,stylua,taplo,terraform-ls,tflint,ty,vtsls,yaml-language-server,zls\n'
     exit 0
 fi
 
@@ -126,9 +126,9 @@ fi
 
 [[ "$(<"$ATTEMPT_FILE")" -eq 2 ]] || fail "Transient provisioning did not stop after the successful retry"
 grep -Fq 'post-create Neovim provisioning retry 1/3' "$LOG_FILE"
-grep -Fq 'required tools complete: 21/21' "$LOG_FILE"
+grep -Fq 'required tools complete: 33/33' "$LOG_FILE"
 grep -Fq 'post-create Neovim provisioning complete' "$LOG_FILE"
-[[ "$(wc -l <"$TEST_HOME/.local/state/dotfiles/mason-tools.txt" | tr -d ' ')" -eq 21 ]] ||
+[[ "$(wc -l <"$TEST_HOME/.local/state/dotfiles/mason-tools.txt" | tr -d ' ')" -eq 33 ]] ||
     fail "Successful provisioning did not persist the complete manifest"
 
 # Exhaustion must propagate through the actual post-create entry point. The

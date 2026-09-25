@@ -3,6 +3,23 @@
 # 由 chezmoi 托管 | DevSecOps 生产级 Profile
 # ------------------------------------------------------------------------------
 
+# macOS GUI 终端可能继承 256 的软上限，clangd 读取标准库时会耗尽文件句柄。
+# 只调整本 Shell 及其后代；保留更高值、不改变硬上限、不修改 launchd/sysctl。
+if [[ "$OSTYPE" == darwin* ]]; then
+    () {
+        local soft_limit hard_limit target_limit=4096
+        soft_limit="$(ulimit -Sn)" || return 0
+        [[ "$soft_limit" != unlimited ]] || return 0
+        (( soft_limit < target_limit )) || return 0
+        hard_limit="$(ulimit -Hn)" || return 0
+        if [[ "$hard_limit" != unlimited ]] && (( hard_limit < target_limit )); then
+            target_limit=$hard_limit
+        fi
+        (( target_limit > soft_limit )) || return 0
+        ulimit -Sn "$target_limit" || print -u2 -- 'zsh: 无法提高文件句柄软上限；clangd 可能耗尽句柄。'
+    }
+fi
+
 # --- 1. 加载 Shell 模块化子配置（环境、别名、补全）---
 ZSH_CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/zsh"
 

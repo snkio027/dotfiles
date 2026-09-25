@@ -14,7 +14,7 @@ chezmoi init --apply https://github.com/snkio027/dotfiles
 
 Linux 工作站由 Brewfile 显式安装 `/home/linuxbrew/.linuxbrew/bin/zsh`，新建的非登录交互 Shell 也会直接获得 Linuxbrew PATH、FPATH、插件与补全，不依赖 `.zprofile`。安装 Zsh 与选择登录 Shell 是两个独立行为：本仓库不会执行 `chsh` 或修改 `/etc/shells`。需要切换时，应先确认该路径存在，再由用户按发行版要求将它加入 `/etc/shells` 并显式运行 `chsh -s /home/linuxbrew/.linuxbrew/bin/zsh`。
 
-Dev Container 使用 `CHEZMOI_PROFILE=devcontainer` 和独立的 `devcontainer.Brewfile`，通过 Linuxbrew 获得与 Linux workstation 相同的 60 个公式声明，但不会生成宿主密钥、修改宿主 Git hooks 或应用 macOS 偏好。基础镜像保留 `resolute` tag 便于 Dependabot 识别，同时固定其覆盖 Linux amd64/arm64 的 OCI manifest digest；镜像内的 chezmoi bootstrap 固定到 `2.72.1` 双架构制品，下载后先比对由上游 Sigstore 签名 checksum 得出的 SHA-256，再检查二进制自身版本，失败时不会留下可执行文件或成功 receipt。该固定制品只负责无 Homebrew 时的首次引导，稳态命令仍由 core profile 的 Homebrew owner 提供。post-create 是缺失 Neovim/Mason 工具的唯一 provisioning owner：瞬时失败最多重试三次，只有插件锁未漂移且 21 项 Mason receipt 完整时才返回成功；后续 lifecycle 只观察状态，不补装工具或重新 apply。CI 使用 Dev Container CLI 真实执行 post-create、非 root Shell、chezmoi、Neovim warm smoke 和二次 `up` 幂等验证。可用 `GIT_AUTHOR_NAME` 与 `GIT_AUTHOR_EMAIL` 覆盖缺省身份。
+Dev Container 使用 `CHEZMOI_PROFILE=devcontainer` 和独立的 `devcontainer.Brewfile`，通过 Linuxbrew 获得与 Linux workstation 相同的 60 个公式声明，但不会生成宿主密钥、修改宿主 Git hooks 或应用 macOS 偏好。基础镜像保留 `resolute` tag 便于 Dependabot 识别，同时固定其覆盖 Linux amd64/arm64 的 OCI manifest digest；镜像内的 chezmoi bootstrap 固定到 `2.72.1` 双架构制品，下载后先比对由上游 Sigstore 签名 checksum 得出的 SHA-256，再检查二进制自身版本，失败时不会留下可执行文件或成功 receipt。该固定制品只负责无 Homebrew 时的首次引导，稳态命令仍由 core profile 的 Homebrew owner 提供。post-create 是缺失 Neovim/Mason 工具的唯一 provisioning owner：瞬时失败最多重试三次，只有插件锁未漂移且 33 项 Mason receipt（21 项通用工具与去重后的 12 项额外 LSP） 完整时才返回成功；后续 lifecycle 复核 provisioning 并执行 warm UI 验收，不重新 apply；warm UI 必须在工具就绪后启动，不允许边安装边退出。CI 使用 Dev Container CLI 真实执行 post-create、非 root Shell、chezmoi、Neovim warm smoke 和二次 `up` 幂等验证。可用 `GIT_AUTHOR_NAME` 与 `GIT_AUTHOR_EMAIL` 覆盖缺省身份。
 
 ## 体验设计
 
@@ -280,7 +280,21 @@ cmake --workflow --preset dev
 
 #### C++ 代码骨架与语义补全
 
-clangd 负责符号、成员及函数／模板调用参数；LuaSnip 负责可编辑的代码骨架，Blink 统一展示。若项目为避免 clangd `if` 等代码模式的缩进问题而设置了 `Completion.CodePatterns: None`，可保持该设置；不要关闭整个 LSP `snippetSupport`，以免丢失调用参数占位符。本仓库不会自动改写项目的 `.clangd`。
+clangd 提供符号、成员、函数／模板参数及上下文代码模式，Blink 展示候选，LuaSnip 执行占位符展开。保留完整 LSP `snippetSupport`，不屏蔽 clangd 候选。针对 clangd 多行控制结构缺失相对缩进的问题，只在这些代码模式的独立正文占位符前补一层缩进；已有缩进、namespace、调用参数、头文件编辑与其他服务器候选保持原样，不在接受补全后格式化整个文件。
+
+如果旧项目为绕过缩进问题设置了 `Completion.CodePatterns: None`，需手动删除该项或改为下面的设置，再执行 `:lsp restart clangd`。不要覆盖项目原有的 `CompileFlags` 等配置；dotfiles 不会自动改写项目的 `.clangd`。
+
+```yaml
+Completion:
+  CodePatterns: All
+  ArgumentLists: FullPlaceholders
+```
+
+Enter 接受候选，Tab / Shift-Tab 前后跳转占位符；C/C++ 默认每层 4 空格，仍尊重项目 EditorConfig。LSP 代码模式与 Snippets 代码骨架可同时出现，按来源选择即可。恢复补全入口不等于 clangd 和所用标准库已实现全部 C++23 特性；语义能力仍取决于实际编译数据库、LLVM 和标准库版本。
+
+`condition` 等默认占位文字不是合法条件的保证；展开后直接输入实际表达式替换，再按 Tab 进入正文。未填写时 clangd 的“未声明标识符”诊断正常保留，不自动接受近似拼写修复。
+
+macOS 新交互式 Zsh 会将过低的文件句柄软上限提高到 4096（受既有硬上限约束），避免 GUI 终端继承 256 后令 clangd 连 `.clang-format` 和标准库头文件都无法读取。已有更高值或 unlimited 不变；不修改系统全局限制，也不改变现有进程。部署后保存编辑内容，在新终端重新启动 Neovim，可用 `ulimit -Sn` 核对。其他启动入口不在此保护范围；若仍出现 `Too many open files` 或 SIGSEGV，应继续检查句柄增长和 clangd 崩溃日志，不能把提高上限当成已修复上游泄漏或崩溃。
 
 在 C++ Buffer 输入以下触发词，从 Blink 的 Snippets 候选确认后，用 `Tab` / `Shift-Tab` 前后跳转；重复出现的模板参数名会联动更新，最后一站是正文或片段末尾。
 

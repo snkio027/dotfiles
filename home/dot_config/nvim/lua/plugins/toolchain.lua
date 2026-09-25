@@ -150,8 +150,8 @@ return {
     end,
   },
 
-  -- Mason packages have no lockfile. LazyVim's mason.nvim config is the sole
-  -- startup owner and only installs missing tools; updates remain explicit via
+  -- Mason packages have no lockfile. LazyVim's Mason integrations perform
+  -- missing-only startup installs; updates remain explicit via
   -- devup or the rolling-latest CI job.
   {
     "WhoIsSethDaniel/mason-tool-installer.nvim",

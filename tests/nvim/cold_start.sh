@@ -74,6 +74,25 @@ grep -Fq "COMPLETION_CONTRACT_NEGATIVE_CONTROL" "$LOG_DIR/completion-contract-ne
     echo "Completion contract negative control did not reach the injected assertion" >&2
     exit 1
 }
+run_nvim clangd-completion "-u" "NONE" "-n" "-i" "NONE" \
+    "+luafile tests/nvim/run_contract.lua" "tests/nvim/clangd_completion.lua"
+grep -Fq "Clangd completion contract passed:" "$LOG_DIR/clangd-completion.log" || {
+    cat "$LOG_DIR/clangd-completion.log" >&2
+    echo "Clangd completion contract did not complete" >&2
+    exit 1
+}
+# Independent cold-cache control: remove one LSP-only receipt from this test's
+# isolated data, not from the user's installation. A 21-tool-only check misses it.
+receipt="$XDG_DATA_HOME/nvim/mason/packages/lua-language-server/mason-receipt.json"
+mv "$receipt" "$receipt.negative"
+run_nvim_expected_failure clangd-completion-missing-receipt "-u" "NONE" "-n" "-i" "NONE" \
+    "+luafile tests/nvim/run_contract.lua" "tests/nvim/clangd_completion.lua"
+mv "$receipt.negative" "$receipt"
+grep -Fq 'WARM_UI_MASON_NOT_READY: lua-language-server' "$LOG_DIR/clangd-completion-missing-receipt.log" || {
+    cat "$LOG_DIR/clangd-completion-missing-receipt.log" >&2
+    echo "Missing LSP receipt did not fail the warm UI readiness check" >&2
+    exit 1
+}
 if ! python3 tests/nvim/comment_keys.py >"$LOG_DIR/comment-keys.log" 2>&1; then
     cat "$LOG_DIR/comment-keys.log" >&2
     exit 1
@@ -91,9 +110,9 @@ run_nvim binding-evidence "-n" "+luafile tests/nvim/binding_evidence.lua" +qa
 DOTFILES_M2C_CONFIG_HOME="$CONFIG_HOME" DOTFILES_M2C_LOG_DIR="$LOG_DIR" \
     bash tests/nvim/python_provider_ownership.sh
 
-if grep -ERni 'Package is already installing|MasonToolsStartingInstall|MasonToolsUpdateCompleted|^Installing tools:|^Updating tools:' \
+if grep -ERni 'Package is already installing|Neovim is exiting while packages are still installing|MasonToolsStartingInstall|MasonToolsUpdateCompleted|^Installing tools:|^Updating tools:' \
     "$LOG_DIR/lazy-restore.log" "$LOG_DIR/startup-policy.log" "$LOG_DIR/completion-contract.log" \
-    "$LOG_DIR/completion-contract-negative.log" "$LOG_DIR/smoke.log" \
+    "$LOG_DIR/completion-contract-negative.log" "$LOG_DIR/clangd-completion.log" "$LOG_DIR/smoke.log" \
     "$LOG_DIR/color-unit.log" "$LOG_DIR/production-visual.log" \
     "$LOG_DIR/python-provider-unit.log" "$LOG_DIR/color-contract.log" "$LOG_DIR/rust-ownership.log" \
     "$LOG_DIR/binding-evidence.log" "$LOG_DIR/python-provider-production.log"; then
