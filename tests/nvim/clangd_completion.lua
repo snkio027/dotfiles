@@ -40,10 +40,14 @@ vim.fn.writefile({
 	"  ArgumentLists: FullPlaceholders",
 }, root .. "/.clangd")
 vim.fn.writefile({ "int main() {", "    if", "}" }, root .. "/probe.cpp")
-local channel = vim.fn.jobstart(
-	{ vim.v.progpath, "--embed", "-n", "-i", "NONE", root .. "/probe.cpp" },
-	{ rpc = true, cwd = root }
-)
+local exit_status
+local channel = vim.fn.jobstart({ vim.v.progpath, "--embed", "-n", "-i", "NONE", root .. "/probe.cpp" }, {
+	rpc = true,
+	cwd = root,
+	on_exit = function(_, code)
+		exit_status = code
+	end,
+})
 assert(channel > 0, "could not start Neovim UI child")
 local function lua(code, args)
 	return vim.rpcrequest(channel, "nvim_exec_lua", code, args or {})
@@ -286,9 +290,17 @@ local cleanup_ok, cleanup_err = pcall(
 ]]
 )
 pcall(vim.rpcnotify, channel, "nvim_exec_lua", "vim.schedule(function() vim.cmd('qa!') end)", {})
-local status = vim.fn.jobwait({ channel }, 5000)[1]
+-- Keep the full event loop (including UI/RPC traffic) running while waiting
+-- for on_exit, rather than blocking it in jobwait on the RPC child.
+vim.wait(5000, function()
+	return exit_status ~= nil
+end, 20)
+local status = exit_status or -1
 if status == -1 then
 	vim.fn.jobstop(channel)
+	vim.wait(2000, function()
+		return exit_status ~= nil
+	end, 20)
 end
 vim.fn.delete(root, "rf")
 assert(ok, err)
