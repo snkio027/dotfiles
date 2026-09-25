@@ -256,13 +256,29 @@ local ok, err = xpcall(function()
 	equal(lines()[4], "    twice(7)", "constrained template argument replacement")
 end, debug.traceback)
 
-pcall(vim.rpcnotify, channel, "nvim_command", "qa!")
+-- Observe graceful fixture LSP shutdown before requesting editor exit; both
+-- the shutdown deadline and the final child exit status remain hard assertions.
+local cleanup_ok, cleanup_err = pcall(
+	lua,
+	[[
+  local clients = vim.lsp.get_clients()
+  for _, client in ipairs(clients) do client:stop(false) end
+  assert(vim.wait(10000, function()
+    for _, client in ipairs(clients) do
+      if not client:is_stopped() then return false end
+    end
+    return true
+  end, 20), 'CLANGD_COMPLETION: fixture LSP shutdown timed out')
+]]
+)
+pcall(vim.rpcnotify, channel, "nvim_exec_lua", "vim.schedule(function() vim.cmd('qa!') end)", {})
 local status = vim.fn.jobwait({ channel }, 5000)[1]
 if status == -1 then
 	vim.fn.jobstop(channel)
 end
 vim.fn.delete(root, "rf")
 assert(ok, err)
+assert(cleanup_ok, cleanup_err)
 assert(status == 0, "Neovim child did not exit cleanly: " .. status)
 print(
 	"Clangd completion contract passed: real candidates, block indentation, call/template arguments and keyboard jumps."
