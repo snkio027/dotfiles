@@ -18,7 +18,7 @@ return function(groups)
 	end
 	local ok, err = xpcall(function()
 		for _, pair in ipairs({
-			{ "DxKeyword", "DxFunctionKeyword", "#79AAFF", "@keyword", "@keyword.function" },
+			{ "DxKeyword", "DxFunctionKeyword", "#DB8FEE", "@keyword", "@keyword.function" },
 			{ "DxConstant", "DxNumber", "#F2D675", "@constant", "@number" },
 		}) do
 			for index = 1, 2 do

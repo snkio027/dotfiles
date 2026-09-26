@@ -595,7 +595,8 @@ local M5_PRODUCTION_GRAPH_COUNT = 226
 local M5_PRODUCTION_GRAPH_SHA256 = "51cfaae3c02ec25551f1a8afd27427d3919d6b53c3b05f5ae26ff6c125aa6666"
 local E_BASE_SHA = "41423d77b31f72e886300add6be56127e35fb68e"
 local E_GRAPH_COUNT = 226
-local E_GRAPH_SHA256 = "44df09042fd6fcb77f4421244a9eb1336c124ce394828cc67e5160cba314c701"
+local E_GRAPH_SHA256 = "eb7b5dc9790c8b609b81dc7ccce5bf5144d5b0c7131ff1eb64845ddf02eb8b19"
+local E_ORIGINAL_GRAPH_SHA256 = "44df09042fd6fcb77f4421244a9eb1336c124ce394828cc67e5160cba314c701"
 local E_AUTHORIZED_FOREGROUND_DELTA = {
 	DxKeyword = "#BB9AF7",
 	DxFunctionKeyword = "#7DCFFF",
@@ -722,9 +723,25 @@ assert_eq(production_count, E_GRAPH_COUNT, "E must retain the production group c
 assert_eq(production_digest, E_GRAPH_SHA256, "E production resolved graph changed")
 print(("E production graph frozen: %d groups, sha256=%s"):format(production_count, production_digest))
 
+-- User-requested grammar/namespace color swap: exactly three foreground fields.
+-- Restore the reviewed E graph without erasing links, styles or UI ownership.
+local original_e_graph = vim.deepcopy(full_hl)
+for role, old_foreground in pairs({
+	DxKeyword = "#79AAFF",
+	DxFunctionKeyword = "#79AAFF",
+	DxNamespace = "#DB8FEE",
+}) do
+	assert(original_e_graph[role].fg ~= old_foreground, "Requested color swap missing: " .. role)
+	original_e_graph[role].fg = old_foreground
+end
+local original_e_count, original_e_digest = normalized_graph_digest(original_e_graph)
+assert_eq(original_e_count, E_GRAPH_COUNT, "Color swap changed E group count")
+assert_eq(original_e_digest, E_ORIGINAL_GRAPH_SHA256, "Color swap changed more than three role foregrounds")
+print("Keyword/namespace swap verified: exactly three foregrounds; original E graph restored.")
+
 -- Only these eight role foregrounds may differ. Rolling them back must restore
 -- the complete base graph, including every UI definition, link and style authority.
-local historical_m5_graph = vim.deepcopy(full_hl)
+local historical_m5_graph = vim.deepcopy(original_e_graph)
 assert_eq(vim.tbl_count(E_AUTHORIZED_FOREGROUND_DELTA), 8, "E must change exactly eight role foregrounds")
 for role, old_foreground in pairs(E_AUTHORIZED_FOREGROUND_DELTA) do
 	local spec = historical_m5_graph[role]
