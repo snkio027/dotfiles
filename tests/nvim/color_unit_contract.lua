@@ -324,6 +324,7 @@ end
 
 -- Typemod Precedence Governance (Neutralization of overriding modifiers)
 local required_typemods = {
+	["@lsp.typemod.class.constructorOrDestructor.cpp"] = "DxCallable",
 	["@lsp.typemod.variable.readonly"] = "DxVariable",
 	["@lsp.typemod.variable.defaultLibrary"] = "DxVariable",
 	["@lsp.typemod.variable.static"] = "DxVariable",
@@ -717,14 +718,23 @@ local function normalized_graph_digest(graph)
 	return #names, vim.fn.sha256(table.concat(normalized, "\n"))
 end
 
+-- This semantic correction adds one C++-scoped link; the E palette and every
+-- other graph definition must remain byte-for-byte equivalent after rollback.
 local production_count, production_digest = normalized_graph_digest(full_hl)
-assert_eq(production_count, E_GRAPH_COUNT, "E must retain the production group count")
-assert_eq(production_digest, E_GRAPH_SHA256, "E production resolved graph changed")
+local SPECIAL_MEMBER_GRAPH_SHA256 = "c4f542adf2d920e7f12fb9600ee1e97ed412499d740dcc4d3ae0805d0aba1b97"
+assert_eq(production_count, E_GRAPH_COUNT + 1, "Special-member correction must add exactly one group")
+assert_eq(production_digest, SPECIAL_MEMBER_GRAPH_SHA256, "Special-member production resolved graph changed")
 print(("E production graph frozen: %d groups, sha256=%s"):format(production_count, production_digest))
+
+local historical_e_graph = vim.deepcopy(full_hl)
+historical_e_graph["@lsp.typemod.class.constructorOrDestructor.cpp"] = nil
+local e_count, e_digest = normalized_graph_digest(historical_e_graph)
+assert_eq(e_count, E_GRAPH_COUNT, "Special-member rollback changed the E group count")
+assert_eq(e_digest, E_GRAPH_SHA256, "Special-member rollback must restore the complete E graph")
 
 -- Only these eight role foregrounds may differ. Rolling them back must restore
 -- the complete base graph, including every UI definition, link and style authority.
-local historical_m5_graph = vim.deepcopy(full_hl)
+local historical_m5_graph = vim.deepcopy(historical_e_graph)
 assert_eq(vim.tbl_count(E_AUTHORIZED_FOREGROUND_DELTA), 8, "E must change exactly eight role foregrounds")
 for role, old_foreground in pairs(E_AUTHORIZED_FOREGROUND_DELTA) do
 	local spec = historical_m5_graph[role]
@@ -871,8 +881,8 @@ print(("M1 historical graph reconstructed from M5 production: %d groups, sha256=
 
 local function assert_production_graph(candidate)
 	local count, digest = normalized_graph_digest(candidate)
-	assert_eq(count, E_GRAPH_COUNT, "E production graph count changed")
-	assert_eq(digest, E_GRAPH_SHA256, "E production graph digest changed")
+	assert_eq(count, E_GRAPH_COUNT + 1, "E production graph count changed")
+	assert_eq(digest, SPECIAL_MEMBER_GRAPH_SHA256, "E production graph digest changed")
 end
 
 local bad_graph_extra = vim.deepcopy(full_hl)
@@ -924,7 +934,8 @@ local function locate_symbolic_sentinel(bufnr, tag, token, lang)
 				local target_line = lines[j]
 				local trimmed = target_line:match("^%s*(.-)%s*$") or ""
 				if not is_comment_line(trimmed, lang) then
-					local pattern = "%f[%w_]" .. vim.pesc(token) .. "%f[^%w_]"
+					local pattern = token:match("^%W+$") and vim.pesc(token)
+						or ("%f[%w_]" .. vim.pesc(token) .. "%f[^%w_]")
 					local s_start = target_line:find(pattern)
 					if s_start then
 						assert(j > i, "Sentinel token must not be found on the marker comment line")

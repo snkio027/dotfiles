@@ -5,7 +5,7 @@
 --- INVARIANTS:
 --- 1. Must fail closed: observes production configuration, NEVER reconstructs it.
 --- 2. Must ensure CI failure propagation: errors exit via :cquit 1 with full traceback.
---- 3. Symbolic sentinels must strictly search after marker comments on identifier boundaries.
+--- 3. Symbolic sentinels search after marker comments: identifier boundaries or literal punctuation.
 --- 4. Real LSP Gate: lane-aware (Tier-2A in minimal locked lane, Tier-2B strict in devcontainer);
 ---    attached servers with semanticTokensProvider MUST generate tokens bound to client.id.
 --- 5. Priority-based foreground resolution: inspect_pos extmarks & treesitter sorted by priority;
@@ -409,7 +409,10 @@ local function main()
 					local target_line = lines[j]
 					local trimmed = target_line:match("^%s*(.-)%s*$") or ""
 					if not is_comment_line(trimmed, lang) then
-						local pattern = "%f[%w_]" .. vim.pesc(token) .. "%f[^%w_]"
+						-- Punctuation-only probes inspect ~ and = themselves, not a
+						-- correctly colored neighboring identifier. Keep word boundaries otherwise.
+						local pattern = token:match("^%W+$") and vim.pesc(token)
+							or ("%f[%w_]" .. vim.pesc(token) .. "%f[^%w_]")
 						local s_start = target_line:find(pattern)
 						if s_start then
 							assert(j > i, "Sentinel token must not be found on the marker comment line")
