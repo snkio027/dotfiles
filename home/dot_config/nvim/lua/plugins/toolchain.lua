@@ -81,6 +81,8 @@ return {
       servers = {
         clangd = {
           mason = false,
+          root_dir = require("config.clangd_context").root_dir,
+          before_init = require("config.clangd_context").before_init,
           cmd = {
             homebrew_llvm_tool("clangd"),
             "--background-index",
