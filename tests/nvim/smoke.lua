@@ -114,6 +114,8 @@ end
 vim.fn.delete(managed_fixture, "rf")
 vim.fn.delete(editorconfig_fixture, "rf")
 
+dofile("tests/nvim/clangd_context.lua")
+
 require("lazy").load({ plugins = { "mini.icons" } })
 local icon_cases_path = vim.fn.getcwd() .. "/tests/icons/generated_cases.json"
 local icon_payload = vim.json.decode(table.concat(vim.fn.readfile(icon_cases_path), "\n"))
