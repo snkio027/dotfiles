@@ -81,6 +81,7 @@ return {
       servers = {
         clangd = {
           mason = false,
+          on_attach = require("theme.adapters.clangd_lambda").attach,
           root_dir = require("config.clangd_context").root_dir,
           before_init = require("config.clangd_context").before_init,
           cmd = {

@@ -718,15 +718,20 @@ local function normalized_graph_digest(graph)
 	return #names, vim.fn.sha256(table.concat(normalized, "\n"))
 end
 
--- This semantic correction adds one C++-scoped link; the E palette and every
--- other graph definition must remain byte-for-byte equivalent after rollback.
+-- Lambda projection adds no role or palette color. Unused diagnostics are a
+-- style-only overlay; removing that one new definition restores the prior graph.
+assert(vim.deep_equal(full_hl.DiagnosticUnnecessary, { italic = true }), "Unused state gained foreground authority")
 local production_count, production_digest = normalized_graph_digest(full_hl)
+assert_eq(production_count, E_GRAPH_COUNT + 2, "Lambda correction must add only the unused-state group")
+local special_member_graph = vim.deepcopy(full_hl)
+special_member_graph.DiagnosticUnnecessary = nil
+local special_count, special_digest = normalized_graph_digest(special_member_graph)
 local SPECIAL_MEMBER_GRAPH_SHA256 = "c4f542adf2d920e7f12fb9600ee1e97ed412499d740dcc4d3ae0805d0aba1b97"
-assert_eq(production_count, E_GRAPH_COUNT + 1, "Special-member correction must add exactly one group")
-assert_eq(production_digest, SPECIAL_MEMBER_GRAPH_SHA256, "Special-member production resolved graph changed")
+assert_eq(special_count, E_GRAPH_COUNT + 1, "Special-member correction must add exactly one group")
+assert_eq(special_digest, SPECIAL_MEMBER_GRAPH_SHA256, "Unrelated production resolved graph changed")
 print(("E production graph frozen: %d groups, sha256=%s"):format(production_count, production_digest))
 
-local historical_e_graph = vim.deepcopy(full_hl)
+local historical_e_graph = vim.deepcopy(special_member_graph)
 historical_e_graph["@lsp.typemod.class.constructorOrDestructor.cpp"] = nil
 local e_count, e_digest = normalized_graph_digest(historical_e_graph)
 assert_eq(e_count, E_GRAPH_COUNT, "Special-member rollback changed the E group count")
