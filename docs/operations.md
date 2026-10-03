@@ -280,6 +280,10 @@ cmake --workflow --preset dev
 
 #### C++ 代码骨架与语义补全
 
+C++ 可调用值使用 `DxCallable`，不改变类型名的颜色。clangd 适配器结合真实 AST、semantic tokens 和同一 buffer 的 document highlights：直接 lambda、明确写出的函数指针／引用（含成员函数指针、回调参数／字段）以及函数衰减初始化的 `auto` 可以在声明处识别；仿函数、`std::function`、`std::ref`／`std::bind_front` 结果、复制或工厂返回的闭包，则在存在 clangd 已解析成功的直接调用时，将同一符号的声明和引用统一投影。没有调用证据的未知对象／别名、依赖模板和未解析代码保持原角色；这不是任意类型的完整可调用性判定，也不是调用一定有效的保证。
+
+识别不解析 hover／AST dump 文本，不按库名猜测，不打开额外头文件或改写原始 LSP token。更新有 200 ms debounce、最多 4 个并发符号请求，并跳过大于 512 KiB 的 buffer；编辑／客户端退出时清空旧投影，过期或失败响应不产生颜色。该限制只停用额外 Callable 投影，原有语法高亮、语义高亮与诊断继续工作。
+
 clangd 提供符号、成员、函数／模板参数及上下文代码模式，Blink 展示候选，LuaSnip 执行占位符展开。保留完整 LSP `snippetSupport`，不屏蔽 clangd 候选。针对 clangd 多行控制结构缺失相对缩进的问题，只在这些代码模式的独立正文占位符前补一层缩进；已有缩进、namespace、调用参数、头文件编辑与其他服务器候选保持原样，不在接受补全后格式化整个文件。
 
 如果旧项目为绕过缩进问题设置了 `Completion.CodePatterns: None`，需手动删除该项或改为下面的设置，再执行 `:lsp restart clangd`。不要覆盖项目原有的 `CompileFlags` 等配置；dotfiles 不会自动改写项目的 `.clangd`。
