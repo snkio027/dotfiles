@@ -37,10 +37,10 @@ local id = assert(vim.lsp.start({
 	root_dir = root,
 	handlers = {
 		["textDocument/publishDiagnostics"] = function(err, result, ctx, config)
+			vim.lsp.handlers["textDocument/publishDiagnostics"](err, result, ctx, config)
 			if result and vim.uri_to_fname(result.uri) == root .. "/main.cpp" then
 				publish = result
 			end
-			vim.lsp.handlers["textDocument/publishDiagnostics"](err, result, ctx, config)
 		end,
 	},
 }, {
@@ -51,6 +51,16 @@ local id = assert(vim.lsp.start({
 }))
 local client = assert(vim.lsp.get_client_by_id(id))
 local request = client.request
+local action_evidence
+client.request = function(self, method, params, callback, target)
+	if method ~= "textDocument/codeAction" then
+		return request(self, method, params, callback, target)
+	end
+	return request(self, method, params, function(err, result)
+		action_evidence = { params = params, err = err, result = result }
+		callback(err, result)
+	end, target)
+end
 local choices, choose, notice, done
 vim.ui.select = function(items, opts, callback)
 	assert(opts.prompt:find("公开头文件", 1, true), "missing public-header warning")
@@ -65,14 +75,22 @@ end
 local function lines()
 	return vim.api.nvim_buf_get_lines(buf, 0, -1, false)
 end
-local function ready()
+local function ready(expected_code)
 	local reply = assert(client:request_sync("textDocument/documentSymbol", {
 		textDocument = vim.lsp.util.make_text_document_params(buf),
 	}, 10000, buf))
 	assert(not reply.err, vim.inspect(reply.err))
 	local version = vim.lsp.util.buf_versions[buf]
 	wait(function()
-		return publish and publish.version == version
+		if not publish or publish.version ~= version then
+			return false
+		end
+		if expected_code then
+			return #publish.diagnostics == 2
+				and publish.diagnostics[1].code == expected_code
+				and publish.diagnostics[2].code == expected_code
+		end
+		return true
 	end, "current diagnostics")
 end
 local function invoke()
@@ -88,7 +106,9 @@ local function find(header)
 			return choice
 		end
 	end
-	error("missing real include choice " .. header .. ": " .. vim.inspect({ choices, notice }))
+	error(
+		"missing real include choice " .. header .. ": " .. vim.inspect({ choices, notice, publish, action_evidence })
+	)
 end
 local ok, err = xpcall(function()
 	wait(function()
@@ -135,7 +155,10 @@ local ok, err = xpcall(function()
 	-- Simulate pasted uses with every include removed, after the real project
 	-- symbols have been indexed. These are unknown-type fixes, not just Strict.
 	vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "First first;", "Second second;" })
-	ready()
+	-- clangd can publish intermediate missing-includes diagnostics and then
+	-- unknown-type diagnostics for the same version. Wait for this case's raw
+	-- AST diagnostics, not merely a matching version or a successful action.
+	ready("unknown_typename")
 	invoke()
 	choose(find('"first.hpp"'))
 	ready()
