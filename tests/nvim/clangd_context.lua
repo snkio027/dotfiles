@@ -11,7 +11,19 @@ local original_clients, buffers = {}, {}
 for _, client in ipairs(vim.lsp.get_clients()) do
 	original_clients[client.id] = true
 end
-local stock = { "CompileFlags:", "  CompilationDatabase: build/dev", "", "Diagnostics:", "  MissingIncludes: Strict" }
+local legacy = { "CompileFlags:", "  CompilationDatabase: build/dev", "", "Diagnostics:", "  MissingIncludes: Strict" }
+local stock = {
+	"CompileFlags:",
+	"  CompilationDatabase: build/dev",
+	"",
+	"---",
+	"If:",
+	"  PathMatch: [(src|include|tests)/.*, '[^/]+\\.(c|cc|cpp|cxx|h|hh|hpp|hxx|inc)']",
+	"",
+	"Diagnostics:",
+	"  MissingIncludes: Strict",
+}
+local ignore = { "  Includes:", "    IgnoreHeader: 'dependency/private/.*'" }
 local function write(path, lines)
 	vim.fn.mkdir(vim.fs.dirname(path), "p")
 	vim.fn.writefile(lines, path)
@@ -112,6 +124,16 @@ local ok, err = xpcall(function()
 	local p23, source, header = fixture("cpp23", "c++23", "cpp", 23)
 	local p17, _, header17 = fixture("cpp17", "c++17", "cpp", 17)
 	local pc, _, headerc = fixture("c17", "c17", "c", 117)
+	for _, layout in ipairs({ legacy, stock }) do
+		for _, mode in ipairs({ "Strict", "None" }) do
+			for _, extra in ipairs({ {}, ignore }) do
+				local lines = vim.deepcopy(layout)
+				lines[#lines] = "  MissingIncludes: " .. mode
+				write(p23 .. "/.clangd", vim.list_extend(lines, extra))
+				assert(initialization(p23).compilationDatabasePath == p23 .. "/build/dev")
+			end
+		end
+	end
 	local params, options = initialization(p23, { usePlaceholders = true })
 	assert(params.compilationDatabasePath == p23 .. "/build/dev" and options == params)
 	assert(params.usePlaceholders, "existing initialization options lost")
@@ -127,6 +149,14 @@ local ok, err = xpcall(function()
 		{ "CompileFlags:", "  CompilationDatabase: build/other" },
 		{ "If:", "  PathMatch: src/.*", unpack(stock) },
 		vim.list_extend(vim.deepcopy(stock), { "---", "CompileFlags:", "  CompilationDatabase: None" }),
+		vim.list_extend(
+			vim.deepcopy(stock),
+			{ "---", "If:", "  PathMatch: vendor/.*", "CompileFlags:", "  CompilationDatabase: build/other" }
+		),
+		vim.list_extend(
+			vim.deepcopy(stock),
+			{ "  Includes:", "    IgnoreHeader: 'library/.*'", "CompileFlags:", "  CompilationDatabase: None" }
+		),
 	}) do
 		write(p23 .. "/.clangd", custom)
 		assert(initialization(p23) == vim.NIL, "custom project discovery overridden")
@@ -135,7 +165,9 @@ local ok, err = xpcall(function()
 	import_std[#import_std] = "  MissingIncludes: None"
 	write(p23 .. "/.clangd", import_std)
 	assert(initialization(p23).compilationDatabasePath == p23 .. "/build/dev")
-	write(p23 .. "/.clangd", stock)
+	write(p23 .. "/.clangd", vim.list_extend(vim.deepcopy(stock), ignore))
+	write(p17 .. "/.clangd", vim.list_extend(vim.deepcopy(legacy), ignore))
+	write(pc .. "/.clangd", stock)
 	vim.fn.delete(p23 .. "/.cxx.toml")
 	assert(initialization(p23) == vim.NIL, "unmanaged project pinned")
 	write(p23 .. "/.cxx.toml", { "schema = 1" })

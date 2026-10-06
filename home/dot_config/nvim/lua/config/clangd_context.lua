@@ -9,13 +9,20 @@ local function managed_database(root)
   if vim.fn.filereadable(database) ~= 1 or vim.fn.filereadable(config_file) ~= 1 then
     return
   end
-  -- Recognize only cxx's two stock templates, not arbitrary YAML. Pinning a
+  -- Recognize cxx's old/new stock layouts, not arbitrary YAML. Pinning a
   -- client-wide database overrides .clangd's lookup policy, so customized or
   -- conditional configurations must retain native clangd discovery instead.
   local config = table.concat(vim.fn.readfile(config_file), "\n")
-  local stock = "CompileFlags:\n  CompilationDatabase: build/dev\n\nDiagnostics:\n  MissingIncludes: "
-  if config == stock .. "Strict" or config == stock .. "None" then
-    return vim.fs.dirname(database)
+  -- A single quoted IgnoreHeader scalar changes diagnostics, not database lookup.
+  -- Accept only this appended shape; other custom YAML retains native discovery.
+  config = config:gsub("\n  Includes:\n    IgnoreHeader: '[^'\n]*'$", "")
+  local build = "CompileFlags:\n  CompilationDatabase: build/dev\n\n"
+  local scope = "---\nIf:\n  PathMatch: [(src|include|tests)/.*, '[^/]+\\.(c|cc|cpp|cxx|h|hh|hpp|hxx|inc)']\n\n"
+  for _, prefix in ipairs({ build, build .. scope }) do
+    local stock = prefix .. "Diagnostics:\n  MissingIncludes: "
+    if config == stock .. "Strict" or config == stock .. "None" then
+      return vim.fs.dirname(database)
+    end
   end
 end
 
