@@ -77,10 +77,20 @@ return {
   -- Explicit paths prevent Mason's bin directory from selecting a stale clangd.
   {
     "neovim/nvim-lspconfig",
+    opts_extend = { "servers.*.keys", "servers.clangd.keys" },
     opts = {
       servers = {
         clangd = {
           mason = false,
+          keys = {
+            {
+              "<leader>ci",
+              function()
+                require("config.clangd_includes").choose()
+              end,
+              desc = "Insert Missing Include (clangd)",
+            },
+          },
           on_attach = require("theme.adapters.clangd_callable").attach,
           root_dir = require("config.clangd_context").root_dir,
           before_init = require("config.clangd_context").before_init,

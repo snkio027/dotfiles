@@ -54,6 +54,7 @@ Neovim 的 `<leader>` 是空格。macOS 的 `Cmd` 绑定属于 Ghostty；Shell�
 | 浏览文件 / 查看 Git | `y`（Yazi，退出后进入目录）· `lg`（LazyGit） |
 | 查文件 / 搜项目 | Neovim `<leader><space>` · `<leader>/` |
 | 查引用 / 重命名 / Code Action | `grr` · `grn` · `gra` |
+| 粘贴 C/C++ 后补头文件 | `<leader>ci`：选择 clangd 的 include 插入建议；不会猜库、删头文件或改构建配置 |
 | 运行任务 / 最近测试 | `<leader>oo` · `<leader>tr` |
 | 设置断点 / 开始或继续调试 | `<leader>db` · `<leader>dc` |
 | 阅读 / 预览 Markdown | `<leader>um` · `<leader>cp` |

@@ -116,6 +116,18 @@ vim.fn.delete(managed_fixture, "rf")
 vim.fn.delete(editorconfig_fixture, "rf")
 
 dofile("tests/nvim/clangd_context.lua")
+local include_key, header_key
+for _, key in ipairs(LazyVim.opts("nvim-lspconfig").servers.clangd.keys or {}) do
+	if key[1] == "<leader>ci" then
+		include_key = key
+	end
+	if key[1] == "<leader>ch" then
+		header_key = key
+	end
+end
+assert(include_key and type(include_key[2]) == "function", "clangd include action key is unavailable")
+assert(header_key, "include action replaced LazyVim's source/header key")
+dofile("tests/nvim/clangd_includes.lua")
 dofile("tests/nvim/clangd_callable.lua")
 
 require("lazy").load({ plugins = { "mini.icons" } })
