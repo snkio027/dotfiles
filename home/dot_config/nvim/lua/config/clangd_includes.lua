@@ -65,6 +65,10 @@ end
 
 function M.choose()
   local buf = vim.api.nvim_get_current_buf()
+  if not vim.bo[buf].modifiable or vim.bo[buf].readonly then
+    notify("当前文件受只读保护；不会向依赖文件插入头文件。请回到自有源码操作。")
+    return
+  end
   local clients = vim.lsp.get_clients({ name = "clangd", bufnr = buf, method = "textDocument/codeAction" })
   if #clients ~= 1 then
     notify("需要当前文件连接到一个 clangd；请先确认项目已配置。")
@@ -77,6 +81,8 @@ function M.choose()
     return vim.api.nvim_buf_is_valid(buf)
       and vim.api.nvim_buf_is_loaded(buf)
       and vim.api.nvim_get_current_buf() == buf
+      and vim.bo[buf].modifiable
+      and not vim.bo[buf].readonly
       and vim.uri_from_bufnr(buf) == uri
       and vim.api.nvim_buf_get_changedtick(buf) == tick
       and not client:is_stopped()

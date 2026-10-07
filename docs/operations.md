@@ -110,6 +110,9 @@ python3 icons/generate.py --check # 验证生成制品未漂移
 
 ### C++ 项目与 vcpkg 环境
 
+日常添加库、增量构建与运行的完整步骤见 [C++ 开发与第三方库指南](cpp-workflow.md)。
+环境维护按本节执行；业务依赖仍由项目声明。
+
 Homebrew 管理 LLVM、CMake、Ninja、Git 等通用工具，uv 管理 `cxx-init`；dotfiles
 复用独立的 vcpkg Git checkout，不再通过 Brew 安装第二份 vcpkg。项目自己的
 `vcpkg.json` 与 CMake target 决定库依赖；编辑器从编译数据库取得结果。
