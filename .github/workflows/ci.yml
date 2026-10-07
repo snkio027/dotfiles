@@ -221,7 +221,9 @@ jobs:
           cd "$tmp_dir"
           "$cxx_bin" init smoke-project --no-git
           cd smoke-project
-          cmake --workflow --preset dev
+          # cxx-init's C++23 println fixture requires a print-capable library.
+          # Match the publisher's preinstalled GCC 14; default GCC 13 lacks <print>.
+          CXX=g++-14 cmake --workflow --preset dev
 
       - name: Test chezmoi apply --dry-run
         run: |
