@@ -235,6 +235,17 @@ else
     check_status "C++ Project Initializer" "warn" "cxx-init missing (run chezmoi apply)"
 fi
 
+# Check the same root CMake consumes, not an unrelated vcpkg found on PATH.
+if [[ -z "${VCPKG_ROOT:-}" ]]; then
+    check_status "C++ Dependencies (vcpkg)" "warn" "VCPKG_ROOT unset; open a new managed Shell or configure your existing checkout"
+elif [[ ! -f "$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" || ! -x "$VCPKG_ROOT/vcpkg" ]]; then
+    check_status "C++ Dependencies (vcpkg)" "warn" "Incomplete checkout: $VCPKG_ROOT; see the vcpkg setup in docs/operations.md"
+elif VCPKG_VERSION="$(VCPKG_DISABLE_METRICS=1 "$VCPKG_ROOT/vcpkg" version 2>&1)"; then
+    check_status "C++ Dependencies (vcpkg)" "pass" "$VCPKG_ROOT: ${VCPKG_VERSION%%$'\n'*}"
+else
+    check_status "C++ Dependencies (vcpkg)" "warn" "vcpkg failed at $VCPKG_ROOT: $VCPKG_VERSION"
+fi
+
 if command -v terraform &>/dev/null; then
     TF_VER="$(terraform version -json 2>/dev/null | jq -r '.terraform_version' || echo "installed")"
     check_status "Terraform CLI" "pass" "v$TF_VER"
