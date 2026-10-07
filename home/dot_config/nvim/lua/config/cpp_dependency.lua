@@ -34,19 +34,49 @@ function M.protect(buf)
   vim.b[buf].cpp_dependency = true
   vim.bo[buf].readonly = true
   vim.bo[buf].modifiable = false
+  vim.diagnostic.show(nil, buf)
+end
+
+-- Native per-buffer display options: diagnostic storage, signs, underline,
+-- floats and navigation are untouched. This does not fix header parsing.
+function M.inline_option(fallback)
+  return function(namespace, buf)
+    if vim.b[buf].cpp_dependency and not vim.bo[buf].modifiable and not vim.b[buf].cpp_dependency_inline then
+      return false
+    end
+    if type(fallback) == "function" then
+      return fallback(namespace, buf)
+    end
+    return fallback
+  end
+end
+
+function M.toggle_inline(buf)
+  if not vim.b[buf].cpp_dependency then
+    vim.notify("This buffer is not a protected C/C++ dependency.", vim.log.levels.INFO)
+    return
+  end
+  if vim.bo[buf].modifiable then
+    vim.notify("Dependency is editable; normal diagnostic display remains enabled.", vim.log.levels.INFO)
+    return
+  end
+  vim.b[buf].cpp_dependency_inline = not vim.b[buf].cpp_dependency_inline
+  vim.diagnostic.show(nil, buf)
+  vim.notify("Dependency inline diagnostics: " .. (vim.b[buf].cpp_dependency_inline and "on" or "off"))
 end
 
 function M.edit(buf)
   if not vim.b[buf].cpp_dependency then
-    vim.notify("当前文件没有启用 C++ 依赖保护。", vim.log.levels.INFO)
+    vim.notify("This buffer is not a protected C/C++ dependency.", vim.log.levels.INFO)
     return
   end
   vim.bo[buf].readonly = false
   vim.bo[buf].modifiable = true
   -- An explicit edit is not permission to reformat the dependency on save.
   vim.b[buf].autoformat = false
+  vim.diagnostic.show(nil, buf)
   vim.notify(
-    "已允许编辑当前依赖文件；保存自动格式化仍关闭。重新打开后恢复保护。",
+    "Dependency editing enabled; save-time formatting stays off. Reopen to restore protection.",
     vim.log.levels.WARN
   )
 end

@@ -32,6 +32,10 @@ vim.api.nvim_create_user_command("CppDependencyEdit", function()
   require("config.cpp_dependency").edit(vim.api.nvim_get_current_buf())
 end, { desc = "Allow editing this dependency buffer (autoformat stays off)" })
 
+vim.api.nvim_create_user_command("CppDependencyDiagnostics", function()
+  require("config.cpp_dependency").toggle_inline(vim.api.nvim_get_current_buf())
+end, { desc = "Toggle inline diagnostics for this dependency (stored diagnostics stay available)" })
+
 -- LazyVim can load these autocmds after the initial buffer's FileType event.
 for _, buf in ipairs(vim.api.nvim_list_bufs()) do
   if

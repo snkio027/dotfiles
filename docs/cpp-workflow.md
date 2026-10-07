@@ -176,16 +176,19 @@ ctest --preset dev
 | `Space o c` | `CMakeGenerate` | 新依赖、manifest 或构建配置变化后 |
 | `Space o s` | `CMakeSelectLaunchTarget` | 在多个程序之间切换 |
 | `Space o a` | `CMakeLaunchArgs` | 设置当前程序的参数 |
+| `Space o d` | 运行目录选择 | 按 target 记住项目根目录、可执行文件目录或自定义目录 |
 | `Space o w` | `OverseerToggle!` | 查看任务状态、输出和历史 |
 | `Space c i` | 插入 clangd 建议的缺失 include | 粘贴代码后，逐项核对公开头文件 |
 
-先保存要参与构建的文件，再运行快捷键；这些入口不会替你自动保存所有 buffer。
-`CMakeRun` 使用磁盘源码，不会运行未保存的编辑。`CMakeQuickRun` 可临时选择其他目标，
+建议先主动保存并确认没有写入错误。锁定的 CMakeTools 会尝试保存所有已命名、已修改的普通 buffer，
+并非只保存当前项目；其 `silent! write` 不保证保存失败能阻止构建。因此不能把任务成功当成保存成功。
+`CMakeRun` 使用磁盘源码。`CMakeQuickRun` 可临时选择其他目标，
 它同样会先构建；日常固定目标用 `Space o r` 即可。
 
-任务列表放在底部，不抢编辑焦点。标题按“配置／构建／运行／测试 · 项目 · preset”组织，
-实际运行目标以原始启动命令为准；命令、工作目录、耗时、退出码和近期输出都保留。
-状态色沿用主题，成功不重复弹通知，失败保留通知及完整日志；编译错误可进入 quickfix。
+界面使用英文 `Configure / Build / Run / Test · project · preset`。配置和构建成功只显示
+一条完成通知，不自动打开任务面板；手动打开历史时，成功任务只展示状态、名称和耗时。
+失败自动显示原始输出，编译错误保留可导航 quickfix；失败卡片保留命令、cwd、退出码及近期输出。
+运行任务单独打开输出窗口，不抢编辑焦点；交互程序可切入该窗口按 `i` 进入终端输入。
 构建日志使用普通输出 buffer，避免窄窗口把文件路径硬折行后破坏错误跳转；
 运行输出继续保留终端能力。界面换行不应改变诊断内容。
 在任务列表按 `o` 打开完整输出，`p` 切换预览，`?` 查看操作。摘要不能代替完整错误日志。
@@ -198,17 +201,22 @@ ctest --preset dev
 CMakeTools 默认从可执行文件所在目录运行；终端示例则从项目根目录运行。
 因此读取相对路径 `config.toml` 的程序，可能终端正常而编辑器运行失败。
 
-对需要源目录配置文件的 target，先用 `:pwd` 确认当前目录就是项目根目录，
-再执行 `:CMakeTargetSettings`，在原有设置中调整：
+对需要源目录配置文件的 target，按 `Space o d` 选择 **Project root**，目录取自
+CMakeTools 当前项目而非恰好正在浏览的库文件。选项只修改所选 target，保留参数和环境，
+通过 CMakeTools 原生 session 保存。取消不更改设置；自定义目录须为存在的绝对路径。
+不自动重写其他 target 或项目的目录。**Executable directory** 使用插件原生 `${dir.binary}`，
+可跟随所选构建目录；项目根目录和自定义目录保存绝对路径，搬移项目后须重新设置。
+
+需要同时调整更多选项时，使用 `:CMakeTargetSettings`，保留原有设置，例如：
 
 ```lua
 return {
   args = { "config.toml" },
-  working_dir = vim.fn.getcwd(),
+  working_dir = "/absolute/path/to/demo",
 }
 ```
 
-这里是锁定插件实际使用的 `working_dir`；保存设置时会记录当前实际目录，
+这里是锁定插件实际使用的 `working_dir`；
 不使用插件并不提供的 `${dir.source}` 变量。项目搬移后重新设置。保留自己已有的设置，
 不要把真实凭据写入要公开提交的文件。参数可以用 `Space o a` 修改；
 无交互程序与需要 stdin 的程序也应分别验证。参见
@@ -270,9 +278,12 @@ Diagnostics:
 
 本配置保护 C/C++ buffer 中可识别的 `vcpkg_installed`、`build/_deps`、
 `build/<preset>/_deps`、常见 Homebrew / 系统 / Apple SDK 头路径，包括指向它们的符号链接。
-这些 buffer 默认只读、不可修改，并关闭保存自动格式化；导航、搜索、复制和诊断仍保留。
+这些 buffer 默认只读、不可修改，并关闭保存自动格式化。阅读模式仅收起行内诊断文字和虚拟行，
+诊断数量、sign、下划线、浮窗、跳转及原始数据仍保留。自有源码不受影响。
+`:CppDependencyDiagnostics` 切换当前依赖文件的行内展示，浮窗和诊断列表随时可查看详情。
+这不是解析修复，也不代表库文件没有错误；不会添加全局 `-include`、改写库头文件或关闭 clangd。
 
-需要有意修改时执行 `:CppDependencyEdit`，只解锁当前 buffer，保存自动格式化仍关闭；
+需要有意修改时执行 `:CppDependencyEdit`，只解锁当前 buffer，并恢复正常诊断展示，保存自动格式化仍关闭；
 重新打开文件恢复保护。这不是安全沙箱，也不覆盖任意自定义依赖目录或外部命令的写入。
 不要在包管理器安装产物里维护长期补丁：修复应进入上游、受控补丁或 overlay port。
 

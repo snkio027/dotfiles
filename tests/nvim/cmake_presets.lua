@@ -8,6 +8,7 @@ local join = vim.fs.joinpath
 local cmake
 local tasks = {}
 local overseer, new_task
+local select, input = vim.ui.select, vim.ui.input
 
 local function command(argv, cwd)
 	local result = vim.system(argv, { cwd = cwd, text = true }):wait(30000)
@@ -35,7 +36,19 @@ local function fixture(dir, managed)
 		"project(preset_ownership LANGUAGES C CXX)",
 		"add_executable(probe main.cpp helper.c)",
 	}, join(dir, "CMakeLists.txt"))
-	vim.fn.writefile({ 'extern "C" int helper(void);', "int main() { return helper(); }" }, join(dir, "main.cpp"))
+	vim.fn.writefile({
+		"#include <cstdio>",
+		'extern "C" int helper(void);',
+		"int main(int argc, char** argv) {",
+		"  if (argc > 1) {",
+		'    auto* file = std::fopen(argv[1], "r");',
+		"    if (!file) return 47;",
+		"    std::fclose(file);",
+		"  }",
+		"  return helper();",
+		"}",
+	}, join(dir, "main.cpp"))
+	vim.fn.writefile({ "fixture = true" }, join(dir, "config.toml"))
 	vim.fn.writefile({ "int helper(void) { return 0; }" }, join(dir, "helper.c"))
 	vim.fn.writefile({
 		"#!/bin/sh",
@@ -102,6 +115,9 @@ local ok, err = xpcall(function()
 	assert(effective.cmake_regenerate_on_save == true, "Save-time configure preference changed")
 	assert(effective.cmake_executor.name == "overseer" and effective.cmake_runner.name == "overseer")
 	assert(effective.cmake_dap_configuration.type == "codelldb")
+	assert(not effective.cmake_notifications.executor.enabled and not effective.cmake_notifications.runner.enabled)
+	assert(type(vim.fn.maparg(" od", "n", false, true).callback) == "function", "Missing run directory shortcut")
+	local output = require("config.cmake_output")
 	for key, command in pairs({
 		ob = "CMakeBuild",
 		["or"] = "CMakeRun",
@@ -128,36 +144,135 @@ local ok, err = xpcall(function()
 				config.configure_preset = case.preset
 				config.build_preset = case.preset
 				assert(vim.deep_equal(cmake.get_generate_options(), {}), "Project switch restored global overrides")
+				overseer.close()
+				local windows = #vim.api.nvim_list_wins()
 				editor_command("generate")
-				assert(tasks[#tasks].name:find("配置", 1, true), tasks[#tasks].name)
+				assert(tasks[#tasks].name:find("Configure", 1, true), tasks[#tasks].name)
 				editor_command("build")
+				assert(#vim.api.nvim_list_wins() == windows, "Successful build opened an output panel")
 				local built = tasks[#tasks]
-				assert(built.name:find("构建", 1, true), built.name)
+				assert(built.name:find("Build", 1, true), built.name)
 				assert(built.exit_code == 0 and built.status == "SUCCESS")
 				assert(built:get_component("on_exit_set_status"), "Exit-code authority removed")
 				assert(built:get_component("on_output_quickfix"), "Missing build diagnostics")
 				assert(vim.bo[built:get_bufnr()].buftype ~= "terminal", "Build diagnostics can be hard-wrapped")
 				local rendered = require("config.cmake_output").render(built)
-				assert(vim.inspect(rendered):find("exit 0", 1, true))
-				assert(vim.inspect(rendered):find(dir, 1, true), "Working directory not visible")
+				assert(
+					#rendered == 2 and not vim.inspect(rendered):find("exit 0", 1, true),
+					"Success summary too noisy"
+				)
+				assert(#vim.api.nvim_buf_get_lines(built:get_bufnr(), 0, -1, false) > 0, "Raw build log lost")
 				config.launch_target = "probe"
-				config.target_settings.probe = { args = { "config.toml" }, working_dir = dir }
+				config.target_settings.probe = { args = { "config.toml" }, env = { KEEP_ME = "yes" } }
+				local choice
+				vim.ui.select = function(_, _, callback)
+					choice = callback
+				end
+				output.select_run_directory()
+				choice(nil)
+				assert(config.target_settings.probe.working_dir == nil, "Cancel changed the working directory")
+				output.select_run_directory()
+				choice("Executable directory")
+				assert(config.target_settings.probe.working_dir == "${dir.binary}")
+				local missing = vim.system({ join(dir, "build", case.preset, "probe"), "config.toml" }, {
+					cwd = cmake.get_launch_path("probe"),
+				}):wait(10000)
+				assert(missing.code == 47, "Missing runtime configuration was not detected")
+				output.select_run_directory()
+				choice("Project root")
+				assert(config.target_settings.probe.working_dir == dir)
+				assert(
+					config.target_settings.probe.env.KEEP_ME == "yes",
+					"Directory selection replaced target settings"
+				)
+				local session = require("cmake-tools.session")
+				session.save(config.cwd, config)
+				assert(session.load(config.cwd).target_settings.probe.working_dir == dir, "Run directory not persisted")
+				vim.ui.select = select
+				local editor_window = vim.api.nvim_get_current_win()
 				editor_command("run")
 				assert(
-					tasks[#tasks].name:find("运行", 1, true) and vim.inspect(tasks[#tasks].cmd):find("probe", 1, true)
+					tasks[#tasks].name:find("Run", 1, true) and vim.inspect(tasks[#tasks].cmd):find("probe", 1, true)
 				)
+				assert(vim.api.nvim_get_current_win() == editor_window, "Run stole editing focus")
+				assert(#vim.fn.win_findbuf(tasks[#tasks]:get_bufnr()) > 0, "Program output was not opened")
 				assert(tasks[#tasks].exit_code == 0)
 				assert(tasks[#tasks].cwd == dir, "Run working_dir was ignored")
 				assert(vim.inspect(tasks[#tasks].cmd):find("config.toml", 1, true), "Run arguments were ignored")
+				local run_windows = #vim.api.nvim_list_wins()
+				editor_command("run")
+				assert(#vim.api.nvim_list_wins() == run_windows, "Repeated run created another output window")
 			end
 			verify(dir, case.preset)
 			print("CMake preset ownership passed: " .. case.name .. " / " .. entry)
 		end
 	end
-	-- A real compiler failure must never continue into the previously built executable.
+	local config = cmake.get_config()
+	local directory = config.target_settings.probe.working_dir
+	local choose, enter
+	vim.ui.select = function(_, _, callback)
+		choose = callback
+	end
+	vim.ui.input = function(_, callback)
+		enter = callback
+	end
+	output.select_run_directory()
+	choose("Custom directory")
+	enter(root .. "/missing")
+	assert(config.target_settings.probe.working_dir == directory)
+	output.select_run_directory()
+	choose("Custom directory")
+	enter("relative/path")
+	assert(config.target_settings.probe.working_dir == directory)
+	output.select_run_directory()
+	choose("Custom directory")
+	enter(nil)
+	assert(config.target_settings.probe.working_dir == directory)
+	output.select_run_directory()
+	choose("Custom directory")
+	enter(root)
+	assert(config.target_settings.probe.working_dir == root)
+	output.select_run_directory()
+	config.launch_target = "different"
+	choose("Project root")
+	assert(config.target_settings.probe.working_dir == root and config.target_settings.different == nil)
+	config.launch_target = "probe"
+	config.target_settings.probe.working_dir = directory
+	vim.ui.select, vim.ui.input = select, input
+	-- Program I/O stays on the native terminal strategy; presentation must not
+	-- consume stdin or replace the application's exit-code authority.
 	local dir = vim.fn.getcwd()
-	vim.fn.writefile({ "this is not C++" }, join(dir, "main.cpp"))
+	vim.fn.writefile({
+		"#include <cstdio>",
+		'int main() { int value = 0; if (std::scanf("%d", &value) != 1) return 41;',
+		'std::printf("RESULT %d\\n", value); return value == 17 ? 0 : 42; }',
+	}, join(dir, "main.cpp"))
 	local count, result = #tasks, nil
+	cmake.run({ fargs = {} }, function(value)
+		result = value
+	end)
+	assert(
+		vim.wait(30000, function()
+			return #tasks == count + 2 and tasks[#tasks]:is_running()
+		end, 20),
+		"Interactive program did not start"
+	)
+	local interactive = tasks[#tasks]
+	assert(vim.bo[interactive:get_bufnr()].buftype == "terminal")
+	vim.api.nvim_chan_send(interactive.strategy.job_id, "17\n")
+	assert(
+		vim.wait(10000, function()
+			return result ~= nil
+		end, 20),
+		"Interactive program timed out"
+	)
+	assert(result:is_ok() and interactive.exit_code == 0)
+	assert(
+		table.concat(vim.api.nvim_buf_get_lines(interactive:get_bufnr(), 0, -1, false), "\n"):find("RESULT 17", 1, true)
+	)
+	-- A real compiler failure must never continue into the previously built executable.
+	vim.fn.writefile({ "this is not C++" }, join(dir, "main.cpp"))
+	count, result = #tasks, nil
 	cmake.run({ fargs = {} }, function(value)
 		result = value
 	end)
@@ -197,11 +312,12 @@ local ok, err = xpcall(function()
 	)
 	assert(not result:is_ok(), "Nonzero program exit reported success")
 	assert(tasks[#tasks - 1].status == "SUCCESS", "Runtime failure was confused with compiler failure")
-	assert(tasks[#tasks].name:find("运行", 1, true) and tasks[#tasks].exit_code == 47)
+	assert(tasks[#tasks].name:find("Run", 1, true) and tasks[#tasks].exit_code == 47)
 	assert(tasks[#tasks].status == "FAILURE")
 	assert(vim.inspect(require("config.cmake_output").render(tasks[#tasks])):find("exit 47", 1, true))
 end, debug.traceback)
 
+vim.ui.select, vim.ui.input = select, input
 if overseer then
 	overseer.new_task = new_task
 end

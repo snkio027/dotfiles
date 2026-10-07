@@ -163,6 +163,16 @@ return {
     end,
   },
 
+  {
+    "neovim/nvim-lspconfig",
+    opts = function(_, opts)
+      local dependency = require("config.cpp_dependency")
+      for _, name in ipairs({ "virtual_text", "virtual_lines" }) do
+        opts.diagnostics[name] = dependency.inline_option(opts.diagnostics[name])
+      end
+    end,
+  },
+
   -- Mason packages have no lockfile. LazyVim's Mason integrations perform
   -- missing-only startup installs; updates remain explicit via
   -- devup or the rolling-latest CI job.
@@ -237,6 +247,13 @@ return {
       { "<leader>oc", "<cmd>CMakeGenerate<cr>", desc = "Configure (CMake)" },
       { "<leader>os", "<cmd>CMakeSelectLaunchTarget<cr>", desc = "Select Run Target (CMake)" },
       { "<leader>oa", "<cmd>CMakeLaunchArgs<cr>", desc = "Run Arguments (CMake)" },
+      {
+        "<leader>od",
+        function()
+          require("config.cmake_output").select_run_directory()
+        end,
+        desc = "Run Directory (CMake)",
+      },
     },
     opts = {
       -- CMakeTools appends these after --preset. An explicit empty list also
@@ -246,6 +263,8 @@ return {
       -- Projects select the database through .clangd (build/dev for cxx).
       -- Avoid an extra root entry that follows the editor's selected preset.
       cmake_compile_commands_options = { action = "none" },
+      -- Overseer emits one completion summary; avoid duplicate spinner/exit notifications.
+      cmake_notifications = { runner = { enabled = false }, executor = { enabled = false } },
       cmake_executor = {
         name = "overseer",
         opts = {
