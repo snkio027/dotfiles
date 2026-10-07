@@ -47,6 +47,7 @@ function M.warn_if_compile_database_missing(bufnr)
 end
 
 function M.setup_buffer(bufnr)
+  require("config.cpp_dependency").protect(bufnr)
   M.configure_buffer(bufnr)
   vim.schedule(function()
     if vim.api.nvim_buf_is_valid(bufnr) then

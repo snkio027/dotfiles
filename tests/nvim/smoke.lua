@@ -26,6 +26,7 @@ assert(installer_opts.run_on_start == false, "mason-tool-installer must not run 
 assert(not package.loaded["mason-tool-installer"], "mason-tool-installer loaded without an explicit command")
 
 local cpp = require("config.cpp")
+dofile("tests/nvim/cpp_dependency.lua")
 local cpp_buffer = vim.api.nvim_create_buf(false, true)
 cpp.configure_buffer(cpp_buffer)
 assert(vim.bo[cpp_buffer].expandtab, "C/C++ buffers must use spaces")

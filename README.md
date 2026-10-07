@@ -72,6 +72,10 @@ Neovim 的 `<leader>` 是空格。macOS 的 `Cmd` 绑定属于 Ghostty；Shell�
 
 C++ 项目使用 `cxx init hello` 创建，再运行 `cmake --workflow --preset dev` 生成构建产物与 clangd 编译数据库。Python 项目先运行 `uv sync`；Neovim 会把项目环境统一交给语言服务、测试与调试。详见[多语言工作流](docs/operations.md#多语言开发环境)。
 
+C++ 日常无需反复运行完整 workflow：保存源码后用 `Space o r` 构建并运行，
+新增依赖后用 `Space o c` 重新配置。完整中文步骤见
+[C++ 开发与第三方库指南](docs/cpp-workflow.md)，包含 toml++ 接入、任务输出、运行参数、测试和 clangd 排错。
+
 ## 工具归属
 
 | 管理者 | 职责 |

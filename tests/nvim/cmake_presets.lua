@@ -6,6 +6,8 @@ root = assert(vim.uv.fs_realpath(root))
 local original_cwd = vim.fn.getcwd()
 local join = vim.fs.joinpath
 local cmake
+local tasks = {}
+local overseer, new_task
 
 local function command(argv, cwd)
 	local result = vim.system(argv, { cwd = cwd, text = true }):wait(30000)
@@ -87,12 +89,28 @@ end
 local ok, err = xpcall(function()
 	require("lazy").load({ plugins = { "cmake-tools.nvim" } })
 	cmake = require("cmake-tools")
+	overseer = require("overseer")
+	new_task = overseer.new_task
+	overseer.new_task = function(opts)
+		local task = new_task(opts)
+		tasks[#tasks + 1] = task
+		return task
+	end
 	local effective = require("cmake-tools.const")
 	assert(vim.deep_equal(cmake.get_generate_options(), {}), "Plugin defaults still override presets")
 	assert(effective.cmake_compile_commands_options.action == "none")
 	assert(effective.cmake_regenerate_on_save == true, "Save-time configure preference changed")
 	assert(effective.cmake_executor.name == "overseer" and effective.cmake_runner.name == "overseer")
 	assert(effective.cmake_dap_configuration.type == "codelldb")
+	for key, command in pairs({
+		ob = "CMakeBuild",
+		["or"] = "CMakeRun",
+		oc = "CMakeGenerate",
+		os = "CMakeSelectLaunchTarget",
+		oa = "CMakeLaunchArgs",
+	}) do
+		assert(vim.fn.maparg(" " .. key, "n"):find(command, 1, true), "Missing CMake shortcut: " .. key)
+	end
 	for _, case in ipairs({
 		{ name = "managed-dev", managed = true, preset = "dev" },
 		{ name = "managed-san", managed = true, preset = "san" },
@@ -111,14 +129,82 @@ local ok, err = xpcall(function()
 				config.build_preset = case.preset
 				assert(vim.deep_equal(cmake.get_generate_options(), {}), "Project switch restored global overrides")
 				editor_command("generate")
+				assert(tasks[#tasks].name:find("配置", 1, true), tasks[#tasks].name)
 				editor_command("build")
+				local built = tasks[#tasks]
+				assert(built.name:find("构建", 1, true), built.name)
+				assert(built.exit_code == 0 and built.status == "SUCCESS")
+				assert(built:get_component("on_exit_set_status"), "Exit-code authority removed")
+				assert(built:get_component("on_output_quickfix"), "Missing build diagnostics")
+				assert(vim.bo[built:get_bufnr()].buftype ~= "terminal", "Build diagnostics can be hard-wrapped")
+				local rendered = require("config.cmake_output").render(built)
+				assert(vim.inspect(rendered):find("exit 0", 1, true))
+				assert(vim.inspect(rendered):find(dir, 1, true), "Working directory not visible")
+				config.launch_target = "probe"
+				config.target_settings.probe = { args = { "config.toml" }, working_dir = dir }
+				editor_command("run")
+				assert(
+					tasks[#tasks].name:find("运行", 1, true) and vim.inspect(tasks[#tasks].cmd):find("probe", 1, true)
+				)
+				assert(tasks[#tasks].exit_code == 0)
+				assert(tasks[#tasks].cwd == dir, "Run working_dir was ignored")
+				assert(vim.inspect(tasks[#tasks].cmd):find("config.toml", 1, true), "Run arguments were ignored")
 			end
 			verify(dir, case.preset)
 			print("CMake preset ownership passed: " .. case.name .. " / " .. entry)
 		end
 	end
+	-- A real compiler failure must never continue into the previously built executable.
+	local dir = vim.fn.getcwd()
+	vim.fn.writefile({ "this is not C++" }, join(dir, "main.cpp"))
+	local count, result = #tasks, nil
+	cmake.run({ fargs = {} }, function(value)
+		result = value
+	end)
+	assert(
+		vim.wait(30000, function()
+			return result ~= nil
+		end, 20),
+		"Failed build timeout"
+	)
+	assert(not result:is_ok(), "Failed build reported success")
+	assert(#tasks == count + 1, "Failed build launched the old binary")
+	local failed = tasks[#tasks]
+	assert(failed.status == "FAILURE" and failed.exit_code ~= 0)
+	assert(failed:get_component("on_exit_set_status"))
+	assert(vim.inspect(require("config.cmake_output").render(failed)):find("exit " .. failed.exit_code, 1, true))
+	local navigable = false
+	for _, item in ipairs(vim.fn.getqflist()) do
+		if item.valid == 1 and vim.api.nvim_buf_get_name(item.bufnr) == join(dir, "main.cpp") then
+			navigable = true
+		end
+	end
+	assert(navigable, "Compiler error has no navigable quickfix location: " .. vim.inspect({
+		items = vim.fn.getqflist(),
+		cwd = dir,
+		output = vim.api.nvim_buf_get_lines(failed:get_bufnr(), 0, -1, false),
+	}))
+	vim.fn.writefile({ "int main() { return 47; }" }, join(dir, "main.cpp"))
+	result = nil
+	cmake.run({ fargs = {} }, function(value)
+		result = value
+	end)
+	assert(
+		vim.wait(30000, function()
+			return result ~= nil
+		end, 20),
+		"Failed run timeout"
+	)
+	assert(not result:is_ok(), "Nonzero program exit reported success")
+	assert(tasks[#tasks - 1].status == "SUCCESS", "Runtime failure was confused with compiler failure")
+	assert(tasks[#tasks].name:find("运行", 1, true) and tasks[#tasks].exit_code == 47)
+	assert(tasks[#tasks].status == "FAILURE")
+	assert(vim.inspect(require("config.cmake_output").render(tasks[#tasks])):find("exit 47", 1, true))
 end, debug.traceback)
 
+if overseer then
+	overseer.new_task = new_task
+end
 vim.cmd.cd(vim.fn.fnameescape(original_cwd))
 vim.fn.delete(root, "rf")
 if not ok then

@@ -231,6 +231,13 @@ return {
     "Civitasv/cmake-tools.nvim",
     optional = true,
     dependencies = { "stevearc/overseer.nvim" },
+    keys = {
+      { "<leader>ob", "<cmd>CMakeBuild<cr>", desc = "Build (CMake)" },
+      { "<leader>or", "<cmd>CMakeRun<cr>", desc = "Build and Run (CMake)" },
+      { "<leader>oc", "<cmd>CMakeGenerate<cr>", desc = "Configure (CMake)" },
+      { "<leader>os", "<cmd>CMakeSelectLaunchTarget<cr>", desc = "Select Run Target (CMake)" },
+      { "<leader>oa", "<cmd>CMakeLaunchArgs<cr>", desc = "Run Arguments (CMake)" },
+    },
     opts = {
       -- CMakeTools appends these after --preset. An explicit empty list also
       -- clears its default EXPORT_COMPILE_COMMANDS override, leaving cache
@@ -239,8 +246,19 @@ return {
       -- Projects select the database through .clangd (build/dev for cxx).
       -- Avoid an extra root entry that follows the editor's selected preset.
       cmake_compile_commands_options = { action = "none" },
-      cmake_executor = { name = "overseer" },
-      cmake_runner = { name = "overseer" },
+      cmake_executor = {
+        name = "overseer",
+        opts = {
+          -- Terminal hard-wrapping can split diagnostic file paths before
+          -- quickfix parses them. Build logs need intact logical lines.
+          new_task_opts = { strategy = { "jobstart", use_terminal = false } },
+          on_new_task = require("config.cmake_output").on_new_task("executor"),
+        },
+      },
+      cmake_runner = {
+        name = "overseer",
+        opts = { on_new_task = require("config.cmake_output").on_new_task("runner") },
+      },
       cmake_dap_configuration = {
         name = "CMake target",
         type = "codelldb",
@@ -248,6 +266,19 @@ return {
         stopOnEntry = false,
         runInTerminal = true,
         console = "integratedTerminal",
+      },
+    },
+  },
+
+  {
+    "stevearc/overseer.nvim",
+    optional = true,
+    opts = {
+      task_list = {
+        direction = "bottom",
+        min_height = 8,
+        max_height = { 18, 0.3 },
+        render = require("config.cmake_output").render,
       },
     },
   },
