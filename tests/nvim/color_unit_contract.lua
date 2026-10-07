@@ -718,12 +718,34 @@ local function normalized_graph_digest(graph)
 	return #names, vim.fn.sha256(table.concat(normalized, "\n"))
 end
 
--- Lambda projection adds no role or palette color. Unused diagnostics are a
--- style-only overlay; removing that one new definition restores the prior graph.
+-- The palette preview changes exactly three foregrounds on the current graph,
+-- including the later special-member and unused-state fixes.
 assert(vim.deep_equal(full_hl.DiagnosticUnnecessary, { italic = true }), "Unused state gained foreground authority")
 local production_count, production_digest = normalized_graph_digest(full_hl)
-assert_eq(production_count, E_GRAPH_COUNT + 2, "Lambda correction must add only the unused-state group")
-local special_member_graph = vim.deepcopy(full_hl)
+local PRODUCTION_GRAPH_SHA256 = "ce699856eba6a5e0232a151a4c7b906517cffc64abe4c1b55b15cc08e44ca9b5"
+assert_eq(production_count, E_GRAPH_COUNT + 2, "Color swap changed the production group count")
+assert_eq(production_digest, PRODUCTION_GRAPH_SHA256, "Unrelated production resolved graph changed")
+local original_graph = vim.deepcopy(full_hl)
+for role, old_foreground in pairs({
+	DxKeyword = "#79AAFF",
+	DxFunctionKeyword = "#79AAFF",
+	DxNamespace = "#DB8FEE",
+}) do
+	assert(original_graph[role].fg ~= old_foreground, "Requested color swap missing: " .. role)
+	original_graph[role].fg = old_foreground
+end
+local original_count, original_digest = normalized_graph_digest(original_graph)
+assert_eq(original_count, E_GRAPH_COUNT + 2, "Color swap changed the original production count")
+assert_eq(
+	original_digest,
+	"5bdfce0b9c3bfd25db861046077c9b084074cd13b2a1576c4386c1418ce20e73",
+	"Color swap changed more than three role foregrounds"
+)
+print("Keyword/namespace swap verified: exactly three foregrounds; current main graph restored.")
+
+-- Unused diagnostics remain a style-only overlay. Preserve the later semantic
+-- corrections before reconstructing the earlier E palette evidence.
+local special_member_graph = vim.deepcopy(original_graph)
 special_member_graph.DiagnosticUnnecessary = nil
 local special_count, special_digest = normalized_graph_digest(special_member_graph)
 local SPECIAL_MEMBER_GRAPH_SHA256 = "c4f542adf2d920e7f12fb9600ee1e97ed412499d740dcc4d3ae0805d0aba1b97"
@@ -886,9 +908,12 @@ print(("M1 historical graph reconstructed from M5 production: %d groups, sha256=
 
 local function assert_production_graph(candidate)
 	local count, digest = normalized_graph_digest(candidate)
-	assert_eq(count, E_GRAPH_COUNT + 1, "E production graph count changed")
-	assert_eq(digest, SPECIAL_MEMBER_GRAPH_SHA256, "E production graph digest changed")
+	assert_eq(count, E_GRAPH_COUNT + 2, "E production graph count changed")
+	assert_eq(digest, PRODUCTION_GRAPH_SHA256, "E production graph digest changed")
 end
+
+-- A valid control must pass before each mutation can prove rejection.
+assert_production_graph(full_hl)
 
 local bad_graph_extra = vim.deepcopy(full_hl)
 bad_graph_extra.DxUnauthorized = { fg = p.code.variable }
