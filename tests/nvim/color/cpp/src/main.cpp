@@ -51,11 +51,23 @@ int observe_binding_topology(
 ) {
     // DX:M2 cpp.binding.local_variable
     // DX:M2B-B cpp.behavior.ordinary_local_variable
+    // DX:E3 cpp.value.namespace_reference
+    // DX:E3 cpp.value.namespace_static_reference
     int local_value = parameter_value + namespace_counter + namespace_static_counter;
     // DX:M2B-B cpp.behavior.function_local_static_variable
     static int function_static_count = 8;
     const BindingProbe probe{};
+    // DX:E3 cpp.value.local_reference
+    // DX:E3 cpp.value.local_static_reference
+    // DX:E3 cpp.value.constexpr_reference
     int result = local_value + function_static_count + namespace_readonly;
+    // DX:E3 cpp.value.runtime_const_declaration
+    const int runtime_readonly = parameter_value;
+    // DX:E3 cpp.value.local_constexpr_declaration
+    constexpr int local_constant = 9;
+    // DX:E3 cpp.value.runtime_const_reference
+    // DX:E3 cpp.value.local_constexpr_reference
+    result += runtime_readonly + local_constant;
     // DX:M2B cpp.classification.qualified_static_member_access
     result += BindingProbe::shared_count;
     // DX:M2B cpp.classification.instance_member_access
@@ -146,6 +158,92 @@ void log_diagnostic(const T& message, std::uint32_t severity) {
 }
 
 } // namespace dx::network
+
+// Alias evidence: organization paths and type names remain different entities.
+namespace alias_source {
+struct Payload { using Inner = int; };
+}
+// DX:E3 cpp.alias.namespace_declaration
+namespace route = alias_source;
+// DX:E3 cpp.alias.type_declaration
+using AliasPayload = alias_source::Payload;
+
+int observe_alias_identity() {
+    // DX:E3 cpp.alias.namespace_reference
+    // DX:E3 cpp.alias.qualified_terminal_type
+    route::Payload value{};
+    // DX:E3 cpp.alias.type_reference
+    AliasPayload direct{};
+    // DX:E3 cpp.alias.type_qualifier
+    AliasPayload::Inner code = 0;
+    return static_cast<int>(sizeof(value) + sizeof(direct)) + code;
+}
+
+namespace special_members {
+struct Base {
+    Base() = default;
+    explicit Base(int) {}
+};
+// DX:SENTINEL cpp.special.class
+class Value : Base {
+public:
+    // DX:SENTINEL cpp.special.default_ctor
+    Value() = default;
+    // DX:SENTINEL cpp.special.value_ctor
+    explicit Value(int value) :
+        // DX:SENTINEL cpp.special.base_initializer
+        Base(value),
+        // DX:SENTINEL cpp.special.member_initializer
+        Capitalized(value) {}
+    // DX:SENTINEL cpp.special.copy_ctor
+    Value(
+        // DX:SENTINEL cpp.special.parameter_type
+        const Value& other) :
+        // DX:SENTINEL cpp.special.delegate
+        Value(other.Capitalized) {}
+    // DX:SENTINEL cpp.special.move_ctor
+    Value(Value&&) = default;
+    // DX:SENTINEL cpp.special.return_type
+    Value&
+        // DX:SENTINEL cpp.special.copy_assignment
+        operator=(const Value&) = default;
+    Value&
+        // DX:SENTINEL cpp.special.move_assignment
+        operator=(Value&&) = default;
+    // DX:SENTINEL cpp.special.destructor
+    // DX:SENTINEL cpp.special.destructor_tilde
+    ~Value();
+    Value(int value, bool);
+
+    int Capitalized = 0;
+};
+
+// Qualifier is a type; only the terminal constructor name is callable.
+// DX:SENTINEL cpp.special.qualifier
+Value::
+    // DX:SENTINEL cpp.special.out_of_class_ctor
+    Value(int value, bool) :
+    // DX:SENTINEL cpp.special.qualified_delegate
+    Value(value) {}
+
+Value::
+    // DX:SENTINEL cpp.special.out_of_class_dtor
+    // DX:SENTINEL cpp.special.out_of_class_tilde
+    ~Value() {}
+
+void destroy(Value* value) {
+    // DX:SENTINEL cpp.special.destructor_call
+    // DX:SENTINEL cpp.special.destructor_call_tilde
+    value->~Value();
+}
+
+int ordinary_operators(int value) {
+    // DX:SENTINEL cpp.special.ordinary_assignment
+    value = 1;
+    // DX:SENTINEL cpp.special.ordinary_complement
+    return ~value;
+}
+} // namespace special_members
 
 // Sentinel: primitive scalar type (Builtin = Steel Blue)
 // DX:SENTINEL cpp.int.builtin

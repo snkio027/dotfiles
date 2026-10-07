@@ -26,6 +26,7 @@ assert(installer_opts.run_on_start == false, "mason-tool-installer must not run 
 assert(not package.loaded["mason-tool-installer"], "mason-tool-installer loaded without an explicit command")
 
 local cpp = require("config.cpp")
+dofile("tests/nvim/cpp_dependency.lua")
 local cpp_buffer = vim.api.nvim_create_buf(false, true)
 cpp.configure_buffer(cpp_buffer)
 assert(vim.bo[cpp_buffer].expandtab, "C/C++ buffers must use spaces")
@@ -57,7 +58,8 @@ assert(cpp.warn_if_compile_database_missing(warning_buffer) == false)
 vim.notify = original_notify
 assert(#compile_database_warnings == 1, "Managed C++ project warning must be emitted exactly once")
 assert(compile_database_warnings[1].message:find("build/dev/compile_commands.json", 1, true))
-assert(compile_database_warnings[1].message:find("cmake --workflow --preset dev", 1, true))
+assert(compile_database_warnings[1].message:find("cmake --preset dev", 1, true))
+assert(not compile_database_warnings[1].message:find("--workflow", 1, true), "CDB recovery must not run the app")
 assert(compile_database_warnings[1].message:find(":lsp restart clangd", 1, true))
 assert(compile_database_warnings[1].level == vim.log.levels.WARN)
 vim.api.nvim_buf_delete(warning_buffer, { force = true })
@@ -113,6 +115,21 @@ end
 
 vim.fn.delete(managed_fixture, "rf")
 vim.fn.delete(editorconfig_fixture, "rf")
+
+dofile("tests/nvim/clangd_context.lua")
+local include_key, header_key
+for _, key in ipairs(LazyVim.opts("nvim-lspconfig").servers.clangd.keys or {}) do
+	if key[1] == "<leader>ci" then
+		include_key = key
+	end
+	if key[1] == "<leader>ch" then
+		header_key = key
+	end
+end
+assert(include_key and type(include_key[2]) == "function", "clangd include action key is unavailable")
+assert(header_key, "include action replaced LazyVim's source/header key")
+dofile("tests/nvim/clangd_includes.lua")
+dofile("tests/nvim/clangd_callable.lua")
 
 require("lazy").load({ plugins = { "mini.icons" } })
 local icon_cases_path = vim.fn.getcwd() .. "/tests/icons/generated_cases.json"
@@ -285,9 +302,40 @@ assert(cmake.cmake_executor.name == "overseer", "CMake executor is not Overseer"
 assert(cmake.cmake_runner.name == "overseer", "CMake runner is not Overseer")
 assert(cmake.cmake_dap_configuration.type == "codelldb", "CMake debugger is not codelldb")
 
-local neotest = LazyVim.opts("neotest")
-assert(neotest.adapters["neotest-golang"].dap_go_enabled, "Go tests are not debuggable")
-assert(neotest.adapters["neotest-python"].runner == "pytest", "Python tests are not using pytest")
+-- Reading these dynamic opts before loading Neotest recursively loads its
+-- Overseer consumer. Observe the opts at the real config boundary instead;
+-- LazyVim subsequently replaces the adapter option map with adapter instances.
+local neotest_plugin = require("lazy.core.config").plugins.neotest
+local configure_neotest = neotest_plugin.config
+assert(type(configure_neotest) == "function", "Neotest setup entry point is unavailable")
+local neotest_opts, neotest_configured, injected_config_error
+neotest_plugin.config = function(plugin, opts)
+	neotest_opts = vim.deepcopy(opts)
+	if vim.g.dotfiles_smoke_config_negative then
+		injected_config_error = true
+		error("SMOKE_CONFIG_NEGATIVE_CONTROL")
+	end
+	configure_neotest(plugin, opts)
+	neotest_configured = true
+end
+local load_ok, load_error = pcall(require("lazy").load, { plugins = { "neotest" } })
+neotest_plugin.config = configure_neotest
+assert(load_ok, load_error)
+-- lazy.nvim catches config errors: a successful load() return is not proof
+-- that setup completed. This also rejects the injected caught-error control.
+assert(
+	neotest_configured,
+	"SMOKE_NEOTEST_SETUP_FAILED" .. (injected_config_error and ": SMOKE_CONFIG_NEGATIVE_CONTROL" or "")
+)
+assert(neotest_opts.adapters["neotest-golang"].dap_go_enabled, "Go tests are not debuggable")
+assert(neotest_opts.adapters["neotest-python"].runner == "pytest", "Python tests are not using pytest")
+local active_adapters = {}
+for _, adapter in ipairs(require("neotest.config").adapters) do
+	active_adapters[adapter.name] = true
+end
+assert(active_adapters["neotest-golang"] and active_adapters["neotest-python"], "Neotest adapters were not activated")
+assert(type(require("neotest").run.run) == "function", "Neotest run consumer was not activated")
+assert(type(require("neotest").overseer) == "table", "Neotest Overseer consumer was not activated")
 
 require("lazy").load({ plugins = { "nvim-dap" } })
 local dap = require("dap")

@@ -82,8 +82,8 @@ local p = palette_mod.resolve(colors)
 local roles = visual.roles(p)
 local full_hl = theme.highlights(colors)
 local composed_hl = compose.highlights(p, visual)
-assert(vim.deep_equal(full_hl, composed_hl), "theme.highlights() must resolve directly to C4.4")
-print("M5 single-production-visual contract passed: theme.highlights() -> C4.4.")
+assert(vim.deep_equal(full_hl, composed_hl), "theme.highlights() must resolve directly to E")
+print("Single-production-visual contract passed: theme.highlights() -> E.")
 
 local groups = {}
 for group, spec in pairs(full_hl) do
@@ -135,7 +135,7 @@ for _, role in ipairs(required_semantic_roles) do
 		fail("Domain role is missing semantic description: " .. role)
 	end
 	if not roles[role] then
-		fail("C4.4 production visual is missing required semantic role: " .. role)
+		fail("E production visual is missing required semantic role: " .. role)
 	end
 	role_count = role_count + 1
 end
@@ -147,16 +147,18 @@ for role in pairs(domain.roles) do
 end
 for role in pairs(roles) do
 	if not domain.roles[role] then
-		fail("C4.4 production visual defines role outside the domain closure: " .. role)
+		fail("E production visual defines role outside the domain closure: " .. role)
 	end
 end
 assert_eq(role_count, 23, "Expected exactly 23 semantic roles in DX-COLOR-003")
 
 -- ==========================================================================
--- 3. C4.4 Production Visual Contract and Negative Controls
+-- 3. E Production Visual Contract and Negative Controls
 -- ==========================================================================
 
 local repo_root = vim.fs.root(0, ".git") or vim.fn.getcwd()
+-- Common colors must not weaken group identity or foreground evidence.
+dofile(repo_root .. "/tests/nvim/shared_color_contract.lua")(full_hl)
 local c4_contract = dofile(repo_root .. "/tests/nvim/visual_contracts/c4.lua")
 c4_contract.verify({
 	palette = p,
@@ -172,7 +174,7 @@ c4_contract.verify_negative_controls({
 	domain = domain,
 	host_colors = colors,
 })
-print("C4.4 High-Chroma Night visual contract and negative controls passed.")
+print("E visual contract and negative controls passed.")
 
 -- ==========================================================================
 -- 4. No Raw Source Hex Outside Palette Gate & Namespace Disjointness Gate
@@ -322,6 +324,7 @@ end
 
 -- Typemod Precedence Governance (Neutralization of overriding modifiers)
 local required_typemods = {
+	["@lsp.typemod.class.constructorOrDestructor.cpp"] = "DxCallable",
 	["@lsp.typemod.variable.readonly"] = "DxVariable",
 	["@lsp.typemod.variable.defaultLibrary"] = "DxVariable",
 	["@lsp.typemod.variable.static"] = "DxVariable",
@@ -471,7 +474,7 @@ for group, _ in pairs(groups) do
 end
 
 -- ==========================================================================
--- 6. M5 Production Graph and Historical Provenance
+-- 6. E Production Graph and Historical Provenance
 -- ==========================================================================
 
 local expected_layers = {
@@ -589,9 +592,21 @@ local C4_3_GRAPH_SHA256 = "12d9299d27f50cc96bc056662ce13eed1bb1e46d7fc154f7bd565
 local M4_C4_4_BASE_SHA = M4_C4_3_HEAD_SHA
 local C4_4_GRAPH_COUNT = 226
 local C4_4_GRAPH_SHA256 = "1ac13a349234d5926a250a82c6beb1135fe4483bfe1208f0e24245d4f0022fc8"
-local M5_BASE_SHA = "65b61ee03bef0bc0bb8bee945d1bbc32a6a829b5"
 local M5_PRODUCTION_GRAPH_COUNT = 226
 local M5_PRODUCTION_GRAPH_SHA256 = "51cfaae3c02ec25551f1a8afd27427d3919d6b53c3b05f5ae26ff6c125aa6666"
+local E_BASE_SHA = "41423d77b31f72e886300add6be56127e35fb68e"
+local E_GRAPH_COUNT = 226
+local E_GRAPH_SHA256 = "44df09042fd6fcb77f4421244a9eb1336c124ce394828cc67e5160cba314c701"
+local E_AUTHORIZED_FOREGROUND_DELTA = {
+	DxKeyword = "#BB9AF7",
+	DxFunctionKeyword = "#7DCFFF",
+	DxCallable = "#E6B35C",
+	DxType = "#2AC3DE",
+	DxMeta = "#D16DDB",
+	DxNamespace = "#5EA1FF",
+	DxNumber = "#F09A6C",
+	DxConstant = "#DCC66A",
+}
 local C4_4_AUTHORIZED_FOREGROUND_DELTA = {
 	DxVariable = "#C9D4F2",
 	DxKeyword = "#C08CFF",
@@ -703,23 +718,52 @@ local function normalized_graph_digest(graph)
 	return #names, vim.fn.sha256(table.concat(normalized, "\n"))
 end
 
+-- Lambda projection adds no role or palette color. Unused diagnostics are a
+-- style-only overlay; removing that one new definition restores the prior graph.
+assert(vim.deep_equal(full_hl.DiagnosticUnnecessary, { italic = true }), "Unused state gained foreground authority")
 local production_count, production_digest = normalized_graph_digest(full_hl)
+assert_eq(production_count, E_GRAPH_COUNT + 2, "Lambda correction must add only the unused-state group")
+local special_member_graph = vim.deepcopy(full_hl)
+special_member_graph.DiagnosticUnnecessary = nil
+local special_count, special_digest = normalized_graph_digest(special_member_graph)
+local SPECIAL_MEMBER_GRAPH_SHA256 = "c4f542adf2d920e7f12fb9600ee1e97ed412499d740dcc4d3ae0805d0aba1b97"
+assert_eq(special_count, E_GRAPH_COUNT + 1, "Special-member correction must add exactly one group")
+assert_eq(special_digest, SPECIAL_MEMBER_GRAPH_SHA256, "Unrelated production resolved graph changed")
+print(("E production graph frozen: %d groups, sha256=%s"):format(production_count, production_digest))
+
+local historical_e_graph = vim.deepcopy(special_member_graph)
+historical_e_graph["@lsp.typemod.class.constructorOrDestructor.cpp"] = nil
+local e_count, e_digest = normalized_graph_digest(historical_e_graph)
+assert_eq(e_count, E_GRAPH_COUNT, "Special-member rollback changed the E group count")
+assert_eq(e_digest, E_GRAPH_SHA256, "Special-member rollback must restore the complete E graph")
+
+-- Only these eight role foregrounds may differ. Rolling them back must restore
+-- the complete base graph, including every UI definition, link and style authority.
+local historical_m5_graph = vim.deepcopy(historical_e_graph)
+assert_eq(vim.tbl_count(E_AUTHORIZED_FOREGROUND_DELTA), 8, "E must change exactly eight role foregrounds")
+for role, old_foreground in pairs(E_AUTHORIZED_FOREGROUND_DELTA) do
+	local spec = historical_m5_graph[role]
+	assert(spec and spec.fg, "E authorized foreground role is missing: " .. role)
+	assert(spec.fg:lower() ~= old_foreground:lower(), "E authorized foreground did not change: " .. role)
+	spec.fg = old_foreground
+end
+local m5_count, m5_digest = normalized_graph_digest(historical_m5_graph)
 assert_eq(
-	production_count,
+	m5_count,
 	M5_PRODUCTION_GRAPH_COUNT,
-	("M5 production highlight-group count changed from %s"):format(M5_BASE_SHA)
+	("E rollback changed M5 highlight-group count from %s"):format(E_BASE_SHA)
 )
 assert_eq(
-	production_digest,
+	m5_digest,
 	M5_PRODUCTION_GRAPH_SHA256,
-	("M5 production resolved graph changed from %s"):format(M5_BASE_SHA)
+	("E eight-foreground rollback did not restore M5 graph from %s"):format(E_BASE_SHA)
 )
-print(("M5 production C4.4 graph frozen: %d groups, sha256=%s"):format(production_count, production_digest))
+print(("M5 C4.4 graph reconstructed after E visual rollback: %d groups, sha256=%s"):format(m5_count, m5_digest))
 
 assert_eq(full_hl.Normal.bg, p.ui.normal_bg, "M5 production Normal background does not use its owned canvas token")
 assert_eq(vim.tbl_count(full_hl.Normal), 1, "M5 production Normal override must own only the canvas background")
 
-local accepted_c4_4_graph = vim.deepcopy(full_hl)
+local accepted_c4_4_graph = vim.deepcopy(historical_m5_graph)
 local consumer_delta_count = 0
 for group, old_foreground in pairs(M5_AUTHORIZED_CONSUMER_DELTA) do
 	local spec = accepted_c4_4_graph[group]
@@ -794,7 +838,7 @@ assert_eq(
 )
 print(("C4.0 graph reconstructed after C4.4 visual rollback: %d groups, sha256=%s"):format(c4_0_count, c4_0_digest))
 
-local historical_m2b_graph = vim.deepcopy(full_hl)
+local historical_m2b_graph = vim.deepcopy(historical_m5_graph)
 for group, old_foreground in pairs(M5_AUTHORIZED_CONSUMER_DELTA) do
 	historical_m2b_graph[group].fg = old_foreground
 end
@@ -842,21 +886,21 @@ print(("M1 historical graph reconstructed from M5 production: %d groups, sha256=
 
 local function assert_production_graph(candidate)
 	local count, digest = normalized_graph_digest(candidate)
-	assert_eq(count, M5_PRODUCTION_GRAPH_COUNT, "M5 production graph count changed")
-	assert_eq(digest, M5_PRODUCTION_GRAPH_SHA256, "M5 production graph digest changed")
+	assert_eq(count, E_GRAPH_COUNT + 1, "E production graph count changed")
+	assert_eq(digest, SPECIAL_MEMBER_GRAPH_SHA256, "E production graph digest changed")
 end
 
 local bad_graph_extra = vim.deepcopy(full_hl)
 bad_graph_extra.DxUnauthorized = { fg = p.code.variable }
-assert(not pcall(assert_production_graph, bad_graph_extra), "M5 production graph must reject added groups")
+assert(not pcall(assert_production_graph, bad_graph_extra), "E production graph must reject added groups")
 
 local bad_graph_link = vim.deepcopy(full_hl)
 bad_graph_link["@lsp.type.variable"].link = "DxMember"
-assert(not pcall(assert_production_graph, bad_graph_link), "M5 production graph must reject link drift")
+assert(not pcall(assert_production_graph, bad_graph_link), "E production graph must reject link drift")
 
 local bad_graph_authority = vim.deepcopy(full_hl)
 bad_graph_authority["@lsp.mod.deprecated"].strikethrough = false
-assert(not pcall(assert_production_graph, bad_graph_authority), "M5 production graph must reject style-authority drift")
+assert(not pcall(assert_production_graph, bad_graph_authority), "E production graph must reject style-authority drift")
 
 local bad_graph_field = vim.deepcopy(full_hl)
 bad_graph_field.DxVariable.reverse = true
@@ -895,7 +939,8 @@ local function locate_symbolic_sentinel(bufnr, tag, token, lang)
 				local target_line = lines[j]
 				local trimmed = target_line:match("^%s*(.-)%s*$") or ""
 				if not is_comment_line(trimmed, lang) then
-					local pattern = "%f[%w_]" .. vim.pesc(token) .. "%f[^%w_]"
+					local pattern = token:match("^%W+$") and vim.pesc(token)
+						or ("%f[%w_]" .. vim.pesc(token) .. "%f[^%w_]")
 					local s_start = target_line:find(pattern)
 					if s_start then
 						assert(j > i, "Sentinel token must not be found on the marker comment line")
@@ -1232,6 +1277,91 @@ end
 
 vim.api.nvim_buf_delete(cpp_buf, { force = true })
 print("Verified M2B-B behavior closure: 6 corrected static members, 2 member controls, 5 variable controls.")
+
+local alias_review = assert(manifest.classification_reviews.alias_identity, "Alias review missing")
+assert_eq(alias_review.decision, "PENDING — EVIDENCE ONLY", "Alias classification must remain separately reviewed")
+assert_eq(#alias_review.cases, 14, "Expected 14 alias observations")
+local alias_counts = { cpp = 0, rust = 0, module = 0, type = 0 }
+local alias_tags = {}
+for _, case in ipairs(alias_review.cases) do
+	assert(case.language == "cpp" or case.language == "rust", "Alias review escaped C++/Rust scope")
+	assert(not alias_tags[case.tag] and not binding_tags[case.tag], "Duplicate alias tag: " .. case.tag)
+	alias_tags[case.tag] = true
+	assert(case.tag:find(case.language .. ".alias.", 1, true) == 1, "Alias tag/language mismatch")
+	assert(case.semantic_description and #case.semantic_description > 0, "Alias semantic description missing")
+	assert(vim.tbl_contains({ "declaration", "reference", "qualifier" }, case.occurrence), "Invalid alias occurrence")
+	local role = ({ module = "DxNamespace", type = "DxType" })[case.source_identity]
+	assert(role, "Invalid alias source identity")
+	local spec = manifest.languages[case.language]
+	local evidence = case.evidence
+	assert_eq(evidence.lsp.provider, spec.evidence_client, "Alias provider drift: " .. case.tag)
+	assert_eq(evidence.effective.role, role, "Settled alias observation escaped its entity kind: " .. case.tag)
+	assert_eq(evidence.effective.source, "lsp", "Settled alias authority drift")
+	assert_eq(evidence.require_unique_top_foreground, true, "Alias foreground winner must be unique")
+	assert_eq(#evidence.applied_foregrounds, 1, "Alias must have one semantic foreground owner")
+	assert(
+		vim.deep_equal(evidence.applied_foregrounds[1], {
+			group = evidence.effective.group,
+			role = role,
+			priority_delta = 0,
+		}),
+		"Alias applied foreground drift"
+	)
+	local buf = vim.fn.bufadd(repo_root .. "/" .. spec.path)
+	vim.fn.bufload(buf)
+	locate_symbolic_sentinel(buf, case.tag, case.token, case.language)
+	alias_counts[case.language] = alias_counts[case.language] + 1
+	alias_counts[case.source_identity] = alias_counts[case.source_identity] + 1
+end
+assert(vim.deep_equal(alias_counts, { cpp = 6, rust = 8, module = 4, type = 10 }), "Alias boundary coverage drift")
+print("Verified all 14/14 alias review locators; no classification change authorized.")
+
+local value_review = assert(manifest.classification_reviews.value_binding, "Value-binding review missing")
+assert_eq(value_review.decision, "PENDING — EVIDENCE ONLY", "Value classification requires separate approval")
+assert_eq(#value_review.cases, 13, "Expected 13 new value-binding observations")
+local value_cases_by_tag = vim.tbl_extend("error", {}, behavior_cases_by_tag)
+for _, spec in pairs(manifest.languages) do
+	for _, case in ipairs(spec.binding_cases or {}) do
+		assert(not value_cases_by_tag[case.tag], "Duplicate reused value tag")
+		value_cases_by_tag[case.tag] = case
+	end
+end
+local value_counts = { cpp = 0, rust = 0, pairs = 0 }
+for _, case in ipairs(value_review.cases) do
+	assert(case.language == "cpp" or case.language == "rust", "Value review escaped C++/Rust scope")
+	assert(not value_cases_by_tag[case.tag] and not alias_tags[case.tag], "Duplicate value tag: " .. case.tag)
+	value_cases_by_tag[case.tag] = case
+	assert(case.tag:find(case.language .. ".value.", 1, true) == 1, "Value tag/language mismatch")
+	assert(case.semantic_description and #case.semantic_description > 0, "Value description missing")
+	local role = ({ variable = "DxVariable", ["const-item"] = "DxConstant", ["static-item"] = "DxConstant" })[case.source_identity]
+	assert(role and (case.language == "rust" or role == "DxVariable"), "Invalid value source identity")
+	local spec, evidence = manifest.languages[case.language], case.evidence
+	assert_eq(evidence.lsp.provider, spec.evidence_client, "Value provider drift")
+	assert_eq(evidence.effective.role, role, "Value observation escaped its recorded role")
+	local lsp_owned = role == "DxVariable"
+	assert_eq(evidence.effective.source, lsp_owned and "lsp" or "treesitter", "Value authority drift")
+	assert_eq(evidence.require_unique_top_foreground, lsp_owned, "Value foreground tie policy drift")
+	assert_eq(#evidence.applied_foregrounds, lsp_owned and 1 or 0, "Value semantic foreground ownership drift")
+	local buf = vim.fn.bufadd(repo_root .. "/" .. spec.path)
+	vim.fn.bufload(buf)
+	locate_symbolic_sentinel(buf, case.tag, case.token, case.language)
+	value_counts[case.language] = value_counts[case.language] + 1
+end
+for _, case in ipairs(value_review.cases) do
+	if case.occurrence == "reference" then
+		local declaration = assert(value_cases_by_tag[case.declaration_tag], "Value declaration missing: " .. case.tag)
+		assert(declaration.occurrence ~= "reference", "Value pair must not target another reference")
+		assert_eq(declaration.token, case.token, "Value pair names differ")
+		assert_eq(declaration.evidence.lsp.provider, case.evidence.lsp.provider, "Value pair providers differ")
+		assert_eq(declaration.evidence.effective.role, case.evidence.effective.role, "Value pair roles differ")
+		value_counts.pairs = value_counts.pairs + 1
+	else
+		assert_eq(case.occurrence, "declaration", "Invalid value occurrence")
+		assert_eq(case.declaration_tag, nil, "Declaration must not link to another declaration")
+	end
+end
+assert(vim.deep_equal(value_counts, { cpp = 9, rust = 4, pairs = 11 }), "Value boundary coverage drift")
+print("Verified 13/13 new value locators and 11/11 declaration/reference pairs; no classification change authorized.")
 
 assert(
 	verified_sentinels == expected_total and verified_sentinels > 0,

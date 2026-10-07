@@ -14,7 +14,7 @@ M.roles = {
   },
   DxCallable = {
     family = "execution",
-    description = "Callable function, method, or constructor",
+    description = "Callable function, method, constructor, or evidenced callable value",
   },
   DxType = {
     family = "type-system",

@@ -26,6 +26,11 @@ function M.groups(p)
     ["DiagnosticInfo"] = { fg = p.state.info },
     ["DiagnosticHint"] = { fg = p.state.hint },
 
+    -- Unused is a state overlay, not a replacement semantic foreground.
+    -- Keep the diagnostic, warning undercurl, and italic cue without greying
+    -- out callable names (or any other source role).
+    ["DiagnosticUnnecessary"] = { italic = true },
+
     ["DiagnosticUnderlineError"] = { undercurl = true, sp = p.state.error },
     ["DiagnosticUnderlineWarn"] = { undercurl = true, sp = p.state.warn },
     ["DiagnosticUnderlineInfo"] = { undercurl = true, sp = p.state.info },

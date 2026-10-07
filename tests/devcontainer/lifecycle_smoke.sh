@@ -69,7 +69,7 @@ assert_container_state() {
     mason_data_root="${XDG_DATA_HOME:-$HOME/.local/share}/nvim/mason/packages"
     [[ -s "$mason_manifest" ]] || fail "Mason provisioning manifest is missing"
     mapfile -t mason_tools <"$mason_manifest"
-    [[ "${#mason_tools[@]}" -eq 21 ]] || fail "Mason provisioning manifest is not 21/21"
+    [[ "${#mason_tools[@]}" -eq 33 ]] || fail "Mason provisioning manifest is not 33/33 (tools + LSP servers)"
     unique_count="$(sort -u "$mason_manifest" | wc -l | tr -d ' ')"
     [[ "$unique_count" -eq "${#mason_tools[@]}" ]] || fail "Mason provisioning manifest contains duplicates"
     for mason_tool in "${mason_tools[@]}"; do
@@ -80,20 +80,24 @@ assert_container_state() {
 
     nvim_log="$(mktemp)"
     (
-        cd "$workspace_folder"
-        nvim --headless "+luafile tests/nvim/provision.lua" +qa
-        nvim --headless "+luafile tests/nvim/startup_policy.lua" \
-            "+luafile tests/nvim/smoke.lua" +qa
-        nvim -n --headless "+luafile tests/nvim/run_contract.lua" "tests/nvim/completion_contract.lua"
+        cd "$workspace_folder" || exit "$?"
+        nvim --headless "+luafile tests/nvim/provision.lua" +qa || exit "$?"
+        nvim --headless "+luafile tests/nvim/startup_policy.lua" +qa || exit "$?"
+        nvim -n --headless "+lua vim.g.dotfiles_contract_file = 'tests/nvim/smoke.lua'" \
+            "+luafile tests/nvim/run_contract.lua" || exit "$?"
+        nvim -n --headless "+luafile tests/nvim/run_contract.lua" "tests/nvim/completion_contract.lua" || exit "$?"
+        nvim -u NONE -n -i NONE --headless "+luafile tests/nvim/run_contract.lua" \
+            "tests/nvim/clangd_completion.lua" || exit "$?"
+        python3 tests/nvim/comment_keys.py || exit "$?"
         nvim -n --headless "+luafile tests/nvim/run_contract.lua" "tests/nvim/rust_toolchain.lua" || exit "$?"
-        nvim -n --headless "+luafile tests/nvim/production_visual_runtime.lua" +qa
-        DOTFILES_STRICT_LSP=1 nvim -n --headless "+luafile tests/nvim/color_contract.lua" +qa
-        nvim -n --headless "+luafile tests/nvim/binding_evidence.lua" +qa
+        nvim -n --headless "+luafile tests/nvim/production_visual_runtime.lua" +qa || exit "$?"
+        DOTFILES_STRICT_LSP=1 nvim -n --headless "+luafile tests/nvim/color_contract.lua" +qa || exit "$?"
+        nvim -n --headless "+luafile tests/nvim/binding_evidence.lua" +qa || exit "$?"
         nvim -u NONE -i NONE --headless "+set rtp^=$PWD/home/dot_config/nvim" \
-            "+luafile tests/nvim/run_contract.lua" "tests/nvim/python_provider_ownership_contract.lua"
+            "+luafile tests/nvim/run_contract.lua" "tests/nvim/python_provider_ownership_contract.lua" || exit "$?"
         DOTFILES_M2C_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}" \
-            bash tests/nvim/python_provider_ownership.sh
-        bash tests/nvim/color/validate_fixtures.sh
+            bash tests/nvim/python_provider_ownership.sh || exit "$?"
+        bash tests/nvim/color/validate_fixtures.sh || exit "$?"
     ) >"$nvim_log" 2>&1 || {
         cat "$nvim_log" >&2
         fail "Neovim warm smoke failed"
@@ -101,6 +105,10 @@ assert_container_state() {
     grep -Fq "Neovim toolchain smoke tests passed" "$nvim_log" || {
         cat "$nvim_log" >&2
         fail "Neovim warm smoke did not complete"
+    }
+    grep -Fq "Tier-2 Runtime Integration Contract passed cleanly." "$nvim_log" || {
+        cat "$nvim_log" >&2
+        fail "Five-language runtime integration did not complete"
     }
     grep -Fq "Rust ownership runtime passed:" "$nvim_log" || {
         cat "$nvim_log" >&2
@@ -114,9 +122,25 @@ assert_container_state() {
         cat "$nvim_log" >&2
         fail "Completion interaction contract did not complete"
     }
+    grep -Fq "Clangd completion contract passed:" "$nvim_log" || {
+        cat "$nvim_log" >&2
+        fail "Clangd completion contract did not complete"
+    }
+    grep -Fq "Native comment key contract passed:" "$nvim_log" || {
+        cat "$nvim_log" >&2
+        fail "Native comment key contract did not complete"
+    }
     grep -Fq "M2A binding-topology evidence passed: 28/28 cases, 15/15 comparisons." "$nvim_log" || {
         cat "$nvim_log" >&2
         fail "M2A binding-topology evidence did not complete"
+    }
+    grep -Fq "E alias identity observations passed: 14/14 cases; classification: PENDING." "$nvim_log" || {
+        cat "$nvim_log" >&2
+        fail "Alias identity evidence did not complete"
+    }
+    grep -Fq "E value-binding observations passed: 13/13 new positions, 11/11 declaration/reference pairs; classification: PENDING." "$nvim_log" || {
+        cat "$nvim_log" >&2
+        fail "Value-binding evidence did not complete"
     }
     grep -Fq "M2B static-data-member evidence passed: 7/7 cases; decision: RECLASSIFY STATIC DATA MEMBER TO DxMember" "$nvim_log" || {
         cat "$nvim_log" >&2
@@ -138,9 +162,9 @@ assert_container_state() {
         cat "$nvim_log" >&2
         fail "M2C-B provider-ownership decision was not implemented"
     }
-    grep -Fq "M5 production C4.4 runtime contract passed against actual Normal.bg #1A1B2A." "$nvim_log" || {
+    grep -Fq "E production visual runtime contract passed against actual Normal.bg #1A1B2A." "$nvim_log" || {
         cat "$nvim_log" >&2
-        fail "M5 production C4.4 runtime contract did not complete"
+        fail "E production visual runtime contract did not complete"
     }
     if grep -Eqi 'Package is already installing|^Installing tools:|^Updating tools:|MasonToolsUpdate' "$nvim_log"; then
         cat "$nvim_log" >&2
@@ -214,7 +238,7 @@ log_line() {
 run_devcontainer up --workspace-folder "$WORKSPACE" 2>&1 | tee "$FIRST_LOG"
 START_LINE="$(log_line "$FIRST_LOG" 'Dev Container post-create start')"
 ATTEMPT_LINE="$(log_line "$FIRST_LOG" 'post-create Neovim provisioning attempt')"
-TOOLS_LINE="$(log_line "$FIRST_LOG" 'required tools complete: 21/21')"
+TOOLS_LINE="$(log_line "$FIRST_LOG" 'required tools complete: 33/33')"
 PROVISION_LINE="$(log_line "$FIRST_LOG" 'post-create Neovim provisioning complete')"
 POST_CREATE_LINE="$(log_line "$FIRST_LOG" 'Dev Container post-create complete')"
 OUTCOME_LINE="$(log_line "$FIRST_LOG" '"outcome":"success"')"

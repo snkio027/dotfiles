@@ -11,21 +11,21 @@ function M.resolve(c)
   local code = {
     -- High-frequency semantic axes
     variable = "#C4CAE0",
-    keyword = "#BB9AF7",
-    keyword_function = "#7DCFFF",
-    callable = "#E6B35C",
-    type = "#2AC3DE",
+    keyword = "#79AAFF",
+    keyword_function = "#79AAFF",
+    callable = "#FFB266",
+    type = "#3DD1BB",
     builtin = "#9ECE6A",
     member = "#F29BC1",
 
     -- Secondary semantic structure
     lifetime = "#67D4C7",
     parameter = "#C8B2E3",
-    meta = "#D16DDB",
-    namespace = "#5EA1FF",
+    meta = "#FF8F7D",
+    namespace = "#DB8FEE",
     string = "#B8D07A",
-    number = "#F09A6C",
-    constant = "#DCC66A",
+    number = "#F2D675",
+    constant = "#F2D675",
 
     -- Micro-syntax and prose
     label = "#8E98B8",
@@ -49,10 +49,14 @@ function M.resolve(c)
     subtext1 = c.subtext1,
     text = c.text,
     normal_bg = "#1A1B2A",
+    -- Decorative consumers retain their C4.4 appearance independently of E source colors.
+    accent_violet = "#BB9AF7",
+    accent_cyan = "#2AC3DE",
+    accent_orange = "#F09A6C",
   }
 
   return {
-    -- 1. Production Source Semantic Palette (C4.4 High-Chroma Night)
+    -- 1. Production Source Semantic Palette (E: 19 source roles, 17 colors)
     code = code,
 
     -- 2. State & Transient Palette (CVD-Aware Accents without Red/Green Dependency)

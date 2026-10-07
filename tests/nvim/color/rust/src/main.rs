@@ -1,6 +1,31 @@
 use std::collections::HashMap;
 use std::time::Duration;
 
+mod alias_source {
+    pub struct Payload;
+    impl Payload {
+        pub const SIZE: usize = 1;
+    }
+}
+// DX:E3 rust.alias.module_declaration
+use alias_source as route;
+// DX:E3 rust.alias.imported_type_declaration
+use alias_source::Payload as ImportedPayload;
+// DX:E3 rust.alias.type_declaration
+type AliasPayload = alias_source::Payload;
+
+pub fn observe_alias_identity() -> usize {
+    // DX:E3 rust.alias.module_reference
+    // DX:E3 rust.alias.qualified_terminal_type
+    let value: route::Payload = alias_source::Payload;
+    // DX:E3 rust.alias.type_reference
+    let direct: AliasPayload = value;
+    // DX:E3 rust.alias.imported_type_reference
+    let imported: ImportedPayload = direct;
+    // DX:E3 rust.alias.type_qualifier
+    AliasPayload::SIZE + std::mem::size_of_val(&imported)
+}
+
 // DX:M2 rust.binding.static_item
 pub static MODULE_COUNTER: u32 = 7;
 
@@ -18,11 +43,14 @@ pub fn observe_binding_topology(
     parameter_value: u32,
 ) -> u32 {
     // DX:M2 rust.binding.local_let
+    // DX:E3 rust.value.static_reference
     let local_value = parameter_value + MODULE_COUNTER;
     // DX:M2 rust.binding.local_let_mut
+    // DX:E3 rust.value.let_reference
     let mut mutable_value = local_value;
     mutable_value += 1;
     let probe = BindingProbe { field_value: 2 };
+    // DX:E3 rust.value.let_mut_reference
     mutable_value + probe.field_value
 }
 
@@ -97,6 +125,7 @@ impl<'a> FrameReader<'a> {
 /// Sentinel: async free function (Callable = Muted Amber, Parameters = Muted Violet-Gray)
 // DX:SENTINEL rust.fetch_stream.fn
 pub async fn fetch_stream<'a>(uri: &'a str, retries: u32) -> Result<DownloadSummary, String> {
+    // DX:E3 rust.value.const_reference
     let initial_size: u64 = MAX_CAPACITY as u64;
     let mut summary = DownloadSummary::with_capacity(initial_size);
 

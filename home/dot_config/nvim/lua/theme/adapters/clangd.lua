@@ -10,6 +10,10 @@ function M.groups()
   return {
     ["@lsp.type.concept"] = { link = "DxType" },
 
+    -- clangd uses class tokens for constructor/destructor names. Their explicit
+    -- modifier identifies a callable without recoloring ordinary type references.
+    ["@lsp.typemod.class.constructorOrDestructor.cpp"] = { link = "DxCallable" },
+
     -- clangd's generic type token loses the builtin/user-defined distinction.
     ["@lsp.type.type.c"] = authority.suppress_foreground(),
     ["@lsp.type.type.cpp"] = authority.suppress_foreground(),

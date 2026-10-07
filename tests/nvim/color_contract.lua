@@ -5,7 +5,7 @@
 --- INVARIANTS:
 --- 1. Must fail closed: observes production configuration, NEVER reconstructs it.
 --- 2. Must ensure CI failure propagation: errors exit via :cquit 1 with full traceback.
---- 3. Symbolic sentinels must strictly search after marker comments on identifier boundaries.
+--- 3. Symbolic sentinels search after marker comments: identifier boundaries or literal punctuation.
 --- 4. Real LSP Gate: lane-aware (Tier-2A in minimal locked lane, Tier-2B strict in devcontainer);
 ---    attached servers with semanticTokensProvider MUST generate tokens bound to client.id.
 --- 5. Priority-based foreground resolution: inspect_pos extmarks & treesitter sorted by priority;
@@ -15,6 +15,8 @@
 ---    @type.lifetime.rust while leaving normal attributes (#[must_use]) as DxMeta.
 
 local function main()
+	local repo_root = vim.fs.root(0, ".git") or vim.fn.getcwd()
+	local highlight_evidence = dofile(repo_root .. "/tests/nvim/highlight_evidence.lua")
 	local function fail(msg)
 		error("COLOR_RUNTIME_CONTRACT_FAILURE: " .. msg, 2)
 	end
@@ -97,7 +99,7 @@ local function main()
 	end
 
 	-- Verify the production theme uses the canvas owned by theme.palette.
-	-- Catppuccin Mocha remains the host theme, while C4.4 intentionally owns
+	-- Catppuccin Mocha remains the host theme, while E preserves
 	-- a dedicated Normal background.
 	local normal = get_resolved_hl("Normal")
 	if normal.bg ~= colors_rgb.normal_bg then
@@ -158,6 +160,17 @@ local function main()
 		end
 
 		-- 2. Tree-sitter link resolution
+		-- These pairs may share RGB, but must keep distinct live identities.
+		for group, role in pairs({
+			["@keyword"] = "DxKeyword",
+			["@keyword.function"] = "DxFunctionKeyword",
+			["@number"] = "DxNumber",
+			["@constant"] = "DxConstant",
+			["@lsp.type.number"] = "DxNumber",
+			["@lsp.type.enumMember"] = "DxConstant",
+		}) do
+			highlight_evidence.assert_role(group, role, get_resolved_hl(group).fg)
+		end
 		local ts_assertions = {
 			{ "@keyword", colors_rgb.keyword },
 			{ "@keyword.function", colors_rgb.keyword_function },
@@ -396,7 +409,10 @@ local function main()
 					local target_line = lines[j]
 					local trimmed = target_line:match("^%s*(.-)%s*$") or ""
 					if not is_comment_line(trimmed, lang) then
-						local pattern = "%f[%w_]" .. vim.pesc(token) .. "%f[^%w_]"
+						-- Punctuation-only probes inspect ~ and = themselves, not a
+						-- correctly colored neighboring identifier. Keep word boundaries otherwise.
+						local pattern = token:match("^%W+$") and vim.pesc(token)
+							or ("%f[%w_]" .. vim.pesc(token) .. "%f[^%w_]")
 						local s_start = target_line:find(pattern)
 						if s_start then
 							assert(j > i, "Sentinel token must not be found on the marker comment line")
@@ -511,7 +527,7 @@ local function main()
 	end
 
 	--- Four-level verification:
-	--- 1. ROLE_ASSERT: asserts that the effective highlight's fg matches expected role
+	--- 1. ROLE_ASSERT: verifies the winning group's real link identity AND foreground
 	--- 2. CAPTURE_PROOF: asserts required or forbidden Tree-sitter captures (e.g. lifetime vs attribute)
 	--- 3. PROTOCOL_CONTRACT: asserts raw LSP token type, modifiers, and foreground authority
 	--- 4. TOKEN_OBSERVE: logs active Tree-sitter captures and raw LSP tokens from get_at_pos()
@@ -546,31 +562,8 @@ local function main()
 			fail(("No effective highlight found at %s (line: %s)"):format(pos_desc, vim.trim(target_line)))
 		end
 
-		-- 1. ROLE_ASSERT: True position-level color check
-		if eff_hl.fg ~= expected_hl.fg then
-			local cand_summary = {}
-			for _, c in ipairs(candidates or {}) do
-				table.insert(
-					cand_summary,
-					("%s(src=%s, prio=%d, fg=%06x, ord=%d)"):format(c.hl_name, c.source, c.priority, c.fg, c.order or 0)
-				)
-			end
-			fail(
-				(
-					"ROLE_ASSERT mismatch for %s:\n"
-					.. "  Expected fg: %06x (%s)\n"
-					.. "  Actual fg:   %06x (from group: %s)\n"
-					.. "  Candidates:  %s"
-				):format(
-					pos_desc,
-					expected_hl.fg,
-					sentinel.role,
-					eff_hl.fg,
-					eff_group or "nil",
-					table.concat(cand_summary, " -> ")
-				)
-			)
-		end
+		-- 1. ROLE_ASSERT: Same RGB is not proof of the same semantic identity.
+		highlight_evidence.assert_role(eff_group, sentinel.role, eff_hl.fg)
 
 		-- 2. CAPTURE_PROOF: Tree-sitter query extension validation
 		if sentinel.required_ts_capture then
@@ -844,8 +837,6 @@ local function main()
 		)
 	end
 
-	local repo_root = vim.fs.root(0, ".git") or vim.fn.getcwd()
-
 	local ok_manifest, manifest = pcall(dofile, repo_root .. "/tests/nvim/color_manifest.lua")
 	if not ok_manifest or not manifest.languages then
 		fail("Failed to load tests/nvim/color_manifest.lua")
@@ -867,6 +858,14 @@ local function main()
 			},
 		})
 	end
+
+	-- This contract observes immutable semantic/highlight fixtures, not builds.
+	-- On Linux ZLS 0.16 starts a build-on-save runner by default, then waits for
+	-- its cold compiler work even after shutdown/exit. Keep AST diagnostics and
+	-- semantic analysis active, but do not start that unrelated background build.
+	-- Production settings and the five-second retirement deadline are unchanged.
+	vim.lsp.config("zls", { settings = { zls = { enable_build_on_save = false } } })
+	local shutdown = dofile(repo_root .. "/tests/nvim/lsp_shutdown.lua")
 
 	for _, lang_key in ipairs(lang_order) do
 		local spec = manifest.languages[lang_key]
@@ -924,18 +923,7 @@ local function main()
 
 			local attached_clients = vim.lsp.get_clients({ bufnr = bufnr })
 			vim.cmd.bdelete({ bang = true })
-			vim.lsp.stop_client(attached_clients, false)
-			local stopped = vim.wait(5000, function()
-				for _, attached in ipairs(attached_clients) do
-					if vim.lsp.get_client_by_id(attached.id) then
-						return false
-					end
-				end
-				return true
-			end, 50)
-			if not stopped then
-				fail("LSP clients did not stop cleanly after fixture: " .. lang_key)
-			end
+			shutdown(attached_clients, lang_key, 5000)
 		else
 			fail(("Fixture file not found: %s"):format(fixture_path))
 		end
