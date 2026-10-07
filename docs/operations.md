@@ -108,6 +108,40 @@ python3 icons/generate.py --check # 验证生成制品未漂移
 
 `devdoctor` 检查 Homebrew、chezmoi、age、SSH、gitleaks、语言 Runtime、LLVM/CMake/Ninja、cxx-init、IaC/Kubernetes CLI 和终端工具。非 Rust Runtime 检查 Homebrew 路径；Rust 单独检查 rustup 所选工具链及 cargo/rustc 的实际入口，禁用诊断期间的自动安装；它不会自动修改系统。
 
+### C++ 项目与 vcpkg 环境
+
+Homebrew 管理 LLVM、CMake、Ninja、Git 等通用工具，uv 管理 `cxx-init`；dotfiles
+复用独立的 vcpkg Git checkout，不再通过 Brew 安装第二份 vcpkg。项目自己的
+`vcpkg.json` 与 CMake target 决定库依赖；编辑器从编译数据库取得结果。
+
+登录及非登录交互 Zsh 共用 `homebrew.zsh`：未指定时，`VCPKG_ROOT` 默认为
+`${XDG_DATA_HOME:-$HOME/.local/share}/vcpkg`，并加入去重后的 PATH；继承的项目
+`VCPKG_ROOT` 和 PATH 优先级保持不变。Shell 启动不联网、不安装工具。
+
+chezmoi 在 Brew bundle 后调用 `scripts/cpp/provision-vcpkg.sh`。首次缺失时从官方仓库
+取得已验证快照 `434307da09bc05b2c86996dccc8b2351fc0d5d37`，bootstrap 成功后才放入目标
+位置；已有 checkout 不 pull、不 reset、不切换版本，缺少可执行文件时才 bootstrap。
+非仓库、符号链接、不可执行或损坏入口会明确失败，不覆盖用户内容。初始化和首次 CMake
+configure 可能联网；`cxx init` 本身仍离线。快照仅约束首次安装，不替项目升级 baseline。
+
+```sh
+cxx init demo --vcpkg
+cd demo
+cmake --workflow --preset dev
+```
+
+不需要再粘贴假的路径。若手动覆盖了 `VCPKG_ROOT`，应恢复实际 checkout 路径；无效的
+显式值不会被静默改回默认值。`devdoctor` 只读检查实际 root 的 toolchain 与 executable，
+不会自动修复。若安装目录后来被删除，`run_onchange` 不会自动重试相同版本脚本，使用
+下面的显式修复入口（保持已有环境和版本）：
+
+```sh
+bash "$(chezmoi source-path)/../scripts/cpp/provision-vcpkg.sh" "$HOMEBREW_PREFIX"
+```
+
+更新已有 checkout 是单独的主动维护动作；本批不升级它、不改项目 manifest，也不自动
+部署日用配置。vcpkg 的官方安装与 CMake 集成说明见 [Microsoft 文档](https://learn.microsoft.com/en-us/vcpkg/get_started/get-started)。
+
 ### Rust 工具链职责
 
 Homebrew 管理通用 CLI 和 `rustup` 管理器；rustup 管理 `rustc`、Cargo、rustfmt、Clippy、rust-src 与编译 targets。Brew 的 `rust` 不再是声明的编译器 owner，但迁移不会自动卸载旧安装、删除 `~/.cargo`/`~/.rustup` 或执行 `brew cleanup`。
