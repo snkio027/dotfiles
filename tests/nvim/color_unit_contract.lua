@@ -324,6 +324,7 @@ end
 
 -- Typemod Precedence Governance (Neutralization of overriding modifiers)
 local required_typemods = {
+	["@lsp.typemod.class.constructorOrDestructor.cpp"] = "DxCallable",
 	["@lsp.typemod.variable.readonly"] = "DxVariable",
 	["@lsp.typemod.variable.defaultLibrary"] = "DxVariable",
 	["@lsp.typemod.variable.static"] = "DxVariable",
@@ -595,8 +596,7 @@ local M5_PRODUCTION_GRAPH_COUNT = 226
 local M5_PRODUCTION_GRAPH_SHA256 = "51cfaae3c02ec25551f1a8afd27427d3919d6b53c3b05f5ae26ff6c125aa6666"
 local E_BASE_SHA = "41423d77b31f72e886300add6be56127e35fb68e"
 local E_GRAPH_COUNT = 226
-local E_GRAPH_SHA256 = "eb7b5dc9790c8b609b81dc7ccce5bf5144d5b0c7131ff1eb64845ddf02eb8b19"
-local E_ORIGINAL_GRAPH_SHA256 = "44df09042fd6fcb77f4421244a9eb1336c124ce394828cc67e5160cba314c701"
+local E_GRAPH_SHA256 = "44df09042fd6fcb77f4421244a9eb1336c124ce394828cc67e5160cba314c701"
 local E_AUTHORIZED_FOREGROUND_DELTA = {
 	DxKeyword = "#BB9AF7",
 	DxFunctionKeyword = "#7DCFFF",
@@ -718,30 +718,50 @@ local function normalized_graph_digest(graph)
 	return #names, vim.fn.sha256(table.concat(normalized, "\n"))
 end
 
+-- The palette preview changes exactly three foregrounds on the current graph,
+-- including the later special-member and unused-state fixes.
+assert(vim.deep_equal(full_hl.DiagnosticUnnecessary, { italic = true }), "Unused state gained foreground authority")
 local production_count, production_digest = normalized_graph_digest(full_hl)
-assert_eq(production_count, E_GRAPH_COUNT, "E must retain the production group count")
-assert_eq(production_digest, E_GRAPH_SHA256, "E production resolved graph changed")
-print(("E production graph frozen: %d groups, sha256=%s"):format(production_count, production_digest))
-
--- User-requested grammar/namespace color swap: exactly three foreground fields.
--- Restore the reviewed E graph without erasing links, styles or UI ownership.
-local original_e_graph = vim.deepcopy(full_hl)
+local PRODUCTION_GRAPH_SHA256 = "ce699856eba6a5e0232a151a4c7b906517cffc64abe4c1b55b15cc08e44ca9b5"
+assert_eq(production_count, E_GRAPH_COUNT + 2, "Color swap changed the production group count")
+assert_eq(production_digest, PRODUCTION_GRAPH_SHA256, "Unrelated production resolved graph changed")
+local original_graph = vim.deepcopy(full_hl)
 for role, old_foreground in pairs({
 	DxKeyword = "#79AAFF",
 	DxFunctionKeyword = "#79AAFF",
 	DxNamespace = "#DB8FEE",
 }) do
-	assert(original_e_graph[role].fg ~= old_foreground, "Requested color swap missing: " .. role)
-	original_e_graph[role].fg = old_foreground
+	assert(original_graph[role].fg ~= old_foreground, "Requested color swap missing: " .. role)
+	original_graph[role].fg = old_foreground
 end
-local original_e_count, original_e_digest = normalized_graph_digest(original_e_graph)
-assert_eq(original_e_count, E_GRAPH_COUNT, "Color swap changed E group count")
-assert_eq(original_e_digest, E_ORIGINAL_GRAPH_SHA256, "Color swap changed more than three role foregrounds")
-print("Keyword/namespace swap verified: exactly three foregrounds; original E graph restored.")
+local original_count, original_digest = normalized_graph_digest(original_graph)
+assert_eq(original_count, E_GRAPH_COUNT + 2, "Color swap changed the original production count")
+assert_eq(
+	original_digest,
+	"5bdfce0b9c3bfd25db861046077c9b084074cd13b2a1576c4386c1418ce20e73",
+	"Color swap changed more than three role foregrounds"
+)
+print("Keyword/namespace swap verified: exactly three foregrounds; current main graph restored.")
+
+-- Unused diagnostics remain a style-only overlay. Preserve the later semantic
+-- corrections before reconstructing the earlier E palette evidence.
+local special_member_graph = vim.deepcopy(original_graph)
+special_member_graph.DiagnosticUnnecessary = nil
+local special_count, special_digest = normalized_graph_digest(special_member_graph)
+local SPECIAL_MEMBER_GRAPH_SHA256 = "c4f542adf2d920e7f12fb9600ee1e97ed412499d740dcc4d3ae0805d0aba1b97"
+assert_eq(special_count, E_GRAPH_COUNT + 1, "Special-member correction must add exactly one group")
+assert_eq(special_digest, SPECIAL_MEMBER_GRAPH_SHA256, "Unrelated production resolved graph changed")
+print(("E production graph frozen: %d groups, sha256=%s"):format(production_count, production_digest))
+
+local historical_e_graph = vim.deepcopy(special_member_graph)
+historical_e_graph["@lsp.typemod.class.constructorOrDestructor.cpp"] = nil
+local e_count, e_digest = normalized_graph_digest(historical_e_graph)
+assert_eq(e_count, E_GRAPH_COUNT, "Special-member rollback changed the E group count")
+assert_eq(e_digest, E_GRAPH_SHA256, "Special-member rollback must restore the complete E graph")
 
 -- Only these eight role foregrounds may differ. Rolling them back must restore
 -- the complete base graph, including every UI definition, link and style authority.
-local historical_m5_graph = vim.deepcopy(original_e_graph)
+local historical_m5_graph = vim.deepcopy(historical_e_graph)
 assert_eq(vim.tbl_count(E_AUTHORIZED_FOREGROUND_DELTA), 8, "E must change exactly eight role foregrounds")
 for role, old_foreground in pairs(E_AUTHORIZED_FOREGROUND_DELTA) do
 	local spec = historical_m5_graph[role]
@@ -888,9 +908,12 @@ print(("M1 historical graph reconstructed from M5 production: %d groups, sha256=
 
 local function assert_production_graph(candidate)
 	local count, digest = normalized_graph_digest(candidate)
-	assert_eq(count, E_GRAPH_COUNT, "E production graph count changed")
-	assert_eq(digest, E_GRAPH_SHA256, "E production graph digest changed")
+	assert_eq(count, E_GRAPH_COUNT + 2, "E production graph count changed")
+	assert_eq(digest, PRODUCTION_GRAPH_SHA256, "E production graph digest changed")
 end
+
+-- A valid control must pass before each mutation can prove rejection.
+assert_production_graph(full_hl)
 
 local bad_graph_extra = vim.deepcopy(full_hl)
 bad_graph_extra.DxUnauthorized = { fg = p.code.variable }
@@ -941,7 +964,8 @@ local function locate_symbolic_sentinel(bufnr, tag, token, lang)
 				local target_line = lines[j]
 				local trimmed = target_line:match("^%s*(.-)%s*$") or ""
 				if not is_comment_line(trimmed, lang) then
-					local pattern = "%f[%w_]" .. vim.pesc(token) .. "%f[^%w_]"
+					local pattern = token:match("^%W+$") and vim.pesc(token)
+						or ("%f[%w_]" .. vim.pesc(token) .. "%f[^%w_]")
 					local s_start = target_line:find(pattern)
 					if s_start then
 						assert(j > i, "Sentinel token must not be found on the marker comment line")

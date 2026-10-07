@@ -179,6 +179,72 @@ int observe_alias_identity() {
     return static_cast<int>(sizeof(value) + sizeof(direct)) + code;
 }
 
+namespace special_members {
+struct Base {
+    Base() = default;
+    explicit Base(int) {}
+};
+// DX:SENTINEL cpp.special.class
+class Value : Base {
+public:
+    // DX:SENTINEL cpp.special.default_ctor
+    Value() = default;
+    // DX:SENTINEL cpp.special.value_ctor
+    explicit Value(int value) :
+        // DX:SENTINEL cpp.special.base_initializer
+        Base(value),
+        // DX:SENTINEL cpp.special.member_initializer
+        Capitalized(value) {}
+    // DX:SENTINEL cpp.special.copy_ctor
+    Value(
+        // DX:SENTINEL cpp.special.parameter_type
+        const Value& other) :
+        // DX:SENTINEL cpp.special.delegate
+        Value(other.Capitalized) {}
+    // DX:SENTINEL cpp.special.move_ctor
+    Value(Value&&) = default;
+    // DX:SENTINEL cpp.special.return_type
+    Value&
+        // DX:SENTINEL cpp.special.copy_assignment
+        operator=(const Value&) = default;
+    Value&
+        // DX:SENTINEL cpp.special.move_assignment
+        operator=(Value&&) = default;
+    // DX:SENTINEL cpp.special.destructor
+    // DX:SENTINEL cpp.special.destructor_tilde
+    ~Value();
+    Value(int value, bool);
+
+    int Capitalized = 0;
+};
+
+// Qualifier is a type; only the terminal constructor name is callable.
+// DX:SENTINEL cpp.special.qualifier
+Value::
+    // DX:SENTINEL cpp.special.out_of_class_ctor
+    Value(int value, bool) :
+    // DX:SENTINEL cpp.special.qualified_delegate
+    Value(value) {}
+
+Value::
+    // DX:SENTINEL cpp.special.out_of_class_dtor
+    // DX:SENTINEL cpp.special.out_of_class_tilde
+    ~Value() {}
+
+void destroy(Value* value) {
+    // DX:SENTINEL cpp.special.destructor_call
+    // DX:SENTINEL cpp.special.destructor_call_tilde
+    value->~Value();
+}
+
+int ordinary_operators(int value) {
+    // DX:SENTINEL cpp.special.ordinary_assignment
+    value = 1;
+    // DX:SENTINEL cpp.special.ordinary_complement
+    return ~value;
+}
+} // namespace special_members
+
 // Sentinel: primitive scalar type (Builtin = Steel Blue)
 // DX:SENTINEL cpp.int.builtin
 int main() {

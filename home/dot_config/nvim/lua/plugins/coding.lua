@@ -1,5 +1,19 @@
 return {
   {
+    "saghen/blink.cmp",
+    opts = function(_, opts)
+      local provider = opts.sources.providers.lsp or {}
+      local previous = provider.transform_items
+      provider.transform_items = function(ctx, items)
+        if previous then
+          items = previous(ctx, items)
+        end
+        return require("config.clangd_completion").transform_items(ctx, items)
+      end
+      opts.sources.providers.lsp = provider
+    end,
+  },
+  {
     "L3MON4D3/LuaSnip",
     config = function(_, opts)
       local luasnip = require("luasnip")

@@ -629,6 +629,11 @@ local function main()
 			},
 		})
 	end
+	-- Like color_contract, this observes immutable semantic fixtures, not builds.
+	-- Keep analysis active without ZLS's unrelated cold build-on-save runner,
+	-- which can outlive shutdown/exit. Production settings remain unchanged.
+	vim.lsp.config("zls", { settings = { zls = { enable_build_on_save = false } } })
+	local shutdown = dofile(repo_root .. "/tests/nvim/lsp_shutdown.lua")
 
 	local observations = {}
 	local classification_observations = {}
@@ -744,18 +749,7 @@ local function main()
 
 		local attached_clients = vim.lsp.get_clients({ bufnr = bufnr })
 		vim.cmd.bdelete({ bang = true })
-		vim.lsp.stop_client(attached_clients, false)
-		local stopped = vim.wait(5000, function()
-			for _, client in ipairs(attached_clients) do
-				if vim.lsp.get_client_by_id(client.id) then
-					return false
-				end
-			end
-			return true
-		end, 50)
-		if not stopped then
-			fail("LSP clients did not stop cleanly after " .. lang)
-		end
+		shutdown(attached_clients, "binding-evidence/" .. lang, 5000)
 	end
 
 	assert_equal(case_count, 28, "binding evidence case count changed")
