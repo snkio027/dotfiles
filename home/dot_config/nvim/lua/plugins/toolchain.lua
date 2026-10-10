@@ -241,6 +241,10 @@ return {
     "Civitasv/cmake-tools.nvim",
     optional = true,
     dependencies = { "stevearc/overseer.nvim" },
+    config = function(_, opts)
+      require("cmake-tools").setup(opts)
+      require("config.cmake_workflow").setup()
+    end,
     keys = {
       { "<leader>ob", "<cmd>CMakeBuild<cr>", desc = "Build (CMake)" },
       { "<leader>or", "<cmd>CMakeRun<cr>", desc = "Build and Run (CMake)" },

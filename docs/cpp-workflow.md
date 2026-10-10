@@ -157,16 +157,16 @@ ctest --preset dev
 
 ## 在 Neovim 中减少重复操作
 
-从项目根目录启动 `nvim .`。首次依次选择：
+从项目根目录启动 `nvim .`。首次选择 configure/build preset 后直接运行：
 
 ```vim
 :CMakeSelectConfigurePreset
 :CMakeSelectBuildPreset
-:CMakeGenerate
-:CMakeSelectLaunchTarget
+:CMakeRun
 ```
 
-日常选择 `dev` / `dev` 和自己的可执行 target，随后使用下面的快捷键。
+日常选择 `dev` / `dev`。尚未配置时，一次 Run 会完成 Configure，按提示选择可执行 target，
+随后 Build → Run；取消选择或任何一步失败都不会继续运行。随后使用下面的快捷键。
 `<leader>` 在本配置中是空格：
 
 | 按键 | 命令 | 何时使用 |
@@ -180,9 +180,11 @@ ctest --preset dev
 | `Space o w` | `OverseerToggle!` | 查看任务状态、输出和历史 |
 | `Space c i` | 插入 clangd 建议的缺失 include | 粘贴代码后，逐项核对公开头文件 |
 
-建议先主动保存并确认没有写入错误。锁定的 CMakeTools 会尝试保存所有已命名、已修改的普通 buffer，
-并非只保存当前项目；其 `silent! write` 不保证保存失败能阻止构建。因此不能把任务成功当成保存成功。
-`CMakeRun` 使用磁盘源码。`CMakeQuickRun` 可临时选择其他目标，
+Configure / Build 会先保存 **CMakeTools 当前项目目录内**已命名、已修改的普通 buffer，
+保留正常保存与格式化钩子。只读、写入异常或保存后仍有未保存内容都会停止任务并提示文件；
+之前已成功保存的文件不会回滚。其他项目、指向项目外的符号链接和未命名草稿不会被自动写入。
+构建期间继续编辑导致运行前仍有未保存内容时，也会停止运行，需再次 Build / Run。
+`CMakeRun` 使用磁盘源码，未命名草稿需自行命名保存。`CMakeQuickRun` 可临时选择其他目标，
 它同样会先构建；日常固定目标用 `Space o r` 即可。
 
 界面使用英文 `Configure / Build / Run / Test · project · preset`。配置和构建成功只显示
