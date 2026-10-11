@@ -58,7 +58,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Homebrew
-        uses: Homebrew/actions/setup-homebrew@962acc985cf741e4f7a112a3cfa6194386b63edf # main 2026-08-12
+        uses: Homebrew/actions/setup-homebrew@eb02c69dbabdb66ff183c614f4ce7ab3c077592c # main 2026-08-12
 
       - name: Install validation toolchain
         run: |
@@ -251,7 +251,7 @@ jobs:
         run: bash scripts/supply-chain/verify-chezmoi-release.sh
 
       - name: Set up Homebrew
-        uses: Homebrew/actions/setup-homebrew@962acc985cf741e4f7a112a3cfa6194386b63edf # main 2026-08-12
+        uses: Homebrew/actions/setup-homebrew@eb02c69dbabdb66ff183c614f4ce7ab3c077592c # main 2026-08-12
 
       - name: Query high-severity formula vulnerabilities
         run: |
@@ -280,7 +280,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Homebrew
-        uses: Homebrew/actions/setup-homebrew@962acc985cf741e4f7a112a3cfa6194386b63edf # main 2026-08-12
+        uses: Homebrew/actions/setup-homebrew@eb02c69dbabdb66ff183c614f4ce7ab3c077592c # main 2026-08-12
 
       - name: Install validation toolchain
         run: |
@@ -357,7 +357,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Homebrew
-        uses: Homebrew/actions/setup-homebrew@962acc985cf741e4f7a112a3cfa6194386b63edf # main 2026-08-12
+        uses: Homebrew/actions/setup-homebrew@eb02c69dbabdb66ff183c614f4ce7ab3c077592c # main 2026-08-12
 
       - name: Install and exercise the core profile
         run: |
@@ -391,7 +391,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Homebrew
-        uses: Homebrew/actions/setup-homebrew@962acc985cf741e4f7a112a3cfa6194386b63edf # main 2026-08-12
+        uses: Homebrew/actions/setup-homebrew@eb02c69dbabdb66ff183c614f4ce7ab3c077592c # main 2026-08-12
 
       - name: Install lifecycle validation toolchain
         run: |
@@ -426,7 +426,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Homebrew
-        uses: Homebrew/actions/setup-homebrew@962acc985cf741e4f7a112a3cfa6194386b63edf # main 2026-08-12
+        uses: Homebrew/actions/setup-homebrew@eb02c69dbabdb66ff183c614f4ce7ab3c077592c # main 2026-08-12
 
       - name: Install validation toolchain
         run: |
@@ -455,7 +455,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Homebrew
-        uses: Homebrew/actions/setup-homebrew@962acc985cf741e4f7a112a3cfa6194386b63edf # main 2026-08-12
+        uses: Homebrew/actions/setup-homebrew@eb02c69dbabdb66ff183c614f4ce7ab3c077592c # main 2026-08-12
 
       - name: Install validation toolchain
         run: |
