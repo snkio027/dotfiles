@@ -39,7 +39,7 @@ if [[ "$1" == clone ]]; then
     "$REAL_GIT" -C "$4" remote set-url origin https://github.com/microsoft/vcpkg.git
 elif [[ "$1" == -C && "$3" == checkout ]]; then
     [[ "$PROBE_FAIL" != checkout ]] || exit 48
-    [[ "$4 $5" == '--detach 434307da09bc05b2c86996dccc8b2351fc0d5d37' ]]
+    [[ "$4 $5" == '--detach e456309491fd875487bf02b8a0dca76c1b1b00cc' ]]
     "$REAL_GIT" -C "$2" checkout --quiet --detach HEAD
 else
     exec "$REAL_GIT" "$@"

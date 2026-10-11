@@ -18,7 +18,7 @@ export PATH="$BREW_PREFIX/bin:$PATH"
 unset GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR GIT_INDEX_FILE GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES
 
 # Used only for a fresh installation; never reset/pull an existing checkout.
-INITIAL_REVISION=434307da09bc05b2c86996dccc8b2351fc0d5d37
+INITIAL_REVISION=e456309491fd875487bf02b8a0dca76c1b1b00cc
 target="$VCPKG_ROOT"
 staging=""
 if [[ ! -e "$target" && ! -L "$target" ]]; then

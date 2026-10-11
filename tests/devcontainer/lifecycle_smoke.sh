@@ -28,9 +28,9 @@ assert_container_state() {
     bootstrap_binary="$HOME/.local/bin/chezmoi"
     bootstrap_receipt="$HOME/.local/bin/.chezmoi-provenance"
     [[ -x "$bootstrap_binary" && -f "$bootstrap_receipt" ]] || fail "verified chezmoi bootstrap artifacts are missing"
-    grep -Fqx 'version=2.72.1' "$bootstrap_receipt" || fail "chezmoi bootstrap version receipt drifted"
+    grep -Fqx 'version=2.73.1' "$bootstrap_receipt" || fail "chezmoi bootstrap version receipt drifted"
     grep -Eq '^platform=linux/(amd64|arm64)$' "$bootstrap_receipt" || fail "chezmoi bootstrap platform receipt is invalid"
-    [[ "$("$bootstrap_binary" --version)" == "chezmoi version v2.72.1,"* ]] || fail "chezmoi bootstrap binary version drifted"
+    [[ "$("$bootstrap_binary" --version)" == "chezmoi version v2.73.1,"* ]] || fail "chezmoi bootstrap binary version drifted"
 
     source_path="$(chezmoi source-path)"
     [[ "$source_path" == "$workspace_folder/home" ]] || fail "chezmoi source is $source_path"

@@ -14,7 +14,7 @@ chezmoi init --apply https://github.com/snkio027/dotfiles
 
 Linux 工作站由 Brewfile 显式安装 `/home/linuxbrew/.linuxbrew/bin/zsh`，新建的非登录交互 Shell 也会直接获得 Linuxbrew PATH、FPATH、插件与补全，不依赖 `.zprofile`。安装 Zsh 与选择登录 Shell 是两个独立行为：本仓库不会执行 `chsh` 或修改 `/etc/shells`。需要切换时，应先确认该路径存在，再由用户按发行版要求将它加入 `/etc/shells` 并显式运行 `chsh -s /home/linuxbrew/.linuxbrew/bin/zsh`。
 
-Dev Container 使用 `CHEZMOI_PROFILE=devcontainer` 和独立的 `devcontainer.Brewfile`，通过 Linuxbrew 获得与 Linux workstation 相同的 60 个公式声明，但不会生成宿主密钥、修改宿主 Git hooks 或应用 macOS 偏好。基础镜像保留 `resolute` tag 便于 Dependabot 识别，同时固定其覆盖 Linux amd64/arm64 的 OCI manifest digest；镜像内的 chezmoi bootstrap 固定到 `2.72.1` 双架构制品，下载后先比对由上游 Sigstore 签名 checksum 得出的 SHA-256，再检查二进制自身版本，失败时不会留下可执行文件或成功 receipt。该固定制品只负责无 Homebrew 时的首次引导，稳态命令仍由 core profile 的 Homebrew owner 提供。post-create 是缺失 Neovim/Mason 工具的唯一 provisioning owner：瞬时失败最多重试三次，只有插件锁未漂移且 33 项 Mason receipt（21 项通用工具与去重后的 12 项额外 LSP） 完整时才返回成功；后续 lifecycle 复核 provisioning 并执行 warm UI 验收，不重新 apply；warm UI 必须在工具就绪后启动，不允许边安装边退出。CI 使用 Dev Container CLI 真实执行 post-create、非 root Shell、chezmoi、Neovim warm smoke 和二次 `up` 幂等验证。可用 `GIT_AUTHOR_NAME` 与 `GIT_AUTHOR_EMAIL` 覆盖缺省身份。
+Dev Container 使用 `CHEZMOI_PROFILE=devcontainer` 和独立的 `devcontainer.Brewfile`，通过 Linuxbrew 获得与 Linux workstation 相同的 60 个公式声明，但不会生成宿主密钥、修改宿主 Git hooks 或应用 macOS 偏好。基础镜像保留 `resolute` tag 便于 Dependabot 识别，同时固定其覆盖 Linux amd64/arm64 的 OCI manifest digest；镜像内的 chezmoi bootstrap 固定到 `2.73.1` 双架构制品，下载后先比对由上游 Sigstore 签名 checksum 得出的 SHA-256，再检查二进制自身版本，失败时不会留下可执行文件或成功 receipt。该固定制品只负责无 Homebrew 时的首次引导，稳态命令仍由 core profile 的 Homebrew owner 提供。post-create 是缺失 Neovim/Mason 工具的唯一 provisioning owner：瞬时失败最多重试三次，只有插件锁未漂移且 33 项 Mason receipt（21 项通用工具与去重后的 12 项额外 LSP） 完整时才返回成功；后续 lifecycle 复核 provisioning 并执行 warm UI 验收，不重新 apply；warm UI 必须在工具就绪后启动，不允许边安装边退出。CI 使用 Dev Container CLI 真实执行 post-create、非 root Shell、chezmoi、Neovim warm smoke 和二次 `up` 幂等验证。可用 `GIT_AUTHOR_NAME` 与 `GIT_AUTHOR_EMAIL` 覆盖缺省身份。
 
 ## 体验设计
 
@@ -122,7 +122,7 @@ Homebrew 管理 LLVM、CMake、Ninja、Git 等通用工具，uv 管理 `cxx-init
 `VCPKG_ROOT` 和 PATH 优先级保持不变。Shell 启动不联网、不安装工具。
 
 chezmoi 在 Brew bundle 后调用 `scripts/cpp/provision-vcpkg.sh`。首次缺失时从官方仓库
-取得已验证快照 `434307da09bc05b2c86996dccc8b2351fc0d5d37`，bootstrap 成功后才放入目标
+取得已验证快照 `e456309491fd875487bf02b8a0dca76c1b1b00cc`，bootstrap 成功后才放入目标
 位置；已有 checkout 不 pull、不 reset、不切换版本，缺少可执行文件时才 bootstrap。
 非仓库、符号链接、不可执行或损坏入口会明确失败，不覆盖用户内容。初始化和首次 CMake
 configure 可能联网；`cxx init` 本身仍离线。快照仅约束首次安装，不替项目升级 baseline。
