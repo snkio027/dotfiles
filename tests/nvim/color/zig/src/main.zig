@@ -40,6 +40,34 @@ pub const Payload = union(enum) {
     close: void,
 };
 
+// Exercise semantic types that share ZLS's generic `type` token with builtins.
+pub const TypeSamples = struct {
+    // DX:SENTINEL zig.tagged.declaration
+    pub const tagged = union(enum) { number: u32, empty: void };
+    // DX:SENTINEL zig.capitalized.member
+    LazyPath: usize,
+};
+
+pub fn observeTypes(
+    // DX:SENTINEL zig.lazy_path.type
+    generated: std.Build.LazyPath,
+    // DX:SENTINEL zig.tagged.reference
+    payload: TypeSamples.tagged,
+    // DX:SENTINEL zig.usize.builtin
+    count: usize,
+    // DX:SENTINEL zig.bool.builtin
+    enabled: bool,
+    // DX:SENTINEL zig.f64.builtin
+    ratio: f64,
+    // DX:SENTINEL zig.u29.builtin
+    bits: u29,
+    sample: TypeSamples,
+) void {
+    _ = .{ generated, payload, count, enabled, ratio, bits };
+    // DX:SENTINEL zig.capitalized.member_reference
+    _ = sample.LazyPath;
+}
+
 /// System errors.
 pub const FrameError = error{
     BufferOverflow,
@@ -51,7 +79,7 @@ pub const FrameError = error{
 // DX:SENTINEL zig.network_buffer.type
 pub const NetworkBuffer = struct {
     allocator: std.mem.Allocator,
-    // Sentinel: primitive scalar type (Builtin = Steel Blue, authority = treesitter, LSP = type)
+    // Primitive scalar: builtin green, Tree-sitter authority over ZLS's type token.
     // DX:SENTINEL zig.u8.builtin
     // DX:SENTINEL zig.bytes.member
     bytes: []u8,

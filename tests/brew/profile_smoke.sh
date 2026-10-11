@@ -85,6 +85,7 @@ case "$PROFILE" in
         exercise wget --version
         exercise yazi --version
         exercise zellij --version
+        exercise zig version
         exercise zizmor --version
         exercise zsh --version
         [[ -f "$(brew --prefix)/share/zsh-autosuggestions/zsh-autosuggestions.zsh" ]] ||

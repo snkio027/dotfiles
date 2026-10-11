@@ -17,8 +17,10 @@ function M.groups()
     ["@lsp.type.errorTag"] = { link = "DxConstant" },
     ["@lsp.type.escapeSequence"] = { link = "DxString" },
 
-    -- ZLS collapses distinctions that the Zig Tree-sitter grammar preserves.
-    ["@lsp.type.type.zig"] = authority.suppress_foreground(),
+    -- ZLS uses `type` for unions as well as primitives. Keep semantic type
+    -- authority on qualified names; the Zig query protects builtin_type nodes.
+    ["@lsp.type.type.zig"] = { link = "DxType" },
+    -- Preserve Tree-sitter's distinction between fn and ordinary keywords.
     ["@lsp.type.keyword.zig"] = authority.suppress_foreground(),
   }
 end
