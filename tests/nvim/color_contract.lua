@@ -262,10 +262,7 @@ local function main()
 			fail("@lsp.type.type.cpp must have nil foreground (LspForegroundPassthrough)")
 		end
 
-		local passthrough_zig = get_resolved_hl("@lsp.type.type.zig")
-		if passthrough_zig.fg ~= nil then
-			fail("@lsp.type.type.zig must have nil foreground (LspForegroundPassthrough)")
-		end
+		highlight_evidence.assert_role("@lsp.type.type.zig", "DxType", get_resolved_hl("@lsp.type.type.zig").fg)
 
 		local passthrough_zig_kw = get_resolved_hl("@lsp.type.keyword.zig")
 		if passthrough_zig_kw.fg ~= nil then

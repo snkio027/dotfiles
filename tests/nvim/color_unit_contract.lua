@@ -360,11 +360,7 @@ assert_eq(
 	"LspForegroundPassthrough",
 	"@lsp.type.type.cpp must link to LspForegroundPassthrough"
 )
-assert_eq(
-	groups["@lsp.type.type.zig"].link,
-	"LspForegroundPassthrough",
-	"@lsp.type.type.zig must link to LspForegroundPassthrough"
-)
+assert_eq(groups["@lsp.type.type.zig"].link, "DxType", "@lsp.type.type.zig must preserve semantic type identity")
 assert_eq(
 	groups["@lsp.type.keyword.zig"].link,
 	"LspForegroundPassthrough",
@@ -718,14 +714,23 @@ local function normalized_graph_digest(graph)
 	return #names, vim.fn.sha256(table.concat(normalized, "\n"))
 end
 
--- The palette preview changes exactly three foregrounds on the current graph,
--- including the later special-member and unused-state fixes.
+-- Freeze the current graph, then reverse the Zig binding correction before
+-- replaying the earlier palette, special-member and unused-state evidence.
 assert(vim.deep_equal(full_hl.DiagnosticUnnecessary, { italic = true }), "Unused state gained foreground authority")
 local production_count, production_digest = normalized_graph_digest(full_hl)
-local PRODUCTION_GRAPH_SHA256 = "ce699856eba6a5e0232a151a4c7b906517cffc64abe4c1b55b15cc08e44ca9b5"
-assert_eq(production_count, E_GRAPH_COUNT + 2, "Color swap changed the production group count")
+local PRODUCTION_GRAPH_SHA256 = "06b6c6dc88bc2925d2c36fc135df7cddc316e2677f60a408d1298dcf1098f62e"
+assert_eq(production_count, E_GRAPH_COUNT + 2, "Production highlight group count changed")
 assert_eq(production_digest, PRODUCTION_GRAPH_SHA256, "Unrelated production resolved graph changed")
 local original_graph = vim.deepcopy(full_hl)
+-- This fix changes one Zig binding only; all palette/UI/other-language graph
+-- entries must recover the previously frozen production graph byte-for-byte.
+original_graph["@lsp.type.type.zig"] = { link = "LspForegroundPassthrough" }
+local _, pre_zig_digest = normalized_graph_digest(original_graph)
+assert_eq(
+	pre_zig_digest,
+	"ce699856eba6a5e0232a151a4c7b906517cffc64abe4c1b55b15cc08e44ca9b5",
+	"Zig fix changed unrelated highlights"
+)
 for role, old_foreground in pairs({
 	DxKeyword = "#79AAFF",
 	DxFunctionKeyword = "#79AAFF",

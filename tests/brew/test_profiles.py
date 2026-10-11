@@ -112,6 +112,7 @@ QUALITY_BREWS = {
     "wget",
     "yazi",
     "zellij",
+    "zig",
     "zizmor",
     "zsh",
     "zsh-autosuggestions",
