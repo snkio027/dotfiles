@@ -10,8 +10,8 @@ return {
 	},
 	locked_plugins = {
 		LazyVim = "999700997f72227187d49d8b92667183dc7fc809",
-		["mason-lspconfig.nvim"] = "137bd0feba2c1885545b6934d36f5e5aa6adb486",
-		["nvim-lspconfig"] = "a9bb4d5f4276aa5cddc015faa3ecc5a7b5a26b14",
+		["mason-lspconfig.nvim"] = "e17625cdc8c2650787467398e02c5d63a2cde966",
+		["nvim-lspconfig"] = "6d27c288ff951e1e94cb5f91c800adeddf0dc0c2",
 	},
 	packages = {
 		pyright = { executable = "pyright", lspconfig_server = "pyright" },

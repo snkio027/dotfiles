@@ -25,7 +25,7 @@ match = re.search(
 )
 if not match:
     fail("Dev Container base must retain resolute and use a manifest digest")
-if match.group(2) != "sha256:00e84e24112159d45c0262f07cb013cb58cb6a415f3e1c743d4a3115ac5d76c6":
+if match.group(2) != "sha256:91eff046d5c12318fc98e59258982b87ba896c467427ed8b5dab5a02107a5db7":
     fail("Dev Container base digest drifted without provenance review")
 
 devcontainer = json.loads(
@@ -56,11 +56,11 @@ for raw_line in (
     key, value = line.split("=", 1)
     manifest[key] = value
 
-if manifest.get("CHEZMOI_VERSION") != "2.72.1":
+if manifest.get("CHEZMOI_VERSION") != "2.73.1":
     fail("chezmoi version drifted without a signed provenance update")
 expected_hashes = {
-    "CHEZMOI_LINUX_AMD64_SHA256": "9f97d32caca166e5c92160ec3a9325519809c38963121cef38173142065c981f",
-    "CHEZMOI_LINUX_ARM64_SHA256": "75508ef41216b6d64f3145986b751729d7f92d09c6bad77d51cf2895ab35a508",
+    "CHEZMOI_LINUX_AMD64_SHA256": "a3f958acb7d0e5d53fa43c2eec9bc8ae3b4fba8bcbfdce29a8881ca3ffc20a53",
+    "CHEZMOI_LINUX_ARM64_SHA256": "e60275b27f505ae2086bfb87b144eacf7377a89803120f6bd933d1852a93b0c6",
 }
 for key, expected in expected_hashes.items():
     if manifest.get(key) != expected:
