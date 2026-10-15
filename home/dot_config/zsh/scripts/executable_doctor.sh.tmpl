@@ -46,6 +46,36 @@ check_status() {
     esac
 }
 
+# Capture the command before formatting: pipelines/fallback text must not turn
+# an unusable executable into a successful health check (or hide stderr).
+observe_version() {
+    local output status
+    if output="$("$@" 2>&1)"; then
+        if [[ "$output" != *[![:space:]]* ]]; then
+            VERSION_DETAIL="empty version response"
+            return 1
+        fi
+        VERSION_DETAIL="${output%%$'\n'*}"
+        return 0
+    else
+        status=$?
+        VERSION_DETAIL="version command failed, exit $status: $output"
+        return 1
+    fi
+}
+
+check_version() {
+    local name="$1" missing_status="$2"
+    shift 2
+    if ! command -v "$1" &>/dev/null; then
+        check_status "$name" "$missing_status" "$1 missing in PATH"
+    elif observe_version "$@"; then
+        check_status "$name" "pass" "$VERSION_DETAIL"
+    else
+        check_status "$name" "fail" "$VERSION_DETAIL"
+    fi
+}
+
 echo -e "${BOLD}${CYAN}======================================================================${RESET}"
 echo -e "${BOLD}${CYAN}   🚀 Developer Platform Environment Health Check (devdoctor)   ${RESET}"
 echo -e "${BOLD}${CYAN}======================================================================${RESET}"
@@ -60,38 +90,32 @@ OS_TYPE="$(uname -s)"
 ARCH_TYPE="$(uname -m)"
 check_status "Operating System" "pass" "$OS_TYPE ($ARCH_TYPE)"
 
+check_version "Homebrew Package Manager" "fail" brew --version
 if command -v brew &>/dev/null; then
-    BREW_VER="$(brew --version 2>/dev/null | head -n1 || echo "installed")"
     BREW_PREFIX="$(brew --prefix 2>/dev/null || true)"
-    check_status "Homebrew Package Manager" "pass" "$BREW_VER"
 else
     BREW_PREFIX=""
-    check_status "Homebrew Package Manager" "fail" "Not installed in PATH"
 fi
 
 if command -v chezmoi &>/dev/null; then
-    CZ_VER="$(chezmoi --version 2>/dev/null | sed -E 's/^chezmoi version ([^,]+).*/\1/' | head -n1 || echo "installed")"
-    if RAW_STATUS="$(chezmoi status)"; then
+    if ! observe_version chezmoi --version; then
+        check_status "chezmoi State" "fail" "$VERSION_DETAIL"
+    elif RAW_STATUS="$(chezmoi status)"; then
         if [ -z "$RAW_STATUS" ]; then
-            check_status "chezmoi State" "pass" "$CZ_VER (Synced / Clean)"
+            check_status "chezmoi State" "pass" "$VERSION_DETAIL (Synced / Clean)"
         else
             DIFF_COUNT="$(echo "$RAW_STATUS" | wc -l | tr -d ' ')"
-            check_status "chezmoi State" "warn" "$CZ_VER ($DIFF_COUNT pending diffs)"
+            check_status "chezmoi State" "warn" "$VERSION_DETAIL ($DIFF_COUNT pending diffs)"
         fi
     else
         STATUS_EXIT=$?
-        check_status "chezmoi State" "fail" "$CZ_VER (status failed, exit $STATUS_EXIT)"
+        check_status "chezmoi State" "fail" "$VERSION_DETAIL (status failed, exit $STATUS_EXIT)"
     fi
 else
     check_status "chezmoi State" "fail" "chezmoi binary missing"
 fi
 
-if command -v age &>/dev/null; then
-    AGE_VER="$(age --version 2>/dev/null | head -n1 || echo "installed")"
-    check_status "age Encryption CLI" "pass" "$AGE_VER"
-else
-    check_status "age Encryption CLI" "warn" "age binary missing"
-fi
+check_version "age Encryption CLI" "warn" age --version
 
 echo ""
 
@@ -132,12 +156,7 @@ else
 fi
 {{- end }}
 
-if command -v gitleaks &>/dev/null; then
-    GLEAKS_VER="$(gitleaks version 2>/dev/null || echo "installed")"
-    check_status "gitleaks Scanner" "pass" "v$GLEAKS_VER"
-else
-    check_status "gitleaks Scanner" "warn" "gitleaks missing (run brew bundle)"
-fi
+check_version "gitleaks Scanner" "warn" gitleaks version
 
 echo ""
 
@@ -146,26 +165,9 @@ echo ""
 # ------------------------------------------------------------------------------
 echo -e "${BOLD}${BLUE}[3/5] Runtime & Platform Toolchain${RESET}"
 
-if command -v uv &>/dev/null; then
-    UV_VER="$(uv --version 2>/dev/null | head -n1 || echo "installed")"
-    check_status "uv Python Manager" "pass" "$UV_VER"
-else
-    check_status "uv Python Manager" "warn" "uv binary missing"
-fi
-
-if command -v python3 &>/dev/null; then
-    PY_VER="$(python3 --version 2>/dev/null | awk '{print $2}' || echo "installed")"
-    check_status "Python Environment" "pass" "v$PY_VER"
-else
-    check_status "Python Environment" "warn" "Python3 missing"
-fi
-
-if command -v node &>/dev/null; then
-    NODE_VER="$(node --version 2>/dev/null || echo "installed")"
-    check_status "Node.js Environment" "pass" "$NODE_VER"
-else
-    check_status "Node.js Environment" "warn" "Node.js missing"
-fi
+check_version "uv Python Manager" "warn" uv --version
+check_version "Python Environment" "warn" python3 --version
+check_version "Node.js Environment" "warn" node --version
 
 RUSTUP_BIN="$BREW_PREFIX/opt/rustup/bin/rustup"
 if [ -x "$RUSTUP_BIN" ] &&
@@ -186,54 +188,13 @@ else
     check_status "Rust Toolchain (rustup)" "warn" "Manager/toolchain missing or unusable; no automatic installation attempted"
 fi
 
-if command -v go &>/dev/null; then
-    GO_VER="$(go version 2>/dev/null | awk '{print $3}' || echo "installed")"
-    check_status "Go Toolchain" "pass" "$GO_VER"
-else
-    check_status "Go Toolchain" "warn" "Go toolchain missing"
-fi
-
-if command -v zig &>/dev/null; then
-    ZIG_VER="$(zig version 2>/dev/null || echo "installed")"
-    check_status "Zig Toolchain" "pass" "v$ZIG_VER"
-else
-    check_status "Zig Toolchain" "warn" "Zig toolchain missing"
-fi
-
-if command -v clang &>/dev/null; then
-    CLANG_VER="$(clang --version 2>/dev/null | head -n1 || echo "installed")"
-    check_status "LLVM C/C++ Toolchain" "pass" "$CLANG_VER"
-else
-    check_status "LLVM C/C++ Toolchain" "warn" "Homebrew LLVM missing"
-fi
-
-if command -v cmake &>/dev/null; then
-    CMAKE_VER="$(cmake --version 2>/dev/null | head -n1 || echo "installed")"
-    check_status "CMake Build System" "pass" "$CMAKE_VER"
-else
-    check_status "CMake Build System" "warn" "CMake missing"
-fi
-
-if command -v ninja &>/dev/null; then
-    NINJA_VER="$(ninja --version 2>/dev/null || echo "installed")"
-    check_status "Ninja Build Backend" "pass" "v$NINJA_VER"
-else
-    check_status "Ninja Build Backend" "warn" "Ninja missing"
-fi
-
-if command -v ccache &>/dev/null; then
-    CCACHE_VER="$(ccache --version 2>/dev/null | head -n1 || echo "installed")"
-    check_status "C/C++ Compiler Cache" "pass" "$CCACHE_VER"
-else
-    check_status "C/C++ Compiler Cache" "warn" "ccache missing"
-fi
-
-if command -v cxx &>/dev/null; then
-    CXX_INIT_VER="$(cxx --version 2>/dev/null | head -n1 || echo "installed")"
-    check_status "C++ Project Initializer" "pass" "$CXX_INIT_VER"
-else
-    check_status "C++ Project Initializer" "warn" "cxx-init missing (run chezmoi apply)"
-fi
+check_version "Go Toolchain" "warn" go version
+check_version "Zig Toolchain" "warn" zig version
+check_version "LLVM C/C++ Toolchain" "warn" clang --version
+check_version "CMake Build System" "warn" cmake --version
+check_version "Ninja Build Backend" "warn" ninja --version
+check_version "C/C++ Compiler Cache" "warn" ccache --version
+check_version "C++ Project Initializer" "warn" cxx --version
 
 # Check the same root CMake consumes, not an unrelated vcpkg found on PATH.
 if [[ -z "${VCPKG_ROOT:-}" ]]; then
@@ -246,26 +207,9 @@ else
     check_status "C++ Dependencies (vcpkg)" "warn" "vcpkg failed at $VCPKG_ROOT: $VCPKG_VERSION"
 fi
 
-if command -v terraform &>/dev/null; then
-    TF_VER="$(terraform version -json 2>/dev/null | jq -r '.terraform_version' || echo "installed")"
-    check_status "Terraform CLI" "pass" "v$TF_VER"
-else
-    check_status "Terraform CLI" "warn" "Terraform missing"
-fi
-
-if command -v kubectl &>/dev/null; then
-    KUBECTL_VER="$(kubectl version --client -o json 2>/dev/null | jq -r '.clientVersion.gitVersion' || echo "installed")"
-    check_status "Kubernetes CLI" "pass" "$KUBECTL_VER"
-else
-    check_status "Kubernetes CLI" "warn" "kubectl missing"
-fi
-
-if command -v helm &>/dev/null; then
-    HELM_VER="$(helm version --short 2>/dev/null || echo "installed")"
-    check_status "Helm CLI" "pass" "$HELM_VER"
-else
-    check_status "Helm CLI" "warn" "Helm missing"
-fi
+check_version "Terraform CLI" "warn" terraform version
+check_version "Kubernetes CLI" "warn" kubectl version --client
+check_version "Helm CLI" "warn" helm version --short
 
 RUNTIME_SOURCE_OK=true
 if [ -z "$BREW_PREFIX" ]; then

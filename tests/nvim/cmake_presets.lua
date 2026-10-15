@@ -482,6 +482,58 @@ local ok, err = xpcall(function()
 	assert(vim.bo[source_buf].modified and vim.deep_equal(vim.fn.readfile(source), saved_source))
 	drafts_untouched()
 
+	-- Saved late edits must also stop Run, even if the written buffer is new
+	-- or has been unloaded by the time the build callback resumes.
+	for _, late_file in ipairs({ source, join(fresh, "late.hpp") }) do
+		vim.api.nvim_buf_set_lines(source_buf, 0, -1, false, saved_source)
+		observe_task = function(task)
+			task:subscribe("on_complete", function()
+				if not task.name:find("Build", 1, true) then
+					return
+				end
+				local buf = late_file == source and source_buf or edit_buffer(late_file, { "#pragma once" })
+				if buf == source_buf then
+					vim.api.nvim_buf_set_lines(buf, 0, -1, false, { "int main() { return 47; }" })
+				end
+				vim.api.nvim_buf_call(buf, function()
+					vim.cmd("silent write")
+				end)
+				assert(not vim.bo[buf].modified)
+				if buf ~= source_buf then
+					vim.api.nvim_buf_delete(buf, { force = true })
+				end
+			end)
+		end
+		count = #tasks
+		result = editor_result("run")
+		observe_task = nil
+		assert(not result:is_ok() and result.message:find("project file saved during build", 1, true))
+		assert(#tasks == count + 1 and tasks[#tasks].status == "SUCCESS", "Saved late edit ran an old binary")
+		drafts_untouched()
+	end
+
+	-- The guard is per-build, not a permanent dirty flag. Unrelated project
+	-- writes must not block a subsequent successful build and run.
+	vim.api.nvim_buf_set_lines(source_buf, 0, -1, false, saved_source)
+	local unrelated = edit_buffer(join(other, "notes.txt"), { "unrelated project" })
+	observe_task = function(task)
+		task:subscribe("on_complete", function()
+			if task.name:find("Build", 1, true) then
+				vim.api.nvim_buf_call(unrelated, function()
+					vim.cmd("silent write")
+				end)
+			end
+		end)
+	end
+	count = #tasks
+	editor_command("run")
+	observe_task = nil
+	assert(#tasks == count + 2 and tasks[#tasks].status == "SUCCESS", "Fresh build did not recover")
+	for _, autocmd in ipairs(vim.api.nvim_get_autocmds({ event = "BufWritePost" })) do
+		assert(autocmd.desc ~= "CMake in-flight build writes", "Build write observer leaked")
+	end
+	drafts_untouched()
+
 	-- First-run cancellation and real configure errors never progress to Run.
 	for _, case in ipairs({ "cancel", "target-cancel", "configure-failure" }) do
 		local project = join(root, case)

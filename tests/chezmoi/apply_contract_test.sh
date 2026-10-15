@@ -123,4 +123,72 @@ fi
 [ "$(grep -cx 'status' "$DOCTOR_LOG")" -eq 1 ]
 
 printf 'devdoctor status failure: stderr sentinel visible, exit 73 propagated\n'
+
+# Independent PATH fixtures: a located but broken executable is not healthy.
+# No real package manager, toolchain, credentials or chezmoi state is touched.
+mkdir -p "$TEST_ROOT/version-bin"
+cat >"$TEST_ROOT/version-bin/tool" <<'EOF'
+#!/bin/bash
+set -euo pipefail
+tool="${0##*/}"
+if [[ "$tool $*" == 'brew --prefix' ]]; then
+    printf '%s\n' "$DOCTOR_TEST_PREFIX"
+elif [[ "$tool $*" == 'chezmoi status' ]]; then
+    exit 0
+elif [[ "$tool" == "${DOCTOR_TEST_TOOL:-}" ]]; then
+    case "$DOCTOR_TEST_MODE" in
+        failure)
+            printf 'misleading version text\n'
+            printf 'VERSION_STDERR_SENTINEL\n' >&2
+            exit 47
+            ;;
+        empty) printf '   \n' ;;
+        multiline)
+            printf '%s test version 1.2.3\n' "$tool"
+            for ((i = 0; i < 10000; i++)); do printf 'additional version detail\n'; done
+            ;;
+    esac
+else
+    printf '%s test version 1.2.3\n' "$tool"
+fi
+EOF
+chmod +x "$TEST_ROOT/version-bin/tool"
+for tool in brew chezmoi age gitleaks uv python3 node go zig clang cmake ninja ccache cxx terraform kubectl helm; do
+    ln -s tool "$TEST_ROOT/version-bin/$tool"
+done
+doctor_versions() {
+    env -u VCPKG_ROOT DOCTOR_TEST_PREFIX="$TEST_ROOT/no-rustup" \
+        PATH="$TEST_ROOT/version-bin:/usr/bin:/bin" \
+        DOCTOR_TEST_TOOL="${1:-}" DOCTOR_TEST_MODE="${2:-}" \
+        bash "$DOCTOR_SCRIPT" >"$DOCTOR_OUTPUT" 2>&1
+}
+doctor_versions
+grep -Eq 'C\+\+ Project Initializer.*✓.*cxx test version 1.2.3' "$DOCTOR_OUTPUT"
+for tool in cxx cmake clang uv brew chezmoi; do
+    for mode in failure empty; do
+        status=0
+        doctor_versions "$tool" "$mode" || status=$?
+        [[ "$status" -eq 1 ]] || {
+            echo "devdoctor accepted $tool $mode (exit $status)" >&2
+            exit 1
+        }
+        if [[ "$mode" == failure ]]; then
+            grep -q 'version command failed, exit 47' "$DOCTOR_OUTPUT"
+            grep -q 'VERSION_STDERR_SENTINEL' "$DOCTOR_OUTPUT"
+        else
+            grep -q 'empty version response' "$DOCTOR_OUTPUT"
+        fi
+        if grep -Eq '100% Healthy|Good with minor warnings' "$DOCTOR_OUTPUT"; then
+            echo "devdoctor falsely reported health after $tool $mode" >&2
+            exit 1
+        fi
+    done
+done
+# Long successful output must not fail through head/SIGPIPE under pipefail.
+doctor_versions cxx multiline
+grep -Eq 'C\+\+ Project Initializer.*✓.*cxx test version 1.2.3' "$DOCTOR_OUTPUT"
+mv "$TEST_ROOT/version-bin/cxx" "$TEST_ROOT/version-bin/cxx.absent"
+doctor_versions
+grep -Eq 'C\+\+ Project Initializer.*⚠.*cxx missing in PATH' "$DOCTOR_OUTPUT"
+printf 'devdoctor versions: failures, stderr, empty output, multiline output and missing tools verified\n'
 printf 'Chezmoi apply and observation side-effect tests passed\n'

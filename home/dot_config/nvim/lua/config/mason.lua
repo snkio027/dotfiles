@@ -45,4 +45,23 @@ function M.wait_for_installed(tools, timeout_ms)
   return #expected
 end
 
+function M.wait_for_idle(tools, timeout_ms)
+  local registry = require("mason-registry")
+  local expected = M.unique(tools)
+  local installing = {}
+  local completed = vim.wait(tonumber(timeout_ms) or 900000, function()
+    installing = {}
+    for _, tool in ipairs(expected) do
+      local name = M.tool_name(tool)
+      local ok, package = pcall(registry.get_package, name)
+      -- A missing/unregistered package needs the installer, not a wait.
+      if ok and package:is_installing() then
+        installing[#installing + 1] = name
+      end
+    end
+    return #installing == 0
+  end, 200)
+  assert(completed, "Timed out waiting for active Mason installs: " .. table.concat(installing, ", "))
+end
+
 return M
