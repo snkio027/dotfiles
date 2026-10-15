@@ -131,9 +131,11 @@ cat >"$TEST_ROOT/version-bin/tool" <<'EOF'
 #!/bin/bash
 set -euo pipefail
 tool="${0##*/}"
+printf '%s %s\n' "$tool" "$*" >>"$DOCTOR_TEST_COMMAND_LOG"
 if [[ "$tool $*" == 'brew --prefix' ]]; then
     printf '%s\n' "$DOCTOR_TEST_PREFIX"
 elif [[ "$tool $*" == 'chezmoi status' ]]; then
+    printf '%s' "${DOCTOR_TEST_STATUS:-}"
     exit 0
 elif [[ "$tool" == "${DOCTOR_TEST_TOOL:-}" ]]; then
     case "$DOCTOR_TEST_MODE" in
@@ -157,13 +159,56 @@ for tool in brew chezmoi age gitleaks uv python3 node go zig clang cmake ninja c
     ln -s tool "$TEST_ROOT/version-bin/$tool"
 done
 doctor_versions() {
+    : >"$TEST_ROOT/version-commands.log"
     env -u VCPKG_ROOT DOCTOR_TEST_PREFIX="$TEST_ROOT/no-rustup" \
         PATH="$TEST_ROOT/version-bin:/usr/bin:/bin" \
+        DOCTOR_TEST_COMMAND_LOG="$TEST_ROOT/version-commands.log" \
+        DOCTOR_TEST_STATUS="${DOCTOR_TEST_STATUS:-}" \
         DOCTOR_TEST_TOOL="${1:-}" DOCTOR_TEST_MODE="${2:-}" \
         bash "$DOCTOR_SCRIPT" >"$DOCTOR_OUTPUT" 2>&1
 }
 doctor_versions
 grep -Eq 'C\+\+ Project Initializer.*✓.*cxx test version 1.2.3' "$DOCTOR_OUTPUT"
+
+# File drift and script execution are different observations. Never apply or
+# change script receipts to make a health report green.
+for status_case in clean files scripts mixed; do
+    DOCTOR_TEST_STATUS=''
+    expected_files=0 expected_scripts=0
+    case "$status_case" in
+        files | mixed)
+            DOCTOR_TEST_STATUS=$' M .config/file with spaces\nM  .config/local-edit\n A .config/Added\n D .config/R is not a script\n'
+            expected_files=4
+            ;;
+    esac
+    case "$status_case" in
+        scripts | mixed)
+            DOCTOR_TEST_STATUS+=$' R .chezmoiscripts/20_brew_bundle.sh\n R .chezmoiscripts/script with spaces.sh\n'
+            expected_scripts=2
+            ;;
+    esac
+    doctor_versions
+    grep -Eq "chezmoi Files.*$expected_files file differences" "$DOCTOR_OUTPUT"
+    grep -Eq "chezmoi Scripts.*$expected_scripts pending scripts" "$DOCTOR_OUTPUT"
+    if [[ "$expected_files" -eq 0 ]]; then
+        grep -Eq 'chezmoi Files.*✓.*Synced / Clean' "$DOCTOR_OUTPUT"
+    else
+        grep -Eq 'chezmoi Files.*⚠' "$DOCTOR_OUTPUT"
+    fi
+    if [[ "$expected_scripts" -gt 0 ]]; then
+        grep -Eq 'chezmoi Scripts.*⚠.*not executed' "$DOCTOR_OUTPUT"
+    else
+        grep -Eq 'chezmoi Scripts.*✓' "$DOCTOR_OUTPUT"
+    fi
+    [[ "$(grep '^chezmoi ' "$TEST_ROOT/version-commands.log")" == $'chezmoi --version\nchezmoi status' ]]
+done
+unset DOCTOR_TEST_STATUS
+# Alternate/project runtimes are identified, never silently rewritten.
+grep -Fq "python3=$TEST_ROOT/version-bin/python3" "$DOCTOR_OUTPUT"
+grep -Fq "clang=$TEST_ROOT/version-bin/clang" "$DOCTOR_OUTPUT"
+grep -Fq "kubectl=$TEST_ROOT/version-bin/kubectl" "$DOCTOR_OUTPUT"
+printf 'devdoctor state: clean, file-only, script-only and mixed observations verified without apply\n'
+
 for tool in cxx cmake clang uv brew chezmoi; do
     for mode in failure empty; do
         status=0

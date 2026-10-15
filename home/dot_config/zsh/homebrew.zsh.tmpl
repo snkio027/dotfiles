@@ -31,19 +31,23 @@ path=("${(@)path:#/opt/homebrew/*}")
 fpath=("${(@)fpath:#/opt/homebrew}")
 fpath=("${(@)fpath:#/opt/homebrew/*}")
 {{- end }}
-# Preserve inherited project/toolchain priority. Add only missing defaults before
-# the first system directory; if there is no system entry, append the defaults.
+# Normalize managed global tools before system paths (including /usr/local on
+# Apple Silicon). Keep project shims ahead of them; path_helper may have moved
+# an active venv/Conda bin behind system directories in a nested login shell.
 () {
     local entry
-    local -a defaults=(
+    local -a globals=(
         "$HOMEBREW_PREFIX/opt/rustup/bin"
         "$HOMEBREW_PREFIX/opt/llvm/bin"
         "$HOMEBREW_PREFIX/bin"
+        # Fallback for a versioned Python keg without a public python3 link.
+        "$HOMEBREW_PREFIX/opt/python@3/libexec/bin"
         "$HOMEBREW_PREFIX/sbin"
+    ) defaults=(
         "${CARGO_HOME:-$HOME/.cargo}/bin"
         "$HOME/.local/bin"
         "$VCPKG_ROOT"
-    ) missing=() ordered=()
+    ) missing=() context=() remaining=() ordered=()
     for entry in "${(@s/:/)${GOPATH:-$HOME/go}}"; do
         defaults+=("$entry/bin")
     done
@@ -51,32 +55,28 @@ fpath=("${(@)fpath:#/opt/homebrew/*}")
         (( ${path[(Ie)$entry]} )) || missing+=("$entry")
     done
     for entry in "${path[@]}"; do
+        if [[ ( -n "${VIRTUAL_ENV:-}" && "$entry" == "$VIRTUAL_ENV/bin" ) ||
+              ( -n "${CONDA_PREFIX:-}" && "$entry" == "$CONDA_PREFIX/bin" ) ]]; then
+            context+=("$entry")
+        elif (( ! ${globals[(Ie)$entry]} )); then
+            remaining+=("$entry")
+        fi
+    done
+    local insert_globals
+    for entry in "${remaining[@]}"; do
+        insert_globals=false
         case "$entry" in
-            /usr/bin|/bin|/usr/sbin|/sbin)
-                ordered+=("${missing[@]}")
-                missing=()
-                ;;
+            /usr/local/bin|/usr/local/sbin|/usr/bin|/bin|/usr/sbin|/sbin|/System/Cryptexes/App/usr/bin)
+                insert_globals=true ;;
         esac
+        (( ${defaults[(Ie)$entry]} )) && insert_globals=true
+        if [[ "$insert_globals" == true ]]; then
+            ordered+=("${globals[@]}" "${missing[@]}")
+            globals=() missing=()
+        fi
         ordered+=("$entry")
     done
-    path=("${ordered[@]}" "${missing[@]}")
-
-    # Only the managed global Rust precedence changes. Preserve project shims
-    # and their relative order, including RUSTUP_TOOLCHAIN/CARGO_HOME contexts.
-    local rustup_bin="$HOMEBREW_PREFIX/opt/rustup/bin" inserted=false
-    ordered=()
-    for entry in "${path[@]}"; do
-        if [[ "$inserted" == false ]]; then
-            case "$entry" in
-                "$rustup_bin"|"$HOMEBREW_PREFIX/opt/llvm/bin"|"$HOMEBREW_PREFIX/bin"|"$HOMEBREW_PREFIX/sbin"|"${CARGO_HOME:-$HOME/.cargo}/bin")
-                    ordered+=("$rustup_bin")
-                    inserted=true
-                    ;;
-            esac
-        fi
-        [[ "$entry" == "$rustup_bin" ]] || ordered+=("$entry")
-    done
-    path=("${ordered[@]}")
+    path=("${context[@]}" "${ordered[@]}" "${globals[@]}" "${missing[@]}")
 }
 fpath=("$HOMEBREW_PREFIX/share/zsh/site-functions" $fpath)
 export PATH FPATH
