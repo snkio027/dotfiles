@@ -101,11 +101,26 @@ if command -v chezmoi &>/dev/null; then
     if ! observe_version chezmoi --version; then
         check_status "chezmoi State" "fail" "$VERSION_DETAIL"
     elif RAW_STATUS="$(chezmoi status)"; then
-        if [ -z "$RAW_STATUS" ]; then
-            check_status "chezmoi State" "pass" "$VERSION_DETAIL (Synced / Clean)"
+        FILE_DIFFS=0
+        PENDING_SCRIPTS=0
+        while IFS= read -r status_line; do
+            [[ -n "$status_line" ]] || continue
+            # Read the two status columns, not words in a possibly spaced path.
+            if [[ "${status_line:0:2}" == ' R' ]]; then
+                PENDING_SCRIPTS=$((PENDING_SCRIPTS + 1))
+            else
+                FILE_DIFFS=$((FILE_DIFFS + 1))
+            fi
+        done <<<"$RAW_STATUS"
+        if [ "$FILE_DIFFS" -eq 0 ]; then
+            check_status "chezmoi Files" "pass" "$VERSION_DETAIL (0 file differences; Synced / Clean)"
         else
-            DIFF_COUNT="$(echo "$RAW_STATUS" | wc -l | tr -d ' ')"
-            check_status "chezmoi State" "warn" "$VERSION_DETAIL ($DIFF_COUNT pending diffs)"
+            check_status "chezmoi Files" "warn" "$VERSION_DETAIL ($FILE_DIFFS file differences)"
+        fi
+        if [ "$PENDING_SCRIPTS" -eq 0 ]; then
+            check_status "chezmoi Scripts" "pass" "0 pending scripts"
+        else
+            check_status "chezmoi Scripts" "warn" "$PENDING_SCRIPTS pending scripts; not executed (review before apply)"
         fi
     else
         STATUS_EXIT=$?
@@ -211,22 +226,22 @@ check_version "Terraform CLI" "warn" terraform version
 check_version "Kubernetes CLI" "warn" kubectl version --client
 check_version "Helm CLI" "warn" helm version --short
 
-RUNTIME_SOURCE_OK=true
+RUNTIME_OUTSIDE=()
 if [ -z "$BREW_PREFIX" ]; then
-    RUNTIME_SOURCE_OK=false
+    RUNTIME_OUTSIDE+=("Homebrew prefix unavailable")
 else
     for tool in uv python3 node go zig clang cmake ninja ccache terraform kubectl helm; do
         tool_path="$(command -v "$tool" 2>/dev/null || true)"
         case "$tool_path" in
             "$BREW_PREFIX"/*) ;;
-            *) RUNTIME_SOURCE_OK=false ;;
+            *) RUNTIME_OUTSIDE+=("$tool=${tool_path:-missing}") ;;
         esac
     done
 fi
-if [ "$RUNTIME_SOURCE_OK" = true ]; then
+if [ "${#RUNTIME_OUTSIDE[@]}" -eq 0 ]; then
     check_status "Runtime Ownership" "pass" "Non-Rust runtimes resolve from $BREW_PREFIX; Rust checked separately"
 else
-    check_status "Runtime Ownership" "warn" "A runtime is outside Homebrew; inspect with 'whence -a <tool>'"
+    check_status "Runtime Ownership" "warn" "Outside Homebrew (may be project overrides): ${RUNTIME_OUTSIDE[*]}"
 fi
 
 echo ""

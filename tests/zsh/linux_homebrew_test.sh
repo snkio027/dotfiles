@@ -123,11 +123,13 @@ fail() {
 # Context hooks such as Carapace may prepend a command shim directory. Keep the
 # managed Linuxbrew group present, contiguous, and internally ordered.
 llvm_path_index="${path[(I)${EXPECTED_HOMEBREW_PREFIX}/opt/llvm/bin]}"
+python_path_index="${path[(I)${EXPECTED_HOMEBREW_PREFIX}/opt/python@3/libexec/bin]}"
 brew_bin_index="${path[(I)${EXPECTED_HOMEBREW_PREFIX}/bin]}"
 brew_sbin_index="${path[(I)${EXPECTED_HOMEBREW_PREFIX}/sbin]}"
 (( llvm_path_index > 0 &&
     brew_bin_index == llvm_path_index + 1 &&
-    brew_sbin_index == brew_bin_index + 1 )) || fail "Linuxbrew PATH group is missing, split, or out of order: ${(j/:/)path}"
+    python_path_index == brew_bin_index + 1 &&
+    brew_sbin_index == python_path_index + 1 )) || fail "Linuxbrew PATH group is missing, split, or out of order: ${(j/:/)path}"
 [[ "$fpath[(I)$EXPECTED_HOMEBREW_PREFIX/share/zsh/site-functions]" -gt 0 ]] || fail "Linuxbrew completion path missing"
 (( ${+functions[_brew]} )) || fail "Homebrew completion was not registered"
 (( ${+functions[_zsh_autosuggest_start]} )) || fail "zsh-autosuggestions was not loaded"
@@ -211,8 +213,8 @@ for profile in linux macos intel devcontainer; do
 
             path=("$PROJECT_BIN" "$HOMEBREW_PREFIX/bin" "$PROJECT_BIN/SDK [1]" /usr/bin /bin)
             source "$OWNER_DIR/homebrew.zsh"
-            [[ "${path[1]}" == "$PROJECT_BIN" && "${path[2]}" == "$HOMEBREW_PREFIX/opt/rustup/bin" &&
-                "${path[3]}" == "$HOMEBREW_PREFIX/bin" && "${path[4]}" == "$PROJECT_BIN/SDK [1]" ]] || exit 59
+            [[ "${path[1]}" == "$PROJECT_BIN" && "${path[2]}" == "$PROJECT_BIN/SDK [1]" &&
+                "${path[3]}" == "$HOMEBREW_PREFIX/opt/rustup/bin" ]] || exit 59
             path=("$PROJECT_BIN")
             export GOPATH=/project/go-a:/project/go-b
             source "$OWNER_DIR/homebrew.zsh"
@@ -220,6 +222,77 @@ for profile in linux macos intel devcontainer; do
                 "${path[(Ie)/project/go-b/bin]}" -gt 0 ]] || exit 60
         '
 done
+
+# Canonical platform prefixes are rendered above. Mirror each into a fixture
+# for real command resolution without modifying the host package installations.
+# Reproduce path_helper's system-first order and globals inherited at the end.
+for profile in linux macos intel devcontainer; do
+    fixture_prefix="$TEST_ROOT/$profile-prefix"
+    fixture_owner="$TEST_ROOT/$profile-owner.zsh"
+    sed "s#^typeset -gx HOMEBREW_PREFIX=.*#typeset -gx HOMEBREW_PREFIX=\"$fixture_prefix\"#" \
+        "$TEST_ROOT/render-$profile/homebrew.zsh" >"$fixture_owner"
+    mkdir -p "$fixture_prefix/bin" "$fixture_prefix/opt/llvm/bin" \
+        "$fixture_prefix/opt/python@3/libexec/bin" "$TEST_ROOT/conda/bin"
+    ln -s /usr/bin/true "$fixture_prefix/bin/kubectl"
+    ln -s /usr/bin/true "$fixture_prefix/opt/llvm/bin/clang"
+    ln -s /usr/bin/true "$fixture_prefix/opt/python@3/libexec/bin/python3"
+    for executable in python3 clang kubectl; do
+        [[ -e "$PROJECT_BIN/$executable" ]] || ln -s /usr/bin/true "$PROJECT_BIN/$executable"
+        [[ -e "$TEST_ROOT/conda/bin/$executable" ]] || ln -s /usr/bin/true "$TEST_ROOT/conda/bin/$executable"
+    done
+    env -u VIRTUAL_ENV -u CONDA_PREFIX FIXTURE_OWNER="$fixture_owner" \
+        FIXTURE_PREFIX="$fixture_prefix" PROJECT_BIN="$PROJECT_BIN" CONDA_BIN="$TEST_ROOT/conda/bin" \
+        "$RUNTIME_ZSH" -dfc '
+            fail() { print -u2 -- "$1"; exit 1; }
+            for scenario in late duplicates empty shim venv conda nested; do
+                unset VIRTUAL_ENV CONDA_PREFIX
+                path=(/usr/local/bin /System/Cryptexes/App/usr/bin /usr/bin /bin /usr/sbin /sbin
+                    "$FIXTURE_PREFIX/bin" "$FIXTURE_PREFIX/sbin" "$FIXTURE_PREFIX/opt/llvm/bin")
+                case "$scenario" in
+                    duplicates) path+=("$FIXTURE_PREFIX/bin" /usr/bin) ;;
+                    empty) path=() ;;
+                    shim) path=("$PROJECT_BIN" "${path[@]}") ;;
+                    venv) export VIRTUAL_ENV="${PROJECT_BIN:h}"; path+=("$PROJECT_BIN") ;;
+                    conda) export CONDA_PREFIX="${CONDA_BIN:h}"; path+=("$CONDA_BIN") ;;
+                    nested)
+                        export VIRTUAL_ENV="${PROJECT_BIN:h}" CONDA_PREFIX="${CONDA_BIN:h}"
+                        path+=("$PROJECT_BIN" "$CONDA_BIN") ;;
+                esac
+                source "$FIXTURE_OWNER"
+                expected_python="$FIXTURE_PREFIX/opt/python@3/libexec/bin/python3"
+                expected_clang="$FIXTURE_PREFIX/opt/llvm/bin/clang"
+                expected_kubectl="$FIXTURE_PREFIX/bin/kubectl"
+                case "$scenario" in
+                    shim|venv|nested)
+                        expected_python="$PROJECT_BIN/python3"; expected_clang="$PROJECT_BIN/clang"
+                        expected_kubectl="$PROJECT_BIN/kubectl" ;;
+                    conda)
+                        expected_python="$CONDA_BIN/python3"; expected_clang="$CONDA_BIN/clang"
+                        expected_kubectl="$CONDA_BIN/kubectl" ;;
+                esac
+                [[ "$commands[python3]" == "$expected_python" && "$commands[clang]" == "$expected_clang" &&
+                    "$commands[kubectl]" == "$expected_kubectl" ]] || fail "$scenario: wrong command resolution: $PATH"
+                before_path="$PATH"
+                source "$FIXTURE_OWNER"
+                source "$FIXTURE_OWNER"
+                [[ "$PATH" == "$before_path" ]] || fail "$scenario: non-idempotent PATH"
+                unique_path=("${(@u)path}")
+                (( ${#path} == ${#unique_path} )) || fail "$scenario: duplicate PATH entries"
+            done
+            # A stale activation variable must not activate a bin absent from PATH.
+            export VIRTUAL_ENV="${PROJECT_BIN:h}" CONDA_PREFIX="${CONDA_BIN:h}"
+            path=(/usr/bin /bin)
+            source "$FIXTURE_OWNER"
+            [[ "$commands[python3]" == "$FIXTURE_PREFIX/opt/python@3/libexec/bin/python3" ]] || exit 65
+        '
+    ln -s /usr/bin/true "$fixture_prefix/bin/python3"
+    env FIXTURE_OWNER="$fixture_owner" FIXTURE_PREFIX="$fixture_prefix" \
+        PATH=/usr/bin:/bin "$RUNTIME_ZSH" -dfc '
+            source "$FIXTURE_OWNER"
+            [[ "$commands[python3]" == "$FIXTURE_PREFIX/bin/python3" ]] || exit 66
+        '
+done
+printf 'Global tool priority and project overrides passed on all four rendered profiles\n'
 
 # A full interactive child must retain a project environment activated in its parent.
 env -u HOMEBREW_PREFIX -u HOMEBREW_CELLAR -u HOMEBREW_REPOSITORY \
