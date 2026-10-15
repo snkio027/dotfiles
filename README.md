@@ -116,6 +116,8 @@ docs/                  操作手册与实机效果图；不部署到日用目录
 
 [GitHub Actions](https://github.com/snkio027/dotfiles/actions/workflows/ci.yml) 按变更路径选择已有门禁：模板与 Shell 检查、安装 profile、macOS 渲染、Locked Neovim Cold Start 和 Dev Container Lifecycle。被跳过的任务不算已执行；CI 通过也不替代实机的视觉、字体与交互验收。
 
+`main` 使用 [Main Merge Gate](docs/operations.md#主线合并门禁)：必跑任务必须实际成功，明确不适用才允许跳过；失败、取消和缺失证据均阻止合并。规则要求 PR 与最新主线验证，不要求外部审批。
+
 - [配置与维护手册](docs/operations.md)：完整目录、XDG、快捷键、Rust / Neovim 更新、SSH 与恢复边界。
 - [E 视觉迁移记录](tests/nvim/E-VISUAL-MIGRATION.md)：源码色、UI 保留项与验收证据。
 - [历史视觉研究恢复](docs/operations.md#历史视觉研究恢复)：从固定 Git 提交导出到独立归档，不覆盖工作区。

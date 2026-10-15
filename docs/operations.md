@@ -209,6 +209,24 @@ git archive --format=tar.gz \
 
 当前行为由主题源码与 `tests/nvim/` 的生产契约定义。
 
+## 主线合并门禁
+
+`Main Merge Gate` 汇总同一 workflow run 的实际 `needs` 结果，不把 workflow 的笼统绿色当作验收。路径分类及其五项 `0/1` 输出必须完整有效；分类失败时其他任务仍保守执行，但不能因此批准合并。
+
+| 事件 | 必须实际成功 | 允许不适用跳过 |
+| --- | --- | --- |
+| PR → main | Classifier、Validate，以及分类器选中的 macOS / Build / Core Brew / Lifecycle / Locked Cold Start | 仅输出 `0` 的路径任务、Provenance、Rolling-Latest |
+| push → main | Validate 和全部五项路径任务 | Classifier、Provenance、Rolling-Latest |
+| schedule / manual | Validate、macOS、Build、Core Brew、Lifecycle、Provenance、Rolling-Latest | Classifier、Locked Cold Start |
+
+后两项维护任务使用独立的 `Maintenance Gate` 名称，不能代替 PR/main 的门禁。`skipped` 只在表中明确豁免时接受，并标记为 **NOT APPLICABLE / not executed**；额外任务成功可接受，但任何任务失败或取消都阻断。必跑任务跳过、结果缺失、未知状态、未知事件和异常分类输出全部 fail closed。超时体现为非成功结果，同样阻断；全局取消即使发生在其他任务完成之后也不算通过。汇总任务使用 `always()` 和有界超时；若它自身未运行、取消或失败，也没有可用于合并的成功结论。
+
+GitHub 原生规则的受审定义在 [main-ruleset.json](../.github/main-ruleset.json)：只保护 `refs/heads/main`，要求 PR、最新 base 上的 `Main Merge Gate`，并绑定实际 GitHub Actions App（ID `15368`）。禁止强推和删除，无 bypass actor；审批人数为 **0**，不要求 CODEOWNERS 或最后推送者之外的人批准。管理员仍能修改规则，因此这是日常合并约束，不是抵御仓库管理员的安全边界。
+
+规则不是通过 chezmoi 或 CI 自动写入的。首次启用前，先让包含门禁的 PR 精确 Head 通过；确认仓库没有冲突规则后，用 `gh api --method POST repos/snkio027/dotfiles/rulesets --input .github/main-ruleset.json` 创建并读取核对。以后先列出规则 ID，再以同一文件 `PUT /repos/snkio027/dotfiles/rulesets/<id>` 更新，不重复创建。启用后正常合并，不使用绕过；若 main 前进，应更新分支并重新验收。维护故障与 PR 门禁分开报告；重跑必须绑定同一 SHA，不能用旧 Head 的绿灯代替新代码验证。
+
+回归入口是 `python3 tests/ci/test_merge_gate.py`（Python 标准库；工作流结构检查复用现有 Ruby YAML）。它覆盖任务矩阵、合法/非法跳过、分类失败、失败/取消、缺失与异常输入、真实 CLI 非零退出，以及工作流与规则定义的一致性。不部署日用配置，也不执行待运行的 chezmoi 脚本。
+
 ## 功能与快捷键速查
 
 修饰键按作用层解释，不把 macOS 的物理按键名称与终端协议混用：
