@@ -61,6 +61,9 @@ grep -Fq "Tree-sitter evidence parser provisioning 5/5: c,cpp,python,rust,zig" \
     exit 1
 }
 run_nvim startup-policy "+luafile tests/nvim/startup_policy.lua" +qa
+run_nvim mason-recovery "-u" "NONE" "-n" "-i" "NONE" "+set rtp^=$PWD/home/dot_config/nvim" \
+    "+luafile tests/nvim/run_contract.lua" "tests/nvim/mason_recovery.lua"
+grep -Fq "Mason recovery contract passed:" "$LOG_DIR/mason-recovery.log"
 run_nvim completion-contract "-n" "+luafile tests/nvim/run_contract.lua" "tests/nvim/completion_contract.lua"
 grep -Fq "Completion interaction contract passed: LazyVim defaults, LuaSnip expansion, replacement plugin topology." \
     "$LOG_DIR/completion-contract.log" || {

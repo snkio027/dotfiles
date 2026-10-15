@@ -83,6 +83,8 @@ assert_container_state() {
         cd "$workspace_folder" || exit "$?"
         nvim --headless "+luafile tests/nvim/provision.lua" +qa || exit "$?"
         nvim --headless "+luafile tests/nvim/startup_policy.lua" +qa || exit "$?"
+        nvim -u NONE -n -i NONE --headless "+set rtp^=$PWD/home/dot_config/nvim" \
+            "+luafile tests/nvim/run_contract.lua" "tests/nvim/mason_recovery.lua" || exit "$?"
         nvim -n --headless "+lua vim.g.dotfiles_contract_file = 'tests/nvim/smoke.lua'" \
             "+luafile tests/nvim/run_contract.lua" || exit "$?"
         nvim -n --headless "+luafile tests/nvim/run_contract.lua" "tests/nvim/completion_contract.lua" || exit "$?"
@@ -106,6 +108,7 @@ assert_container_state() {
         cat "$nvim_log" >&2
         fail "Neovim warm smoke did not complete"
     }
+    grep -Fq "Mason recovery contract passed:" "$nvim_log" || fail "Mason recovery contract did not complete"
     grep -Fq "Tier-2 Runtime Integration Contract passed cleanly." "$nvim_log" || {
         cat "$nvim_log" >&2
         fail "Five-language runtime integration did not complete"

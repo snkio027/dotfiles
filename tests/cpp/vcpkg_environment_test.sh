@@ -154,8 +154,9 @@ for platform in arm intel linux; do
 done
 
 # Exercise the actual doctor block; no host inspection or repair in this probe.
-printf 'check_status() { printf "%%s|%%s|%%s\\n" "$1" "$2" "$3"; }\n' >"$TEST_ROOT/doctor"
-sed -n '/^# Check the same root/,/^if command -v terraform/{ /^if command -v terraform/!p; }' \
+printf 'set -euo pipefail\ncheck_status() { printf "%%s|%%s|%%s\\n" "$1" "$2" "$3"; }\n' >"$TEST_ROOT/doctor"
+grep -q '^check_version "Terraform CLI"' "$REPO_ROOT/home/dot_config/zsh/scripts/executable_doctor.sh.tmpl"
+sed -n '/^# Check the same root/,/^check_version "Terraform CLI"/{ /^check_version "Terraform CLI"/!p; }' \
     "$REPO_ROOT/home/dot_config/zsh/scripts/executable_doctor.sh.tmpl" >>"$TEST_ROOT/doctor"
 bash "$TEST_ROOT/doctor" >"$TEST_ROOT/result"
 grep -Fq '|pass|' "$TEST_ROOT/result"

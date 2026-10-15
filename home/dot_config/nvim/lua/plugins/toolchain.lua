@@ -196,8 +196,14 @@ return {
       installer.setup(opts)
 
       local function run_after_missing_tools(force_update, sync)
-        mason_policy.wait_for_installed(opts.ensure_installed)
+        -- Let startup's active installs finish, but let this command repair
+        -- tools whose startup install failed or never began.
+        mason_policy.wait_for_idle(opts.ensure_installed)
         installer.check_install(force_update, sync)
+        if sync then
+          local pending = mason_policy.pending(opts.ensure_installed)
+          assert(#pending == 0, "Mason tools unavailable after install: " .. table.concat(pending, ", "))
+        end
       end
 
       vim.api.nvim_create_user_command("MasonToolsInstall", function()

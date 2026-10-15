@@ -110,6 +110,48 @@ function M.setup()
           "unsaved project changes; save and build again: " .. vim.api.nvim_buf_get_name(modified[1])
         )
       end
+      if method == "execute" and vim.tbl_contains(args, "--build") then
+        -- Observe writes for this actual build, after autosave/configure/pickers.
+        -- `modified` alone misses edits saved while the compiler is running,
+        -- including newly opened files and buffers unloaded before completion.
+        local config = cmake.get_config()
+        local root = real_path(config.cwd):gsub("/$", "") .. "/"
+        local written
+        local watcher = vim.api.nvim_create_autocmd("BufWritePost", {
+          desc = "CMake in-flight build writes",
+          callback = function(event)
+            local path = real_path(event.file)
+            if path and vim.startswith(path, root) then
+              written = path
+            end
+          end,
+        })
+        local function cleanup()
+          if watcher then
+            vim.api.nvim_del_autocmd(watcher)
+            watcher = nil
+          end
+        end
+        local ok, err = pcall(original, cmd, env_script, env, args, cwd, backend, function(result)
+          cleanup()
+          if result:is_ok() then
+            if cmake.get_config() ~= config then
+              return fail(callback, "project changed during build; build again")
+            end
+            if written then
+              return fail(callback, "project file saved during build; build again: " .. written)
+            end
+          end
+          if callback then
+            callback(result)
+          end
+        end)
+        if not ok then
+          cleanup()
+          error(err, 0)
+        end
+        return
+      end
       return original(cmd, env_script, env, args, cwd, backend, callback)
     end
   end
