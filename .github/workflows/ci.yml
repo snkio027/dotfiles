@@ -190,6 +190,7 @@ jobs:
         run: |
           python3 tests/ci/test_install_cost_contract.py
           python3 tests/ci/test_pr_path_classifier.py
+          python3 tests/ci/test_merge_gate.py
           python3 tests/fonts/test_monolisa_manifest.py
           python3 brew/generate.py --check
           python3 tests/brew/test_profiles.py
@@ -491,3 +492,40 @@ jobs:
             echo "::error::Neovim plugins have newer validated commits; run devup and commit lazy-lock.json."
             exit 1
           fi
+
+  merge-gate:
+    # Maintenance cannot emit the required change-validation check name.
+    name: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'Maintenance Gate' || 'Main Merge Gate' }}
+    needs:
+      - classify_pr
+      - validate
+      - macos-smoke
+      - devcontainer-build
+      - brew-core-profile
+      - devcontainer-lifecycle
+      - neovim-locked-cold-start
+      - supply-chain-provenance
+      - neovim-cold-start
+    # Do not turn a failed dependency into a skipped (GitHub-acceptable) gate.
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout gate policy
+        if: ${{ !cancelled() }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Evaluate every job result
+        if: ${{ !cancelled() }}
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+          WORKFLOW_CANCELLED: 'false'
+        run: python3 scripts/ci/merge_gate.py
+
+      - name: Reject cancelled run
+        if: ${{ cancelled() }}
+        run: |
+          echo 'Gate: BLOCK — workflow cancelled.'
+          exit 1
