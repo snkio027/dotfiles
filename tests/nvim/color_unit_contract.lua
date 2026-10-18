@@ -714,14 +714,25 @@ local function normalized_graph_digest(graph)
 	return #names, vim.fn.sha256(table.concat(normalized, "\n"))
 end
 
--- Freeze the current graph, then reverse the Zig binding correction before
+-- Freeze the current graph, then reverse the C/C++ import and Zig bindings before
 -- replaying the earlier palette, special-member and unused-state evidence.
 assert(vim.deep_equal(full_hl.DiagnosticUnnecessary, { italic = true }), "Unused state gained foreground authority")
 local production_count, production_digest = normalized_graph_digest(full_hl)
-local PRODUCTION_GRAPH_SHA256 = "06b6c6dc88bc2925d2c36fc135df7cddc316e2677f60a408d1298dcf1098f62e"
-assert_eq(production_count, E_GRAPH_COUNT + 2, "Production highlight group count changed")
+local PRODUCTION_GRAPH_SHA256 = "750e550413539aaab5bcccb8370ff25a87cfbea0a753836bcaa7255db186f9ef"
+assert_eq(production_count, E_GRAPH_COUNT + 4, "Production highlight group count changed")
 assert_eq(production_digest, PRODUCTION_GRAPH_SHA256, "Unrelated production resolved graph changed")
 local original_graph = vim.deepcopy(full_hl)
+for _, language in ipairs({ "c", "cpp" }) do
+	local group = "@keyword.import." .. language
+	assert_eq(original_graph[group].link, "DxKeyword", "Language-specific include escaped keyword ownership")
+	original_graph[group] = nil
+end
+local _, pre_import_digest = normalized_graph_digest(original_graph)
+assert_eq(
+	pre_import_digest,
+	"06b6c6dc88bc2925d2c36fc135df7cddc316e2677f60a408d1298dcf1098f62e",
+	"C/C++ import fix changed palette or unrelated highlights"
+)
 -- This fix changes one Zig binding only; all palette/UI/other-language graph
 -- entries must recover the previously frozen production graph byte-for-byte.
 original_graph["@lsp.type.type.zig"] = { link = "LspForegroundPassthrough" }
@@ -913,7 +924,7 @@ print(("M1 historical graph reconstructed from M5 production: %d groups, sha256=
 
 local function assert_production_graph(candidate)
 	local count, digest = normalized_graph_digest(candidate)
-	assert_eq(count, E_GRAPH_COUNT + 2, "E production graph count changed")
+	assert_eq(count, E_GRAPH_COUNT + 4, "E production graph count changed")
 	assert_eq(digest, PRODUCTION_GRAPH_SHA256, "E production graph digest changed")
 end
 

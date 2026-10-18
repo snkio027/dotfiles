@@ -1,5 +1,11 @@
 ; extends
 
+; Unexpanded namespace/declaration macros can make the parser recover reserved
+; enum/class tokens as identifiers. Repair only those ERROR children, not type
+; names or macro bodies. Default TS priority stays below clangd inactive code.
+((ERROR (identifier) @keyword.type)
+  (#any-of? @keyword.type "enum" "class"))
+
 ; Keep the entire special-member name callable, including ~ and operator=.
 ; 128 is one above LSP typemod priority (127); ordinary operators are untouched.
 ((destructor_name) @function.method

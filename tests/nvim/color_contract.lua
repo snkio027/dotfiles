@@ -834,6 +834,8 @@ local function main()
 		)
 	end
 
+	dofile(repo_root .. "/tests/nvim/cpp_preprocessor_highlights.lua")(get_effective_highlight_at_pos)
+
 	local ok_manifest, manifest = pcall(dofile, repo_root .. "/tests/nvim/color_manifest.lua")
 	if not ok_manifest or not manifest.languages then
 		fail("Failed to load tests/nvim/color_manifest.lua")
