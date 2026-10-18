@@ -928,6 +928,7 @@ local function main()
 		end
 	end
 
+	dofile(repo_root .. "/tests/nvim/cpp_keyword_runtime.lua")(get_effective_highlight_at_pos, repo_root)
 	print("Tier-2 Runtime Integration Contract passed cleanly.")
 end
 

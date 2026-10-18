@@ -187,7 +187,7 @@ local function projection_ready()
 end
 local ok, err = xpcall(function()
 	require("lazy").load({ plugins = { "nvim-lspconfig" } })
-	assert(vim.lsp.config.clangd.on_attach == require("theme.adapters.clangd_callable").attach)
+	assert(vim.lsp.config.clangd.on_attach == require("theme.adapters.clangd").attach)
 	vim.cmd.edit(vim.fn.fnameescape(source))
 	buf = vim.api.nvim_get_current_buf()
 	wait_for(function()
