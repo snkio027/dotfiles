@@ -35,6 +35,12 @@
 
 ; Primitive spellings must not become user-defined types during recovery.
 ; In particular the current C++ grammar represents wchar_t as type_identifier.
+; Signed/width specifiers can survive as anonymous tokens in an ERROR node
+; (e.g. a macro-wrapped enum base), outside upstream's sized_type_specifier.
+(["signed" "unsigned" "short" "long"] @type.builtin
+  (#not-has-ancestor? @type.builtin attribute_declaration attribute_specifier preproc_def preproc_function_def preproc_call)
+  (#set! priority 101))
+
 ([
   (identifier) (type_identifier) (field_identifier) (namespace_identifier)
 ] @type.builtin

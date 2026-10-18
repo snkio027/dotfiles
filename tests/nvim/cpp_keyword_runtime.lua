@@ -25,7 +25,7 @@ return function(effective, repo_root)
 		"constexpr int eval(int x) { if consteval { return 1; } else { return x; } }",
 		"wchar_t wide;",
 		"#if 0",
-		"class Dormant { public:",
+		"class Dormant { public: unsigned short flags;",
 		"  using id = int;",
 		"  Dormant();",
 		"  Dormant(int) : Dormant() {}",
@@ -44,6 +44,10 @@ return function(effective, repo_root)
 		"  typeid(Base);",
 		"  static_assert(sizeof(int) > 0);",
 		"}",
+		"VENDOR_BEGIN",
+		"enum class Mode : unsigned short { first };",
+		"enum class Kind : signed char { second };",
+		"VENDOR_END",
 	}
 	vim.fn.writefile(source, root .. "/keywords.cpp")
 	vim.fn.writefile({ "-std=c++23" }, root .. "/compile_flags.txt")
@@ -117,8 +121,14 @@ return function(effective, repo_root)
 			check(point[1], point[2], "DxKeyword", false)
 		end
 		check(19, "wchar_t", "DxBuiltin", false)
+		check(41, "unsigned", "DxBuiltin", false)
+		check(41, "short", "DxBuiltin", false)
+		check(42, "signed", "DxBuiltin", false)
+		check(42, "char", "DxBuiltin", false)
 		local inactive_points = {
 			{ 21, "public", "DxKeyword" },
+			{ 21, "unsigned", "DxBuiltin" },
+			{ 21, "short", "DxBuiltin" },
 			{ 22, "using", "DxKeyword" },
 			{ 24, "Dormant()", "DxCallable" },
 			{ 25, "operator=", "DxCallable" },
