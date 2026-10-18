@@ -11,6 +11,10 @@ function M.groups()
     ["@keyword.return"] = { link = "DxKeyword" },
     ["@keyword.type"] = { link = "DxKeyword" },
     ["@keyword.import"] = { link = "DxKeyword" },
+    -- Catppuccin defines these more-specific captures; own them explicitly so
+    -- C/C++ includes cannot bypass the shared keyword role.
+    ["@keyword.import.c"] = { link = "DxKeyword" },
+    ["@keyword.import.cpp"] = { link = "DxKeyword" },
     ["@keyword.conditional"] = { link = "DxKeyword" },
     ["@keyword.repeat"] = { link = "DxKeyword" },
     ["@keyword.coroutine"] = { link = "DxKeyword" },
