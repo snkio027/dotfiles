@@ -5,6 +5,38 @@ local authority = require("theme.authority")
 
 local M = {}
 
+function M.attach(client, buf)
+  require("theme.adapters.clangd_callable").attach(client, buf)
+  if client.name ~= "clangd" or vim.bo[buf].filetype ~= "cpp" then
+    return
+  end
+  local group = vim.api.nvim_create_augroup("dx_clangd_inactive_" .. client.id .. "_" .. buf, { clear = true })
+  vim.api.nvim_create_autocmd("LspTokenUpdate", {
+    group = group,
+    buffer = buf,
+    callback = function(event)
+      local data = event.data
+      if data.client_id == client.id and data.token.type == "comment" then
+        -- clangd alone decides inactivity. Use the native token namespace so
+        -- edits, refreshes and detach clear the override with the original.
+        -- Inactive code outranks our special-member/callable projection (128).
+        vim.lsp.semantic_tokens.highlight_token(data.token, buf, client.id, "@lsp.type.comment.cpp", {
+          priority = vim.hl.priorities.semantic_tokens + 4,
+        })
+      end
+    end,
+  })
+  vim.api.nvim_create_autocmd({ "LspDetach", "BufWipeout" }, {
+    group = group,
+    buffer = buf,
+    callback = function(event)
+      if event.event == "BufWipeout" or event.data.client_id == client.id then
+        vim.api.nvim_del_augroup_by_id(group)
+      end
+    end,
+  })
+end
+
 ---@return table<string, vim.api.keyset.highlight>
 function M.groups()
   return {

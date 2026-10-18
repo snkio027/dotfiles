@@ -109,6 +109,144 @@ return function(effective)
 		check(buf, 2, "using", "DxComment")
 		check(buf, 3, "using", "DxString")
 
+		-- Access labels and declaration decorators recover differently from the
+		-- first using alias. Exercise whole reserved words, not vendor macro names.
+		buf = open({
+			"VENDOR_NAMESPACE_BEGIN",
+			"class Worker {",
+			"public:",
+			"  typedef int size_type;",
+			"  VENDOR_ABI explicit Worker(int);",
+			"  VENDOR_ABI friend bool equal(const Worker&, const Worker&);",
+			"protected:",
+			"  int guard;",
+			"private:",
+			"  int field;",
+			"};",
+			"VENDOR_NAMESPACE_END",
+		}, "cpp")
+		for _, point in ipairs({
+			{ 3, "public" },
+			{ 4, "typedef" },
+			{ 5, "explicit" },
+			{ 6, "friend" },
+			{ 7, "protected" },
+			{ 9, "private" },
+		}) do
+			check(buf, point[1], point[2], "DxKeyword")
+		end
+		buf = open({
+			"#if FEATURE_LEVEL >= 20",
+			"VENDOR_NAMESPACE_BEGIN",
+			"using ::global_type VENDOR_ATTR;",
+			"VENDOR_NAMESPACE_END",
+			"#endif",
+		}, "cpp")
+		check(buf, 3, "using", "DxKeyword")
+		buf = open({
+			"VENDOR_BEGIN",
+			"static VENDOR_CONSTEXPR const bool value = true;",
+			"inline VENDOR_ABI const int* address();",
+			"VENDOR_END",
+		}, "cpp")
+		for _, point in ipairs({ { 2, "static" }, { 2, "const" }, { 3, "inline" }, { 3, "const" } }) do
+			check(buf, point[1], point[2], "DxKeyword")
+		end
+
+		buf = open({
+			"inline namespace versioned {}",
+			"template<class T> struct Box {};",
+			"extern template struct Box<int>;",
+			"struct alignas(16) Aligned {};",
+			"consteval int immediate() { return 1; }",
+			"constinit int initial = 0;",
+			"constexpr int evaluate(int x) {",
+			"  if consteval { return 1; }",
+			"  else { return x; }",
+			"}",
+			"void casts(int* p) {",
+			"  static_cast<void>(p);",
+			"  dynamic_cast<Derived*>(base);",
+			"  const_cast<const int*>(p);",
+			"  reinterpret_cast<char*>(p);",
+			"  typeid(int);",
+			"  static_assert(sizeof(int) > 0);",
+			"}",
+			"wchar_t wide;",
+			"int ordinary;",
+			"char8_t utf8;",
+		}, "cpp")
+		for _, point in ipairs({
+			{ 1, "inline" },
+			{ 3, "extern" },
+			{ 4, "alignas" },
+			{ 5, "consteval" },
+			{ 6, "constinit" },
+			{ 8, "consteval" },
+			{ 9, "else" },
+			{ 9, "return" },
+			{ 12, "static_cast" },
+			{ 13, "dynamic_cast" },
+			{ 14, "const_cast" },
+			{ 15, "reinterpret_cast" },
+			{ 16, "typeid" },
+			{ 17, "static_assert" },
+		}) do
+			local col = check(buf, point[1], point[2], "DxKeyword")
+			vim.api.nvim_buf_set_extmark(buf, ns, point[1] - 1, col, {
+				end_col = col + #point[2],
+				hl_group = "@lsp.type.comment.cpp",
+				priority = vim.hl.priorities.semantic_tokens,
+			})
+			local _, inactive_keyword = check(buf, point[1], point[2], "DxComment")
+			assert(inactive_keyword.italic, "Keyword recovery overrode inactive style")
+			vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
+		end
+		for _, point in ipairs({ { 19, "wchar_t" }, { 20, "int" }, { 21, "char8_t" } }) do
+			check(buf, point[1], point[2], "DxBuiltin")
+		end
+
+		buf = open({
+			"using_type object;",
+			"int explicit_value, friendship, classification;",
+			"int final, override, module, import;",
+			"// public explicit using wchar_t static_cast",
+			'const char* text = R"(public explicit using wchar_t static_cast)";',
+			"[[vendor::using]] int attributed;",
+			"#define TOKEN using id = int;",
+			"#define static_assert(...) vendor_assert(__VA_ARGS__)",
+			"#ifdef static_assert",
+			"#if defined(typedef)",
+			"#endif",
+			"#endif",
+		}, "cpp")
+		check(buf, 1, "using_type", "DxType")
+		for _, token in ipairs({ "explicit_value", "friendship", "classification" }) do
+			check(buf, 2, token, "DxVariable")
+		end
+		for _, token in ipairs({ "final", "override", "module", "import" }) do
+			check(buf, 3, token, "DxVariable")
+		end
+		for _, token in ipairs({ "public", "explicit", "using", "wchar_t", "static_cast" }) do
+			check(buf, 4, token, "DxComment")
+			check(buf, 5, token, "DxString")
+		end
+		-- Keywords may occur in attribute tokens and legacy compatibility macro
+		-- definitions. Neither is an ordinary grammar-keyword recovery site.
+		for _, point in ipairs({
+			{ 6, "using" },
+			{ 7, "using" },
+			{ 8, "static_assert" },
+			{ 9, "static_assert" },
+			{ 10, "typedef" },
+		}) do
+			local line = vim.api.nvim_buf_get_lines(buf, point[1] - 1, point[1], false)[1]
+			local col = assert(line:find(point[2], 1, true)) - 1
+			for _, capture in ipairs(vim.treesitter.get_captures_at_pos(buf, point[1] - 1, col)) do
+				assert(tonumber(capture.metadata.priority) ~= 101, "Recovery escaped into attribute/macro")
+			end
+		end
+
 		for _, lang in ipairs({ "c", "cpp" }) do
 			buf = open({
 				"#include <vendor_header.h>",

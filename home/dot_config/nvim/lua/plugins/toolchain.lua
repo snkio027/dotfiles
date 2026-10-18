@@ -91,7 +91,7 @@ return {
               desc = "Insert Missing Include (clangd)",
             },
           },
-          on_attach = require("theme.adapters.clangd_callable").attach,
+          on_attach = require("theme.adapters.clangd").attach,
           root_dir = require("config.clangd_context").root_dir,
           before_init = require("config.clangd_context").before_init,
           cmd = {
