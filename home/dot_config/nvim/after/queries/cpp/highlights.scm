@@ -6,6 +6,13 @@
 ((ERROR (identifier) @keyword.type)
   (#any-of? @keyword.type "enum" "class"))
 
+; A macro-wrapped class can recover its first alias as a declaration whose
+; type is the reserved word using. Only repair that type slot, not the alias
+; name. 101 beats the erroneous @type (100), below inactive-code tokens (125).
+((declaration type: (type_identifier) @keyword)
+  (#eq? @keyword "using")
+  (#set! priority 101))
+
 ; Keep the entire special-member name callable, including ~ and operator=.
 ; 128 is one above LSP typemod priority (127); ordinary operators are untouched.
 ((destructor_name) @function.method

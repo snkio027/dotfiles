@@ -63,6 +63,52 @@ return function(effective)
 		vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
 		check(buf, 4, "enum", "DxKeyword")
 
+		-- The namespace macro makes the first alias after public: recover as a
+		-- declaration with a type_identifier named "using". Exercise qualified
+		-- and builtin RHS types, and the ordinary namespace control, independently.
+		for _, wrapped in ipairs({ false, true }) do
+			for _, rhs in ipairs({ "Thread::id", "int" }) do
+				buf = open({
+					wrapped and "VENDOR_NAMESPACE_BEGIN" or "namespace vendor {",
+					"class Worker {",
+					"public:",
+					"  using id = " .. rhs .. ";",
+					"  using native_handle_type = Thread::native_handle_type;",
+					"};",
+					wrapped and "VENDOR_NAMESPACE_END" or "}",
+				}, "cpp")
+				check(buf, 4, "using", "DxKeyword")
+				check(buf, 5, "using", "DxKeyword")
+				check(buf, 5, "native_handle_type", "DxType")
+				if not wrapped then
+					check(buf, 4, "id", "DxType")
+				end
+				-- Do not recolor the alias identifier; its semantic type remains
+				-- provider-owned when the parser has lost the alias structure.
+				for _, capture in ipairs(vim.treesitter.get_captures_at_pos(buf, 3, 8)) do
+					assert(capture.capture ~= "keyword", "Using recovery escaped onto the alias name")
+				end
+				vim.api.nvim_buf_set_extmark(buf, ns, 3, 2, {
+					end_row = 3,
+					end_col = 7,
+					hl_group = "@lsp.type.comment.cpp",
+					priority = vim.hl.priorities.semantic_tokens,
+				})
+				local _, inactive_using = check(buf, 4, "using", "DxComment")
+				assert(inactive_using.italic, "Inactive using lost its italic style")
+				vim.api.nvim_buf_clear_namespace(buf, ns, 0, -1)
+				check(buf, 4, "using", "DxKeyword")
+			end
+		end
+		buf = open({
+			"using_type value;",
+			"// using id = int;",
+			'const char *text = "using id = int;";',
+		}, "cpp")
+		check(buf, 1, "using_type", "DxType")
+		check(buf, 2, "using", "DxComment")
+		check(buf, 3, "using", "DxString")
+
 		for _, lang in ipairs({ "c", "cpp" }) do
 			buf = open({
 				"#include <vendor_header.h>",
