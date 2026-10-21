@@ -346,5 +346,6 @@ assert(dap.adapters.codelldb, "codelldb adapter is unavailable")
 assert(#(dap.configurations.zig or {}) >= 2, "Zig launch/attach configurations are unavailable")
 
 dofile("tests/nvim/cmake_presets.lua")
+dofile("tests/nvim/hover.lua")
 
 print("Neovim toolchain smoke tests passed")

@@ -49,7 +49,17 @@ return {
     opts = {
       -- Language servers can emit frequent progress completions while editing.
       -- Diagnostics, completion, hover and signature help remain enabled.
-      lsp = { progress = { enabled = false } },
+      lsp = {
+        progress = { enabled = false },
+        -- Frame K documentation without changing signature help or other floats.
+        hover = {
+          opts = {
+            border = { style = "rounded" },
+            position = { row = 2, col = 2 },
+            size = { max_width = 90 },
+          },
+        },
+      },
     },
   },
   {
