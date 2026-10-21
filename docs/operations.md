@@ -108,6 +108,38 @@ python3 icons/generate.py --check # 验证生成制品未漂移
 
 `devdoctor` 检查 Homebrew、chezmoi、age、SSH、gitleaks、语言 Runtime、LLVM/CMake/Ninja、cxx-init、IaC/Kubernetes CLI 和终端工具。非 Rust Runtime 检查 Homebrew 路径；Rust 单独检查 rustup 所选工具链及 cargo/rustc 的实际入口，禁用诊断期间的自动安装；它不会自动修改系统。
 
+### Neovim 日志与剪贴板
+
+clangd 日常使用 `--log=error`：保留错误日志，不逐条记录正常 LSP 请求。
+Neovim 会将语言服务器 stderr 统一标为 `ERROR`，所以旧日志中的 `I[...]` 并不表示故障。
+这不关闭代码诊断、clang-tidy 或其他服务器的日志；排查时可临时将 clangd 参数改为
+`--log=verbose` 并重启客户端，结束后恢复 `error`。日志位置用
+`:lua print(vim.lsp.log.get_filename())` 查询。清理历史日志前先退出占用它的 Neovim，
+压缩留档；不在启动时删除日志或改写其他进程正在使用的文件。
+
+剪贴板使用 Neovim 原生 provider，不额外安装插件：
+
+| 环境 | 选择与前提 |
+| --- | --- |
+| macOS | 原生 `pbcopy` / `pbpaste` |
+| Linux Wayland | 已有 `wl-copy` / `wl-paste`，需要真实桌面会话 |
+| Linux X11 | 已有 `xclip` 或 `xsel`，需要可访问的 `DISPLAY` |
+| 本地 WSL2 | 优先已有 `win32yank.exe`；否则使用已有 `powershell.exe` 的 Windows 剪贴板 |
+| SSH / 容器 | 保留原生终端探测；OSC 52 依赖终端及复用器支持，不保证能读取本机剪贴板 |
+
+WSL2 的 Windows 工具必须在 Linux `$PATH` 中可执行，且 WSL interop 未关闭。
+不会安装另一份 Neovim、自动下载 win32yank、硬编码 Windows 系统盘或改动 `/etc/wsl.conf`。
+PowerShell 回退以 UTF-8 通过标准输入传递文本，粘贴保留多行并转换 CRLF；启动成本高于
+win32yank。两者都缺失时保留原生 WSLg/终端探测；显式 `g:clipboard` 与 SSH 会话不被覆盖。
+
+在 WSL 的 Neovim 中运行 `:checkhealth vim.provider` 查看实际 provider，分别测试
+`"+yy` → Windows 应用，以及 Windows 复制中文、多行文本 → Neovim `"+p`。
+普通 `y/p` 是否连接系统剪贴板取决于 `:set clipboard?`；终端的 `Ctrl-Shift-V` 是另一条
+粘贴通道，不证明 Neovim provider 可用。OSC 52 读取可能受终端安全授权限制，
+不要为复制功能全局放开剪贴板读取权限。
+参见 [Neovim provider](https://neovim.io/doc/user/provider/) 与
+[WSL interop](https://learn.microsoft.com/en-us/windows/wsl/interop)。
+
 ### C++ 项目与 vcpkg 环境
 
 日常添加库、增量构建与运行的完整步骤见 [C++ 开发与第三方库指南](cpp-workflow.md)。

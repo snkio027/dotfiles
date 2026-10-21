@@ -96,6 +96,9 @@ return {
           before_init = require("config.clangd_context").before_init,
           cmd = {
             homebrew_llvm_tool("clangd"),
+            -- Neovim records all server stderr as ERROR, including clangd's
+            -- default per-request INFO traces. Keep actual errors, not traffic.
+            "--log=error",
             "--background-index",
             "--clang-tidy",
             "--header-insertion=iwyu",

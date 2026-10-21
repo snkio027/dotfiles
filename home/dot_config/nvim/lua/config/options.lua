@@ -5,6 +5,8 @@ vim.g.lazyvim_picker = "snacks"
 vim.g.lazyvim_python_lsp = "ty"
 vim.g.lazyvim_python_ruff = "ruff"
 
+require("config.clipboard").setup()
+
 vim.opt.confirm = true
 vim.opt.cursorline = true
 vim.opt.cursorlineopt = "number"
