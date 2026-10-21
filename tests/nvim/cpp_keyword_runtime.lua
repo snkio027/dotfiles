@@ -145,7 +145,7 @@ return function(effective, repo_root)
 		-- The override belongs to clangd's native token namespace and lifetime.
 		vim.lsp.buf_detach_client(buf, client.id)
 		assert(not vim.lsp.buf_is_attached(buf, client.id), "clangd still attached")
-		local group = "dx_clangd_inactive_" .. client.id .. "_" .. buf
+		local group = "dx_clangd_tokens_" .. client.id .. "_" .. buf
 		assert(vim.fn.exists("#" .. group) == 0, "Inactive callback survived detach")
 		local col = assert(source[25]:find("operator=", 1, true)) - 1
 		local name, hl = effective(buf, 24, col)
