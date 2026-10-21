@@ -10,18 +10,28 @@ function M.attach(client, buf)
   if client.name ~= "clangd" or vim.bo[buf].filetype ~= "cpp" then
     return
   end
-  local group = vim.api.nvim_create_augroup("dx_clangd_inactive_" .. client.id .. "_" .. buf, { clear = true })
+  local group = vim.api.nvim_create_augroup("dx_clangd_tokens_" .. client.id .. "_" .. buf, { clear = true })
   vim.api.nvim_create_autocmd("LspTokenUpdate", {
     group = group,
     buffer = buf,
     callback = function(event)
       local data = event.data
-      if data.client_id == client.id and data.token.type == "comment" then
+      if data.client_id ~= client.id then
+        return
+      end
+      if data.token.type == "comment" then
         -- clangd alone decides inactivity. Use the native token namespace so
         -- edits, refreshes and detach clear the override with the original.
         -- Inactive code outranks our special-member/callable projection (128).
         vim.lsp.semantic_tokens.highlight_token(data.token, buf, client.id, "@lsp.type.comment.cpp", {
           priority = vim.hl.priorities.semantic_tokens + 4,
+        })
+      elseif data.token.type == "type" and not data.token.modifiers.deduced then
+        -- Spelled type names (including aliases inside unexpanded macros) have
+        -- semantic authority even when Tree-sitter recovers them as variables.
+        -- Deduced auto/decltype tokens retain their syntax foreground instead.
+        vim.lsp.semantic_tokens.highlight_token(data.token, buf, client.id, "@type.cpp", {
+          priority = vim.hl.priorities.semantic_tokens,
         })
       end
     end,
@@ -46,7 +56,9 @@ function M.groups()
     -- modifier identifies a callable without recoloring ordinary type references.
     ["@lsp.typemod.class.constructorOrDestructor.cpp"] = { link = "DxCallable" },
 
-    -- clangd's generic type token loses the builtin/user-defined distinction.
+    -- The C++ callback grants authority only to non-deduced type tokens;
+    -- applying a blanket foreground here would also recolor auto/decltype.
+    -- C retains its existing syntax-owned foreground policy.
     ["@lsp.type.type.c"] = authority.suppress_foreground(),
     ["@lsp.type.type.cpp"] = authority.suppress_foreground(),
 
