@@ -25,6 +25,8 @@ assert(installer_opts.auto_update == false, "Mason tools must not update automat
 assert(installer_opts.run_on_start == false, "mason-tool-installer must not run on startup")
 assert(not package.loaded["mason-tool-installer"], "mason-tool-installer loaded without an explicit command")
 
+dofile("tests/nvim/clipboard.lua")
+
 local cpp = require("config.cpp")
 dofile("tests/nvim/cpp_dependency.lua")
 local cpp_buffer = vim.api.nvim_create_buf(false, true)
@@ -80,6 +82,7 @@ vim.fn.writefile(
 )
 vim.fn.writefile({ "int main() {}" }, editorconfig_source)
 require("lazy").load({ plugins = { "nvim-lspconfig" } })
+dofile("tests/nvim/lsp_log.lua")
 vim.cmd.edit(vim.fn.fnameescape(editorconfig_source))
 assert(vim.bo.filetype == "cpp", "EditorConfig fixture did not load as C++")
 assert(vim.bo.expandtab, "EditorConfig indent_style did not override the C++ fallback")
