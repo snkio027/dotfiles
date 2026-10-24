@@ -5,18 +5,15 @@ local config = require("noice.config")
 -- Contract runners execute before VimEnter, when Noice normally starts.
 config.setup(LazyVim.opts("noice.nvim"))
 local router = require("noice.message.router")
-local views = require("noice.view")
-local hover, signature
+local views = {}
 for _, route in ipairs(config.options.routes) do
-	if route.filter.event == "lsp" and route.filter.kind == "hover" then
-		hover = router.add(route).view
-	elseif route.filter.event == "lsp" and route.filter.kind == "signature" then
-		signature = views.get_view(route.view, route.opts)
+	if route.filter.event == "lsp" and (route.filter.kind == "hover" or route.filter.kind == "signature") then
+		views[route.filter.kind] = router.add(route).view
 	end
 end
-assert(hover and signature, "HOVER_ROUTES_MISSING")
-assert(signature._opts.border.style == "none", "HOVER_CHANGED_SIGNATURE_BORDER")
-assert(signature._opts.size.max_width == 120, "HOVER_CHANGED_SIGNATURE_WIDTH")
+assert(views.hover and views.signature, "HOVER_ROUTES_MISSING")
+assert(config.options.lsp.signature.enabled, "SIGNATURE_DISABLED")
+assert(config.options.lsp.signature.auto_open.enabled, "SIGNATURE_AUTO_OPEN_DISABLED")
 
 local api = vim.api
 local original_win = api.nvim_get_current_win()
@@ -32,12 +29,12 @@ for _, name in ipairs({ "Normal", "NormalFloat", "FloatBorder", "NoicePopup", "N
 	highlights[name] = api.nvim_get_hl(0, { name = name })
 end
 
-local function check_documentation(markdown, expected, expected_width)
-	require("noice.lsp.hover").on_hover(nil, {
-		contents = { kind = "markdown", value = markdown },
-	}, { bufnr = scratch })
+local function check_documentation(kind, response, expected, expected_width)
+	local handler = kind == "hover" and require("noice.lsp.hover").on_hover
+		or require("noice.lsp.signature").on_signature
+	handler(nil, response, { bufnr = scratch })
 	router.update()
-	local popup = hover._nui
+	local popup = views[kind]._nui
 	assert(popup and popup.winid and api.nvim_win_is_valid(popup.winid), "HOVER_WINDOW_MISSING")
 	local border = popup.border
 	assert(border and border.winid and api.nvim_win_is_valid(border.winid), "HOVER_BORDER_MISSING")
@@ -78,22 +75,38 @@ local ok, err = xpcall(function()
 	api.nvim_buf_set_lines(scratch, 0, -1, false, { "auto result = example();" })
 	api.nvim_win_set_cursor(source_win, { 1, 0 })
 	local declaration = "using example = std::tuple<" .. string.rep("int, ", 30) .. "int>;"
-	check_documentation(
-		"### type-alias example\n\nprovided by <tuple>\n\n```cpp\n" .. declaration .. "\n```\n\nEnd of documentation.",
-		{ "type-alias example", "provided by <tuple>", declaration, "End of documentation." },
-		90
-	)
+	check_documentation("hover", {
+		contents = {
+			kind = "markdown",
+			value = "### type-alias example\n\nprovided by <tuple>\n\n```cpp\n"
+				.. declaration
+				.. "\n```\n\nEnd of documentation.",
+		},
+	}, { "type-alias example", "provided by <tuple>", declaration, "End of documentation." }, 90)
+	local signature = "example(" .. string.rep("const std::string& argument, ", 6) .. "int last)"
+	check_documentation("signature", {
+		signatures = {
+			{ label = signature, parameters = { { label = "int last" } }, documentation = "Parameter documentation." },
+		},
+		activeSignature = 0,
+		activeParameter = 0,
+	}, { signature, "Parameter documentation." }, 90)
 	-- Short docs still autosize, including in a smaller terminal.
 	vim.o.columns = 80
-	check_documentation("Short documentation.", { "Short documentation." }, #"Short documentation.")
+	check_documentation(
+		"hover",
+		{ contents = "Short documentation." },
+		{ "Short documentation." },
+		#"Short documentation."
+	)
 end, debug.traceback)
 
 -- Restore even on assertion failure; smoke contracts can share a process.
-hover:hide()
+for _, view in pairs(views) do
+	view:hide()
+end
 api.nvim_win_close(source_win, true)
 api.nvim_set_current_win(original_win)
 vim.o.columns, vim.o.lines = columns, lines
 assert(ok, err)
-print(
-	"Hover documentation contract passed: rounded frame, padding, 90-column content, unchanged highlights/signature help"
-)
+print("Hover/signature documentation contract passed: rounded frames, padding, 90-column content, unchanged highlights")
