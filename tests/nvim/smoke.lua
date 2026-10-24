@@ -347,5 +347,6 @@ assert(#(dap.configurations.zig or {}) >= 2, "Zig launch/attach configurations a
 
 dofile("tests/nvim/cmake_presets.lua")
 dofile("tests/nvim/hover.lua")
+dofile("tests/nvim/completion_windows.lua")
 
 print("Neovim toolchain smoke tests passed")

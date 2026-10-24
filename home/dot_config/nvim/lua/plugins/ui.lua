@@ -51,14 +51,31 @@ return {
       -- Diagnostics, completion, hover and signature help remain enabled.
       lsp = {
         progress = { enabled = false },
-        -- Frame K documentation without changing signature help or other floats.
-        hover = {
+        -- K documentation and signature help share the same reading surface.
+        documentation = {
           opts = {
             border = { style = "rounded" },
             position = { row = 2, col = 2 },
             size = { max_width = 90 },
           },
         },
+      },
+    },
+  },
+  {
+    "saghen/blink.cmp",
+    opts = {
+      completion = {
+        menu = { border = "rounded" },
+        documentation = { window = { border = "rounded" } },
+      },
+    },
+  },
+  {
+    "neovim/nvim-lspconfig",
+    opts = {
+      diagnostics = {
+        float = { border = "rounded", max_width = 90 },
       },
     },
   },
