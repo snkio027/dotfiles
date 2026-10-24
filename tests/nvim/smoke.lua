@@ -349,5 +349,6 @@ dofile("tests/nvim/cmake_presets.lua")
 dofile("tests/nvim/hover.lua")
 dofile("tests/nvim/completion_windows.lua")
 dofile("tests/nvim/clangd_documentation.lua")
+dofile("tests/nvim/clangd_lsp_documentation.lua")
 
 print("Neovim toolchain smoke tests passed")

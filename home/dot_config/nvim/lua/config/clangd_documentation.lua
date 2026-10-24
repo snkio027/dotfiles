@@ -1,7 +1,7 @@
 local M = {}
 
 -- clangd can return Doxygen commands even with CommentFormat: Doxygen.
--- Adapt only block commands in completion prose, then use Blink's renderer.
+-- Adapt only block commands in prose, then use the existing UI renderer.
 -- This is not a Doxygen interpreter: unknown commands and Markdown are kept.
 local sections = { param = "Parameters", tparam = "Template parameters", returns = "Returns", ["return"] = "Returns" }
 local blocks = {
@@ -13,6 +13,12 @@ local blocks = {
 }
 
 local function command(line)
+  -- clangd's Doxygen hover formatter emphasizes unknown commands, including
+  -- Poxy aliases: **\cpp**example / **\ecpp**. Preserve unknown names below.
+  local emphasized, suffix = line:match("^ ? ? ?%*%*([\\@]+[%a_]+)%*%*(.*)$")
+  if emphasized then
+    line = emphasized .. " " .. suffix
+  end
   local indent, prefix, name, rest = line:match("^( *)([\\@]+)([%a_]+)(.*)$")
   if
     not name
@@ -32,6 +38,10 @@ local function unescape(text)
 end
 
 function M.normalize(documentation)
+  -- A hover MarkedString with a language is literal code, not prose.
+  if type(documentation) == "table" and documentation.language then
+    return documentation
+  end
   local text = type(documentation) == "table" and documentation.value or documentation
   if type(text) ~= "string" then
     return documentation
@@ -164,6 +174,47 @@ function M.draw(opts)
   -- Resolve has already completed here. Keep the completion item, edit ranges,
   -- snippets and provider cache intact; override only the displayed document.
   opts.default_implementation({ documentation = M.normalize(opts.item.documentation) })
+end
+
+local function hover_contents(contents)
+  if type(contents) == "table" and vim.islist(contents) then
+    return vim.tbl_map(hover_contents, contents)
+  end
+  return M.normalize(contents)
+end
+
+local noice_installed = false
+function M.setup_noice()
+  if noice_installed then
+    return
+  end
+  -- Noice's explicit requests and auto signature trigger call these same
+  -- callbacks. Keep its request, focus, error and rendering behavior intact.
+  for _, kind in ipairs({ "hover", "signature" }) do
+    local module = require("noice.lsp." .. kind)
+    local key = "on_" .. kind
+    local handler = module[key]
+    module[key] = function(err, result, ctx, ...)
+      local client = ctx and ctx.client_id and vim.lsp.get_client_by_id(ctx.client_id)
+      if not err and type(result) == "table" and client and client.name == "clangd" then
+        -- Noice adds rendering state to signature results; give it a copy so
+        -- neither that state nor normalized prose changes the server response.
+        result = vim.deepcopy(result)
+        if kind == "hover" then
+          result.contents = hover_contents(result.contents)
+        else
+          for _, signature in ipairs(result.signatures or {}) do
+            signature.documentation = M.normalize(signature.documentation)
+            for _, parameter in ipairs(signature.parameters or {}) do
+              parameter.documentation = M.normalize(parameter.documentation)
+            end
+          end
+        end
+      end
+      return handler(err, result, ctx, ...)
+    end
+  end
+  noice_installed = true
 end
 
 return M
