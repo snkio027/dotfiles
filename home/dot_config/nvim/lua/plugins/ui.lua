@@ -46,6 +46,11 @@ return {
   },
   {
     "folke/noice.nvim",
+    init = function()
+      LazyVim.on_load("noice.nvim", function()
+        require("config.clangd_documentation").setup_noice()
+      end)
+    end,
     opts = {
       -- Language servers can emit frequent progress completions while editing.
       -- Diagnostics, completion, hover and signature help remain enabled.
