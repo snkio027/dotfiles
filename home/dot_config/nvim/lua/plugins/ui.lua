@@ -67,7 +67,12 @@ return {
     opts = {
       completion = {
         menu = { border = "rounded" },
-        documentation = { window = { border = "rounded" } },
+        documentation = {
+          window = { border = "rounded" },
+          draw = function(opts)
+            require("config.clangd_documentation").draw(opts)
+          end,
+        },
       },
     },
   },
