@@ -10,6 +10,9 @@ return {
     end,
     opts = {
       flavour = "mocha",
+      -- Automatic discovery calls vim.pack.get(), creating an unused package
+      -- directory on Neovim 0.12. Keep our lazy.nvim integrations explicit.
+      auto_integrations = false,
       -- Snacks uses diagnostic groups for Git status filenames. Keep their
       -- colors without switching Maple Mono to its cursive italic face.
       lsp_styles = {
@@ -29,6 +32,10 @@ return {
       end,
       integrations = {
         blink_cmp = true,
+        blink_pairs = true,
+        dadbod_ui = true,
+        dap = true,
+        octo = true,
         fzf = false,
         gitsigns = true,
         mason = true,
