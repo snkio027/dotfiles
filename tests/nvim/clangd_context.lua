@@ -115,8 +115,13 @@ local function verify(buf, project)
 end
 local function initialization(project, options, cmd)
 	local config = { root_dir = project, init_options = options, cmd = cmd or { "clangd" } }
-	local params = { initializationOptions = options or vim.NIL }
+	local capabilities = vim.lsp.protocol.make_client_capabilities()
+	capabilities.offsetEncoding = { "utf-16" }
+	local standard = vim.deepcopy(capabilities.general.positionEncodings)
+	local params = { initializationOptions = options or vim.NIL, capabilities = capabilities }
 	context.before_init(params, config)
+	assert(params.capabilities.offsetEncoding == nil, "deprecated clangd offsetEncoding sent")
+	assert(vim.deep_equal(params.capabilities.general.positionEncodings, standard), "standard encodings changed")
 	return params.initializationOptions, config.init_options
 end
 
@@ -178,7 +183,40 @@ local ok, err = xpcall(function()
 	-- The header is deliberately NOT included: inheritance must not depend on
 	-- an includer cache (e.g. SDK aliases or opening a header before its source).
 	vim.cmd.cd(vim.fn.fnameescape(p23))
-	local source_client = attached(open(source))
+	local unicode_lines = { "/* 中😀 */ int known_value = 7;", "int main() { /* 中😀 */ return known_value; }" }
+	write(source, unicode_lines)
+	local source_buf = open(source)
+	local source_client = attached(source_buf)
+	assert(source_client.capabilities.offsetEncoding == nil, "live clangd still uses legacy encoding")
+	local encoding = source_client.server_capabilities.positionEncoding
+	assert(encoding and encoding == source_client.offset_encoding, "standard position encoding not negotiated")
+	local byte_col = assert(unicode_lines[2]:find("known_value", 1, true)) - 1
+	local position = { line = 1, character = vim.str_utfindex(unicode_lines[2], encoding, byte_col) }
+	local definition = source_client:request_sync("textDocument/definition", {
+		textDocument = { uri = vim.uri_from_fname(source) },
+		position = position,
+	}, 15000, source_buf)
+	assert(definition and not definition.err and definition.result and #definition.result == 1, vim.inspect(definition))
+	assert(vim.lsp.util.show_document(definition.result[1], encoding, { focus = true }))
+	assert(
+		vim.deep_equal(vim.api.nvim_win_get_cursor(0), { 1, unicode_lines[1]:find("known_value", 1, true) - 1 }),
+		"definition jump after Chinese/emoji used the wrong offset"
+	)
+	local rename = source_client:request_sync("textDocument/rename", {
+		textDocument = { uri = vim.uri_from_fname(source) },
+		position = position,
+		newName = "renamed_value",
+	}, 15000, source_buf)
+	assert(rename and not rename.err and rename.result, vim.inspect(rename))
+	vim.lsp.util.apply_workspace_edit(rename.result, encoding)
+	local expected = vim.tbl_map(function(line)
+		return (line:gsub("known_value", "renamed_value"))
+	end, unicode_lines)
+	assert(
+		vim.deep_equal(vim.api.nvim_buf_get_lines(source_buf, 0, -1, false), expected),
+		"rename corrupted Chinese/emoji or adjacent source text"
+	)
+	vim.cmd.write()
 	assert(vim.lsp.util.show_document({
 		uri = vim.uri_from_fname(header),
 		range = {

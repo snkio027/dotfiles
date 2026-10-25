@@ -61,6 +61,11 @@ function M.root_dir(bufnr, on_dir)
 end
 
 function M.before_init(params, config)
+  -- LazyVim/lspconfig still supply the deprecated clangd extension. Neovim
+  -- negotiates standard general.positionEncodings and honors the response.
+  -- Remove only the legacy field from this client's actual initialize request.
+  params.capabilities.offsetEncoding = nil
+
   if config.init_options and config.init_options.compilationDatabasePath then
     return
   end
