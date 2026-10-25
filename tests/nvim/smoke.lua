@@ -121,6 +121,7 @@ vim.fn.delete(managed_fixture, "rf")
 vim.fn.delete(editorconfig_fixture, "rf")
 
 dofile("tests/nvim/clangd_context.lua")
+dofile("tests/nvim/taplo_schema.lua")
 local include_key, header_key
 for _, key in ipairs(LazyVim.opts("nvim-lspconfig").servers.clangd.keys or {}) do
 	if key[1] == "<leader>ci" then
