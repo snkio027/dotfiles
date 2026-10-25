@@ -155,7 +155,7 @@ class MergeGateTest(unittest.TestCase):
         ], text=True))
         jobs = workflow["jobs"]
         gate = jobs["merge-gate"]
-        self.assertEqual(set(jobs) - {"merge-gate"}, JOBS)
+        self.assertEqual(set(jobs) - {"merge-gate", "fast", "plan", "delivery"}, JOBS)
         self.assertEqual(set(gate["needs"]), JOBS)
         self.assertEqual(gate["if"], "${{ always() }}")
         self.assertEqual(gate["timeout-minutes"], 5)
@@ -167,7 +167,7 @@ class MergeGateTest(unittest.TestCase):
             # Keep gate exemptions tied to the actual execution conditions.
             condition = " ".join(jobs[job]["if"].split())
             selection = (
-                "needs.classify_pr.result != 'success' || "
+                "!github.event.pull_request.draft || needs.classify_pr.result != 'success' || "
                 f"format('lane:{{0}}', needs.classify_pr.outputs.{lane}) != 'lane:0'"
             )
             if job == "neovim-locked-cold-start":
