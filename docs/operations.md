@@ -353,6 +353,14 @@ Quiet Ops Prompt 将第一行留给位置与 Git 状态，第二行留给命令�
 
 Mason 只安装编辑器侧的 LSP、格式化器与调试适配器；Rust 编译工具链由 rustup 提供，其余声明的全局编译器和构建系统由 Homebrew 提供。C/C++ 的 clangd 与 clang-format 是例外：两者显式使用 Homebrew LLVM 的同一滚动版本，避免 Mason 与终端工具链发生版本漂移。CMake 使用 neocmake 与 gersemi，两者统一为 100 列；neocmake 保留内置语义和样式诊断，不再额外启动固定 80 列且维护停滞的 cmakelint。CMake 和通用任务输出统一进入 Overseer，测试统一进入 Neotest，原生语言统一使用 codelldb。调试配置优先读取项目的 `.vscode/launch.json`，也可以使用内置的 launch/attach 配置。
 
+#### 编辑器工具与项目格式化
+
+`:MasonUpdate` 只刷新工具目录；`:MasonToolsInstallSync` 补齐缺失工具，`:MasonToolsUpdateSync` 显式更新工具。后两者共用最终启用的工具与 Mason LSP 清单，包含语言 extra 增加的服务器，排除外部管理的 clangd / rust-analyzer。启动不主动批量升级。
+
+`:MasonToolsClean` 仅预览清单外的已安装包，不执行卸载；手动安装不等于废弃。确认不用后，在 `:Mason` 中或通过 `:MasonUninstall <package>` 单独删除。
+
+Web 文件从已启用的 Biome、Oxfmt、Prettier/Prettierd 中选择一个：按文件路径查找项目配置，最近的配置优先，搜索不越过当前 Git 仓库。支持 Prettier 的 `package.json` 配置；目录相同且多种工具配置并存时提示冲突并跳过，缺少项目配置时也跳过，不退回另一工具或 LSP 风格。用 `:ConformInfo` 查看当前选择和工具可用性；需要一次性指定时可运行 `:lua require("conform").format({ formatters = { "prettier" } })`。该策略不改变 C/C++、Python、Rust、Zig 等其他格式化流程，也不自动启用未安装的 extra。
+
 新建规范 C++ 项目时直接运行：
 
 ```bash

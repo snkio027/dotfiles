@@ -18,12 +18,7 @@ local function provision()
 	-- its ensure_installed pass in headless mode, so explicitly run that pass
 	-- here and wait for the effective LSP list as well as mason.nvim's tools.
 	-- Read the compiled settings, preserving disabled/external server policy.
-	local mapping = require("mason-lspconfig.mappings").get_mason_map().lspconfig_to_package
-	for _, server in ipairs(require("mason-lspconfig.settings").current.ensure_installed) do
-		local name = require("mason-core.package").Parse(server)
-		unique[#unique + 1] = assert(mapping[name], "Unmapped Mason LSP server: " .. name)
-	end
-	unique = policy.unique(unique)
+	unique = policy.required_tools()
 	assert(not vim.tbl_contains(unique, "clangd"), "Mason must not provision Homebrew clangd")
 	assert(not vim.tbl_contains(unique, "rust-analyzer"), "Mason must not provision Homebrew rust-analyzer")
 	require("mason-lspconfig.features.ensure_installed")()

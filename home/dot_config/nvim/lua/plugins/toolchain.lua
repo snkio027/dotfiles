@@ -154,6 +154,14 @@ return {
     },
   },
 
+  {
+    "stevearc/conform.nvim",
+    optional = true,
+    opts = function(_, opts)
+      require("config.project_format").setup(opts)
+    end,
+  },
+
   -- neocmake owns CMake diagnostics. Disable LazyVim's redundant legacy
   -- cmakelint process; the global neocmakelsp config keeps its internal lint
   -- engine on the same 100-column policy as gersemi.
@@ -181,7 +189,7 @@ return {
   -- devup or the rolling-latest CI job.
   {
     "WhoIsSethDaniel/mason-tool-installer.nvim",
-    dependencies = { "mason-org/mason.nvim" },
+    dependencies = { "mason-org/mason.nvim", "neovim/nvim-lspconfig" },
     cmd = {
       "MasonToolsInstall",
       "MasonToolsInstallSync",
@@ -194,7 +202,7 @@ return {
       run_on_start = false,
     },
     config = function(_, opts)
-      opts.ensure_installed = mason_policy.unique(vim.deepcopy(LazyVim.opts("mason.nvim").ensure_installed or {}))
+      opts.ensure_installed = mason_policy.required_tools()
       local installer = require("mason-tool-installer")
       installer.setup(opts)
 
@@ -221,6 +229,9 @@ return {
       vim.api.nvim_create_user_command("MasonToolsUpdateSync", function()
         run_after_missing_tools(true, true)
       end, { force = true })
+      vim.api.nvim_create_user_command("MasonToolsClean", function()
+        mason_policy.preview_clean(mason_policy.required_tools())
+      end, { force = true, desc = "Preview unlisted Mason packages without removing them" })
     end,
   },
 
