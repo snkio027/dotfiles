@@ -154,6 +154,11 @@ return {
         gersemi = {
           prepend_args = { "--line-length", "100" },
         },
+        -- LazyVim's SQL extra forces ANSI. Let SQLFluff load the buffer's
+        -- project dialect, retaining Conform's native require_cwd guard.
+        sqlfluff = {
+          args = { "format", "--stdin-filename", "$FILENAME", "-" },
+        },
       },
     },
   },
