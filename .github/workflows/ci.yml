@@ -4,20 +4,54 @@ permissions:
   contents: read
 
 concurrency:
-  # Required change validation must not cancel longer schedule/manual maintenance.
-  group: ${{ github.workflow }}-${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 'maintenance' || 'change-validation' }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Superseded PR feedback may be cancelled; main/release evidence must survive.
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 on:
   push:
     branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, edited, ready_for_review, converted_to_draft]
     branches: [main]
   schedule:
     - cron: "0 17 * * 0"
   workflow_dispatch:
 
 jobs:
+  fast:
+    name: Fast policy feedback
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Offline feedback
+        run: |
+          python3 tests/ci/test_delivery.py
+          python3 tests/ci/test_merge_gate.py
+          python3 tests/ci/test_pr_path_classifier.py
+
+  plan:
+    name: Plan full candidate coverage
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      mode: ${{ steps.plan.outputs.mode }}
+      plan: ${{ steps.plan.outputs.plan }}
+    steps:
+      - name: Checkout test-merge history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Record candidate identity and coverage
+        id: plan
+        run: python3 scripts/ci/plan.py
+
   classify_pr:
     name: Classify Pull Request Paths
     if: github.event_name == 'pull_request'
@@ -268,6 +302,7 @@ jobs:
       always() && !cancelled() &&
       (
         github.event_name != 'pull_request' ||
+        !github.event.pull_request.draft ||
         needs.classify_pr.result != 'success' ||
         format('lane:{0}', needs.classify_pr.outputs.macos) != 'lane:0'
       )
@@ -320,6 +355,7 @@ jobs:
       always() && !cancelled() &&
       (
         github.event_name != 'pull_request' ||
+        !github.event.pull_request.draft ||
         needs.classify_pr.result != 'success' ||
         format('lane:{0}', needs.classify_pr.outputs.devcontainer_build) != 'lane:0'
       )
@@ -345,6 +381,7 @@ jobs:
       always() && !cancelled() &&
       (
         github.event_name != 'pull_request' ||
+        !github.event.pull_request.draft ||
         needs.classify_pr.result != 'success' ||
         format('lane:{0}', needs.classify_pr.outputs.brew_core) != 'lane:0'
       )
@@ -379,6 +416,7 @@ jobs:
       always() && !cancelled() &&
       (
         github.event_name != 'pull_request' ||
+        !github.event.pull_request.draft ||
         needs.classify_pr.result != 'success' ||
         format('lane:{0}', needs.classify_pr.outputs.devcontainer_lifecycle) != 'lane:0'
       )
@@ -412,7 +450,8 @@ jobs:
         (
           github.event_name == 'pull_request' &&
           (
-            needs.classify_pr.result != 'success' ||
+            !github.event.pull_request.draft ||
+        needs.classify_pr.result != 'success' ||
             format('lane:{0}', needs.classify_pr.outputs.neovim_locked) != 'lane:0'
           )
         )
@@ -529,3 +568,26 @@ jobs:
         run: |
           echo 'Gate: BLOCK — workflow cancelled.'
           exit 1
+
+  delivery:
+    # Draft feedback and main/manual runs cannot emit the admission context.
+    name: ${{ github.event_name == 'pull_request' && (github.event.pull_request.draft && 'Draft Delivery Feedback' || 'Delivery / Quality / pr-full-standard-v1') || (github.event_name == 'push' && 'Main Delivery Quality' || 'Release and Maintenance Quality') }}
+    if: ${{ always() }}
+    needs: [fast, plan, classify_pr, validate, macos-smoke, devcontainer-build, brew-core-profile, devcontainer-lifecycle, neovim-locked-cold-start, supply-chain-provenance, neovim-cold-start, merge-gate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout candidate history
+        if: ${{ !cancelled() }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Require complete candidate evidence
+        if: ${{ !cancelled() }}
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: python3 scripts/ci/delivery_gate.py
+      - name: Reject cancellation
+        if: ${{ cancelled() }}
+        run: exit 1
