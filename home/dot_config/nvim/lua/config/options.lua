@@ -7,6 +7,21 @@ vim.g.lazyvim_python_ruff = "ruff"
 
 require("config.clipboard").setup()
 
+-- Register before the first BufRead/FileType event so Compose's dedicated
+-- language server starts on both command-line and picker opens.
+vim.filetype.add({
+  filename = {
+    ["compose.yaml"] = "yaml.docker-compose",
+    ["compose.yml"] = "yaml.docker-compose",
+    ["docker-compose.yaml"] = "yaml.docker-compose",
+    ["docker-compose.yml"] = "yaml.docker-compose",
+  },
+  pattern = {
+    ["compose%.[%w_-]+%.ya?ml"] = "yaml.docker-compose",
+    ["docker%-compose%.[%w_-]+%.ya?ml"] = "yaml.docker-compose",
+  },
+})
+
 vim.opt.confirm = true
 vim.opt.cursorline = true
 vim.opt.cursorlineopt = "number"

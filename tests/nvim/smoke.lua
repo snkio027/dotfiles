@@ -122,6 +122,7 @@ vim.fn.delete(editorconfig_fixture, "rf")
 
 dofile("tests/nvim/clangd_context.lua")
 dofile("tests/nvim/taplo_schema.lua")
+dofile("tests/nvim/compose.lua")
 local include_key, header_key
 for _, key in ipairs(LazyVim.opts("nvim-lspconfig").servers.clangd.keys or {}) do
 	if key[1] == "<leader>ci" then
@@ -353,6 +354,7 @@ dofile("tests/nvim/completion_windows.lua")
 dofile("tests/nvim/clangd_documentation.lua")
 dofile("tests/nvim/clangd_lsp_documentation.lua")
 dofile("tests/nvim/project_format.lua")
+dofile("tests/nvim/sql_format.lua")
 dofile("tests/nvim/mason_inventory.lua")
 
 print("Neovim toolchain smoke tests passed")
