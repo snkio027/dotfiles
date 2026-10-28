@@ -320,9 +320,7 @@ assert(
 	end, 10),
 	"Editing a template parameter did not update its mirror"
 )
-print(
-	"C++ snippets passed: 8 templates and 4 definitions, 2/4-space nesting, navigation, mirrors, C++23 compilation."
-)
+print("C++ snippets passed: 8 templates and 4 definitions, 2/4-space nesting, navigation, mirrors, C++23 compilation.")
 -- Exercise the installed provider transform against current parser nodes,
 -- including edits that move the same trigger between code and prose.
 local filter = blink_config.sources.providers.snippets.transform_items
