@@ -7,13 +7,15 @@ function M.open(name)
 	local path = root .. "/" .. name .. "-" .. vim.fn.getpid()
 	local started = vim.uv.hrtime()
 	local function record(event, value)
-		vim.fn.writefile({
-			vim.json.encode({
-				elapsed_ms = math.floor((vim.uv.hrtime() - started) / 1e6),
-				event = event,
-				value = value,
-			}),
-		}, path .. ".jsonl", "a")
+		-- Mason emits process output in libuv fast callbacks. Vimscript file APIs
+		-- are forbidden there; write synchronously so :cquit cannot drop events.
+		local file = assert(io.open(path .. ".jsonl", "a"))
+		assert(file:write(vim.json.encode({
+			elapsed_ms = math.floor((vim.uv.hrtime() - started) / 1e6),
+			event = event,
+			value = value,
+		}) .. "\n"))
+		assert(file:close())
 	end
 	record("start", { nvim = tostring(vim.version()), log = vim.lsp.log.get_filename() })
 	return record, path

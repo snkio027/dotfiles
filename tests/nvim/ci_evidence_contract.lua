@@ -82,7 +82,23 @@ end
 local record, path = evidence.open("mason-contract")
 evidence.watch_mason(registry, record)
 registry:emit("package:install:handle", handle) -- Existing handles must not be observed twice.
-handle:emit("stderr", "fetch failed: injected connection reset")
+local timer = assert(vim.uv.new_timer())
+local callback_ok, callback_error
+-- Real installer stdout/stderr arrive on a fast callback, not a scheduled task.
+timer:start(0, 0, function()
+	timer:close()
+	callback_ok, callback_error = pcall(function()
+		assert(vim.in_fast_event())
+		handle:emit("stderr", "fetch failed: injected connection reset")
+	end)
+end)
+assert(
+	vim.wait(1000, function()
+		return callback_ok ~= nil
+	end),
+	"Installer output callback was not delivered"
+)
+assert(callback_ok, callback_error)
 handle.state = "CLOSED"
 handle:emit("state:change", handle.state)
 registry:emit("package:install:failed", pkg, "installer exited 23")

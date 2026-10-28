@@ -25,7 +25,7 @@ local ok, err = xpcall(function()
 		return vim.trim(result.stdout)
 	end
 	vim.fn.mkdir(root .. "/src", "p")
-	for _, tool in ipairs({ "rustc", "cargo", "rust-analyzer" }) do
+	for _, tool in ipairs({ "rustc", "cargo" }) do
 		command({ tool, "--version" })
 	end
 	command({ "cargo", "clippy", "--version" })
@@ -53,6 +53,8 @@ local ok, err = xpcall(function()
 	stage = "attach"
 	vim.cmd.edit(vim.fn.fnameescape(root .. "/src/main.rs"))
 	bufnr = vim.api.nvim_get_current_buf()
+	-- PATH may resolve the rustup proxy; record the configured analyzer owner.
+	command({ LazyVim.opts("rustaceanvim").server.cmd[1], "--version" })
 	local last_stage
 	assert(
 		vim.wait(45000, function()

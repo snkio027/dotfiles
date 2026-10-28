@@ -497,11 +497,14 @@ jobs:
 
       - name: Collect cold-start failure evidence
         if: failure() || cancelled()
-        run: >-
-          python3 tests/nvim/collect_evidence.py
-          --state "$RUNNER_TEMP/nvim-cold-start/state"
-          --logs "$RUNNER_TEMP/nvim-cold-start/logs"
-          --output "$RUNNER_TEMP/cold-start-evidence" --status 1
+        run: |
+          # Preserve the trap's original exit status; recover logs if it never ran.
+          if [ ! -f "$RUNNER_TEMP/cold-start-evidence/collection.json" ]; then
+            python3 tests/nvim/collect_evidence.py \
+              --state "$RUNNER_TEMP/nvim-cold-start/state" \
+              --logs "$RUNNER_TEMP/nvim-cold-start/logs" \
+              --output "$RUNNER_TEMP/cold-start-evidence"
+          fi
 
       - name: Preserve cold-start failure evidence
         if: failure() || cancelled()

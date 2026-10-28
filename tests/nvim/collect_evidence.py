@@ -13,7 +13,7 @@ def collect(state, logs, output, status):
     entries = []
     sources = [(state / "nvim" / name, "nvim/" + name) for name in ("lsp.log", "mason.log")]
     sources += [(p, "commands/" + p.name) for p in sorted(logs.glob("*.log"))]
-    evidence = state / "dotfiles-ci-evidence"
+    evidence = state / "nvim" / "dotfiles-ci-evidence"
     sources += [
         (p, "probes/" + p.name)
         for p in sorted(evidence.glob("*"))
@@ -41,6 +41,6 @@ if __name__ == "__main__":
     parser.add_argument("--state", type=Path, required=True)
     parser.add_argument("--logs", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--status", type=int, required=True)
+    parser.add_argument("--status", type=int, help="Original exit status, omitted if the process was interrupted")
     args = parser.parse_args()
     collect(args.state.resolve(), args.logs.resolve(), args.output.resolve(), args.status)

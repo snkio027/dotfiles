@@ -35,11 +35,11 @@ class EvidenceTest(unittest.TestCase):
     def test_bounded_allowlist_does_not_export_installations_or_symlinks(self):
         state, logs, output = [self.root / n for n in ("state", "logs", "output")]
         (state / "nvim").mkdir(parents=True)
-        (state / "dotfiles-ci-evidence").mkdir()
+        (state / "nvim/dotfiles-ci-evidence").mkdir()
         logs.mkdir()
         (state / "nvim/lsp.log").write_bytes(b"x" * (collector.LIMIT + 8) + b"last error")
         (state / "nvim/credentials").write_text("never export")
-        (state / "dotfiles-ci-evidence/mason.jsonl").write_text('{"error":"network"}\n')
+        (state / "nvim/dotfiles-ci-evidence/mason.jsonl").write_text('{"error":"network"}\n')
         (logs / "secret.log").symlink_to(state / "nvim/credentials")
         (logs / "probe.log").write_text("original failure")
         collector.collect(state, logs, output, 23)
