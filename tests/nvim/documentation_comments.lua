@@ -14,6 +14,10 @@ return function(effective, language, buf, client)
 			{ "/*** SeparatorBlock */", "SeparatorBlock", "DxComment" },
 			{ 'const char *literal = "/// Literal";', "Literal", "DxString" },
 			{ "int marker = 1;" },
+			{ "#if 0" },
+			{ "/// DormantDocs", "DormantDocs", "DxDocComment", "inactive" },
+			{ "int dormant = 2;" },
+			{ "#endif" },
 		},
 		zig = {
 			{ "//! ModuleDocs", "ModuleDocs", "DxDocComment" },
@@ -87,9 +91,13 @@ return function(effective, language, buf, client)
 					local group, hl = effective(buf, line - 1, col)
 					local context = ("DOC_COMMENT [%s/%s/%s]"):format(language, stage, row[2])
 					assert(hl, context .. ": no foreground")
-					evidence.assert_role(group, row[3], hl.fg)
+					local role = row[3]
+					if row[4] == "inactive" and stage == "semantic" and client then
+						role = "DxComment"
+					end
+					evidence.assert_role(group, role, hl.fg)
 					local expected = { DxDocComment = 0xAAA67A, DxComment = 0x7580A3, DxString = 0xB8D07A }
-					assert(hl.fg == expected[row[3]], context .. ": wrong final foreground")
+					assert(hl.fg == expected[role], context .. ": wrong final foreground")
 					if row[3] ~= "DxString" then
 						assert(hl.italic and not hl.bold, context .. ": comment style changed")
 					end
