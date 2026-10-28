@@ -31,6 +31,7 @@ jobs:
       - name: Offline feedback
         run: |
           python3 tests/ci/test_delivery.py
+          python3 tests/ci/test_nvim_evidence.py
           python3 tests/ci/test_merge_gate.py
           python3 tests/ci/test_pr_path_classifier.py
 
@@ -438,7 +439,17 @@ jobs:
           devcontainer --version
 
       - name: Run full lifecycle twice
+        env:
+          DOTFILES_CI_EVIDENCE_DIR: ${{ runner.temp }}/lifecycle-evidence
         run: bash tests/devcontainer/lifecycle_smoke.sh
+
+      - name: Preserve lifecycle failure evidence
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: lifecycle-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/lifecycle-evidence
+          retention-days: 7
 
   neovim-locked-cold-start:
     name: Validate Locked Neovim Cold Start
@@ -474,6 +485,8 @@ jobs:
 
       - name: Restore locked plugins and provision missing Mason tools
         env:
+          DOTFILES_COLD_START_ROOT: ${{ runner.temp }}/nvim-cold-start
+          DOTFILES_CI_EVIDENCE_DIR: ${{ runner.temp }}/cold-start-evidence
           RUSTUP_HOME: ${{ runner.temp }}/dotfiles-rustup
           CARGO_HOME: ${{ runner.temp }}/dotfiles-cargo
         run: |
@@ -481,6 +494,22 @@ jobs:
           export PATH="$rust_prefix/opt/rustup/bin:$PATH"
           bash scripts/rust/provision.sh "$(brew --prefix)"
           bash tests/nvim/cold_start.sh
+
+      - name: Collect cold-start failure evidence
+        if: failure() || cancelled()
+        run: >-
+          python3 tests/nvim/collect_evidence.py
+          --state "$RUNNER_TEMP/nvim-cold-start/state"
+          --logs "$RUNNER_TEMP/nvim-cold-start/logs"
+          --output "$RUNNER_TEMP/cold-start-evidence" --status 1
+
+      - name: Preserve cold-start failure evidence
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: cold-start-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/cold-start-evidence
+          retention-days: 7
 
   neovim-cold-start:
     name: Validate Rolling-Latest Neovim Environment

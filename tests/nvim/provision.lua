@@ -1,8 +1,16 @@
+local directory = vim.fn.fnamemodify(debug.getinfo(1, "S").source:sub(2), ":p:h")
+local evidence = dofile(directory .. "/ci_evidence.lua")
+local record = evidence.open("mason")
+local registry, names
+
 local function provision()
 	require("lazy").load({ plugins = { "mason.nvim", "nvim-treesitter" } })
+	registry = require("mason-registry")
+	evidence.watch_mason(registry, record)
 	local registry_ready
 	require("mason-registry").refresh(function(success)
 		registry_ready = success
+		record("registry-refresh", { success = success })
 	end)
 	assert(vim.wait(tonumber(vim.env.DOTFILES_MASON_TIMEOUT_MS) or 900000, function()
 		return registry_ready ~= nil
@@ -23,8 +31,10 @@ local function provision()
 	assert(not vim.tbl_contains(unique, "rust-analyzer"), "Mason must not provision Homebrew rust-analyzer")
 	require("mason-lspconfig.features.ensure_installed")()
 
+	names = vim.tbl_map(policy.tool_name, unique)
+	record("before-wait", evidence.mason_snapshot(registry, names))
 	local installed = policy.wait_for_installed(unique, vim.env.DOTFILES_MASON_TIMEOUT_MS)
-	local names = vim.tbl_map(policy.tool_name, unique)
+	record("installed", evidence.mason_snapshot(registry, names))
 	table.sort(names)
 	print(("Mason missing-tool provisioning %d/%d"):format(installed, #unique))
 	print("Mason required tools: " .. table.concat(names, ","))
@@ -55,6 +65,10 @@ end
 
 local ok, error_message = xpcall(provision, debug.traceback)
 if not ok then
+	record("failed", { error = error_message })
+	if registry and names then
+		record("final-state", evidence.mason_snapshot(registry, names))
+	end
 	vim.api.nvim_err_writeln(error_message)
 	vim.cmd("cquit 1")
 end

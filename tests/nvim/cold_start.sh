@@ -8,9 +8,21 @@ LOG_DIR="$TEST_ROOT/logs"
 CONFIG_HOME="$TEST_ROOT/config"
 LOCK_SNAPSHOT="$TEST_ROOT/lazy-lock.committed.json"
 
-if [ -z "${DOTFILES_COLD_START_ROOT:-}" ]; then
-    trap 'rm -rf -- "$TEST_ROOT"' EXIT
-fi
+cleanup() {
+    local status=$?
+    if [ "$status" -ne 0 ]; then
+        local evidence_dir="${DOTFILES_CI_EVIDENCE_DIR:-$(mktemp -d)}"
+        python3 "$REPO_ROOT/tests/nvim/collect_evidence.py" --state "$TEST_ROOT/state" \
+            --logs "$LOG_DIR" --output "$evidence_dir" --status "$status" ||
+            echo "Failed to collect cold-start evidence" >&2
+    fi
+    if [ -z "${DOTFILES_COLD_START_ROOT:-}" ]; then
+        rm -rf -- "$TEST_ROOT"
+    fi
+    exit "$status"
+}
+trap cleanup EXIT
+trap 'exit 143' TERM
 
 mkdir -p "$LOG_DIR" "$CONFIG_HOME" "$TEST_ROOT/data" "$TEST_ROOT/state" "$TEST_ROOT/cache"
 cp -R "$REPO_ROOT/home/dot_config/." "$CONFIG_HOME/"
@@ -50,6 +62,8 @@ run_nvim_expected_failure() {
 }
 
 cd "$REPO_ROOT"
+run_nvim ci-evidence "-u" "NONE" "-n" "-i" "NONE" \
+    "+lua vim.g.dotfiles_contract_file = 'tests/nvim/ci_evidence_contract.lua'" "+luafile tests/nvim/run_contract.lua"
 run_nvim lsp-shutdown "-u" "NONE" "-n" "-i" "NONE" \
     "+luafile tests/nvim/run_contract.lua" "tests/nvim/lsp_shutdown_contract.lua"
 run_nvim lazy-restore "+luafile tests/nvim/restore_lock.lua" "+Lazy! restore" \
@@ -118,7 +132,8 @@ if grep -Fq "Neovim toolchain smoke tests passed" "$LOG_DIR/smoke-config-negativ
     echo "Failed Neotest setup produced a successful smoke marker" >&2
     exit 1
 fi
-run_nvim rust-ownership "-n" "+luafile tests/nvim/run_contract.lua" "tests/nvim/rust_toolchain.lua"
+run_nvim rust-ownership "-n" "+lua vim.g.dotfiles_contract_file = 'tests/nvim/rust_toolchain.lua'" \
+    "+luafile tests/nvim/run_contract.lua"
 grep -Fq "Rust ownership runtime passed:" "$LOG_DIR/rust-ownership.log"
 run_nvim color-contract "-n" "+luafile tests/nvim/color_contract.lua" +qa
 grep -Fq "Tier-2 Runtime Integration Contract passed cleanly." "$LOG_DIR/color-contract.log"

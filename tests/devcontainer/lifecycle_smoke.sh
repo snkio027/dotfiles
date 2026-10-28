@@ -78,7 +78,8 @@ assert_container_state() {
     done
     printf 'Mason receipt observation %d/%d (%s)\n' "${#mason_tools[@]}" "${#mason_tools[@]}" "$pass_name"
 
-    nvim_log="$(mktemp)"
+    mkdir -p /tmp/dotfiles-lifecycle-logs
+    nvim_log="/tmp/dotfiles-lifecycle-logs/$pass_name.log"
     (
         cd "$workspace_folder" || exit "$?"
         nvim --headless "+luafile tests/nvim/provision.lua" +qa || exit "$?"
@@ -91,7 +92,8 @@ assert_container_state() {
         nvim -u NONE -n -i NONE --headless "+luafile tests/nvim/run_contract.lua" \
             "tests/nvim/clangd_completion.lua" || exit "$?"
         python3 tests/nvim/comment_keys.py || exit "$?"
-        nvim -n --headless "+luafile tests/nvim/run_contract.lua" "tests/nvim/rust_toolchain.lua" || exit "$?"
+        nvim -n --headless "+lua vim.g.dotfiles_contract_file = 'tests/nvim/rust_toolchain.lua'" \
+            "+luafile tests/nvim/run_contract.lua" || exit "$?"
         nvim -n --headless "+luafile tests/nvim/production_visual_runtime.lua" +qa || exit "$?"
         DOTFILES_STRICT_LSP=1 nvim -n --headless "+luafile tests/nvim/color_contract.lua" +qa || exit "$?"
         nvim -n --headless "+luafile tests/nvim/binding_evidence.lua" +qa || exit "$?"
@@ -177,7 +179,6 @@ assert_container_state() {
     status_output="$(chezmoi status)"
     [[ -z "$status_output" ]] || fail "Neovim changed chezmoi-managed state: $status_output"
 
-    rm -f -- "$nvim_log"
     printf 'Dev Container state verification passed (%s)\n' "$pass_name"
 }
 
@@ -194,13 +195,34 @@ FIRST_LOG="$TEST_ROOT/devcontainer-up-first.log"
 SECOND_LOG="$TEST_ROOT/devcontainer-up-second.log"
 
 cleanup() {
-    local container_id
+    local status=$? container_id evidence_dir
+    # Preserve the failing command's status even if collection or Docker cleanup fails.
+    set +e
+    if [[ "$status" -ne 0 ]]; then
+        evidence_dir="${DOTFILES_CI_EVIDENCE_DIR:-$(mktemp -d)}"
+        mkdir -p "$evidence_dir"
+        python3 "$REPO_ROOT/tests/nvim/collect_evidence.py" --state "$TEST_ROOT/state" \
+            --logs "$TEST_ROOT" --output "$evidence_dir/host" --status "$status"
+    fi
     while IFS= read -r container_id; do
-        [[ -z "$container_id" ]] || docker rm --force "$container_id" >/dev/null
+        [[ -n "$container_id" ]] || continue
+        if [[ "$status" -ne 0 ]]; then
+            # Export before deleting the container, including failed post-create installs.
+            docker exec "$container_id" python3 \
+                /workspaces/dotfiles-lifecycle/tests/nvim/collect_evidence.py \
+                --state /home/vscode/.local/state --logs /tmp/dotfiles-lifecycle-logs \
+                --output /tmp/dotfiles-ci-export --status "$status" \
+                >>"$evidence_dir/collection.log" 2>&1
+            docker cp "$container_id:/tmp/dotfiles-ci-export" "$evidence_dir/container-$container_id" \
+                >>"$evidence_dir/collection.log" 2>&1 || echo "Container evidence export failed: $container_id" >&2
+        fi
+        docker rm --force "$container_id" >/dev/null
     done < <(docker ps --all --quiet --filter "label=devcontainer.local_folder=$WORKSPACE" 2>/dev/null || true)
     rm -rf -- "$TEST_ROOT"
+    exit "$status"
 }
 trap cleanup EXIT
+trap 'exit 143' TERM
 
 [[ -n "$DEVCONTAINER_BIN" && -x "$DEVCONTAINER_BIN" ]] || fail "devcontainer CLI is unavailable"
 command -v docker >/dev/null || fail "docker is unavailable"
