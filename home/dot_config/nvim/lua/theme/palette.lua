@@ -15,12 +15,12 @@ function M.resolve(c)
     keyword_function = "#DB8FEE",
     callable = "#FFB266",
     type = "#3DD1BB",
-    builtin = "#9ECE6A",
+    builtin = "#8FBCE6",
     member = "#F29BC1",
 
     -- Secondary semantic structure
     lifetime = "#67D4C7",
-    parameter = "#C8B2E3",
+    parameter = "#CBB79A",
     meta = "#FF8F7D",
     namespace = "#79AAFF",
     string = "#B8D07A",
@@ -29,9 +29,9 @@ function M.resolve(c)
 
     -- Micro-syntax and prose
     label = "#8E98B8",
-    operator = "#89DDFF",
+    operator = "#A7B5CC",
     punctuation = "#8991A8",
-    comment = "#7580A3",
+    comment = "#8490AE",
     doc = "#AAA67A",
   }
 

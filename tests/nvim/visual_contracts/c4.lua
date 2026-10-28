@@ -115,19 +115,19 @@ local expected_code = {
 	keyword_function = "#DB8FEE",
 	callable = "#FFB266",
 	type = "#3DD1BB",
-	builtin = "#9ECE6A",
+	builtin = "#8FBCE6",
 	member = "#F29BC1",
 	lifetime = "#67D4C7",
-	parameter = "#C8B2E3",
+	parameter = "#CBB79A",
 	meta = "#FF8F7D",
 	namespace = "#79AAFF",
 	string = "#B8D07A",
 	number = "#F2D675",
 	constant = "#F2D675",
 	label = "#8E98B8",
-	operator = "#89DDFF",
+	operator = "#A7B5CC",
 	punctuation = "#8991A8",
-	comment = "#7580A3",
+	comment = "#8490AE",
 	doc = "#AAA67A",
 }
 
@@ -148,7 +148,8 @@ end
 local must_separate = {
 	{ "keyword_function", "namespace", 0.12 },
 	{ "namespace", "type", 0.11 },
-	{ "type", "builtin", 0.10 }, -- E distance 0.1151; supersedes C4.4's 0.17 floor.
+	{ "type", "builtin", 0.10 },
+	{ "builtin", "parameter", 0.11 }, -- Warm sand separates parameters from pale-blue builtins (0.1227).
 	{ "variable", "member", 0.12 },
 	{ "variable", "string", 0.14 },
 	{ "callable", "constant", 0.04 },
@@ -156,7 +157,7 @@ local must_separate = {
 }
 
 local should_separate = {
-	{ "builtin", "string", 0.035 },
+	{ "builtin", "string", 0.15 }, -- Approved pale blue must stay distinct from yellow-green strings.
 	{ "meta", "keyword", 0.10 },
 }
 
@@ -166,7 +167,7 @@ local should_separate = {
 
 local intentional_near = {
 	{ "variable", "parameter", 0.02, 0.10 },
-	{ "comment", "punctuation", 0.02, 0.06 },
+	{ "comment", "punctuation", 0.01, 0.06 }, -- Approved brighter comment stays near neutral punctuation (0.0122).
 }
 
 local function assert_ratio_range(name, ratio, minimum, maximum)
@@ -269,12 +270,12 @@ local function verify_policy(context)
 			fail(("E_SOURCE_STATE: code.%s reuses %s"):format(name, hex))
 		end
 		-- E's teal Type also meets this coarse RGB heuristic (G - B = 22).
-		if name ~= "builtin" and name ~= "string" and name ~= "type" and is_green_dominant(hex) then
-			fail(("E admits green dominance only for type/builtin/string, found code.%s (%s)"):format(name, hex))
+		if name ~= "string" and name ~= "type" and is_green_dominant(hex) then
+			fail(("E admits green dominance only for type/string, found code.%s (%s)"):format(name, hex))
 		end
 	end
-	if not is_green_dominant(code.builtin) or not is_green_dominant(code.string) then
-		fail("E green builtin/string axes are missing")
+	if is_green_dominant(code.builtin) or not is_green_dominant(code.string) then
+		fail("E builtin must be pale blue while strings remain yellow-green")
 	end
 
 	assert_eq(palette.state.success:lower(), host_colors.sky:lower(), "state.success must remain Catppuccin Sky")
@@ -308,7 +309,7 @@ local function verify_policy(context)
 	assert_ratio_range("DxFunctionKeyword", ratios.keyword_function, 7.2, 7.7)
 	assert_ratio_range("DxCallable", ratios.callable, 9.3, 9.9)
 	assert_ratio_range("DxType", ratios.type, 8.7, 9.2)
-	assert_ratio_range("DxBuiltin", ratios.builtin, 9.0, 9.6)
+	assert_ratio_range("DxBuiltin", ratios.builtin, 8.4, 9.0)
 	assert_ratio_range("DxLifetime", ratios.lifetime, 9.3, 9.9)
 	assert_ratio_range("DxMember", ratios.member, 8.0, 8.6)
 	assert_ratio_range("DxParameter", ratios.parameter, 8.5, 9.2)
@@ -319,10 +320,11 @@ local function verify_policy(context)
 	assert_ratio_range("DxConstant", ratios.constant, 11.6, 12.1)
 	assert_ratio_range("DxLabel", ratios.label, 5.7, 6.2)
 	assert_ratio_range("DxPunctuation", ratios.punctuation, 5.3, 5.8)
-	assert_ratio_range("DxComment", ratios.comment, 4.1, 4.6)
+	assert_ratio_range("DxComment", ratios.comment, 5.1, 5.6)
 	assert_ratio_range("DxDocComment", ratios.doc, 6.6, 7.1)
-	if ratios.operator < 10.8 then
-		fail("DxOperator must retain high local micro-syntax energy")
+	assert_ratio_range("DxOperator", ratios.operator, 8.0, 8.4)
+	if ratios.operator >= math.min(ratios.callable, ratios.type) then
+		fail("DxOperator must remain subordinate to callable/type foregrounds")
 	end
 	if not (ratios.comment < ratios.doc and ratios.doc < ratios.variable) then
 		fail("Prose hierarchy must satisfy DxComment < DxDocComment < DxVariable")
@@ -374,6 +376,34 @@ end
 ---@param context table
 function M.verify_negative_controls(context)
 	local cases = {
+		{
+			name = "old_lavender_parameter",
+			expected = "MUST-SEPARATE pairing builtin/parameter",
+			mutate = function(palette)
+				palette.code.parameter = "#C8B2E3"
+			end,
+		},
+		{
+			name = "old_green_builtin",
+			expected = "E admits green dominance only",
+			mutate = function(palette)
+				palette.code.builtin = "#9ECE6A"
+			end,
+		},
+		{
+			name = "old_bright_operator",
+			expected = "E_CONTRAST: DxOperator",
+			mutate = function(palette)
+				palette.code.operator = "#89DDFF"
+			end,
+		},
+		{
+			name = "old_dim_comment",
+			expected = "E_CONTRAST: DxComment",
+			mutate = function(palette)
+				palette.code.comment = "#7580A3"
+			end,
+		},
 		{
 			name = "bad_primary_body",
 			expected = "E_BODY_FLOOR:",

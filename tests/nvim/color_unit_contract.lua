@@ -718,10 +718,37 @@ end
 -- C/C++ import/Zig bindings before replaying the earlier visual evidence.
 assert(vim.deep_equal(full_hl.DiagnosticUnnecessary, { italic = true }), "Unused state gained foreground authority")
 local production_count, production_digest = normalized_graph_digest(full_hl)
-local PRODUCTION_GRAPH_SHA256 = "fad47868f297cf9ebf6d663290eef13db2dc24a4926d048aab2a2257288addf4"
+local PRODUCTION_GRAPH_SHA256 = "d4c6bf64a4dda5b13167a9e26077e2595b946931b9ca0f7b66e21894f45ab34f"
 assert_eq(production_count, E_GRAPH_COUNT + 6, "Production highlight group count changed")
 assert_eq(production_digest, PRODUCTION_GRAPH_SHA256, "Unrelated production resolved graph changed")
 local original_graph = vim.deepcopy(full_hl)
+-- The warm-sand revision changes only the parameter foreground relative to
+-- the already verified three-color candidate. Keep its full graph as evidence.
+assert_eq(original_graph.DxParameter.fg, "#CBB79A", "Warm-sand parameter foreground missing")
+original_graph.DxParameter.fg = "#C8B2E3"
+local _, three_color_digest = normalized_graph_digest(original_graph)
+assert_eq(
+	three_color_digest,
+	"fd18ead701913afeeb69f63cb69574f6ce96fa98e7fd0145d7c7e9bc6cce34bc",
+	"Parameter revision changed unrelated highlights or styles"
+)
+-- After restoring parameters, reverse the three earlier foreground changes.
+-- Together these must reproduce the complete deployed graph, including prose,
+-- language bindings, all styles and unrelated UI consumers.
+for role, colors_before_after in pairs({
+	DxBuiltin = { "#9ECE6A", "#8FBCE6" },
+	DxOperator = { "#89DDFF", "#A7B5CC" },
+	DxComment = { "#7580A3", "#8490AE" },
+}) do
+	assert_eq(original_graph[role].fg, colors_before_after[2], "Approved hierarchy foreground missing: " .. role)
+	original_graph[role].fg = colors_before_after[1]
+end
+local _, pre_hierarchy_digest = normalized_graph_digest(original_graph)
+assert_eq(
+	pre_hierarchy_digest,
+	"fad47868f297cf9ebf6d663290eef13db2dc24a4926d048aab2a2257288addf4",
+	"Hierarchy adjustment changed more than four role foregrounds"
+)
 -- Only two scoped documentation bindings are added. Removing them must
 -- recover the complete deployed graph, including all unrelated UI/styles.
 for _, group in ipairs({
