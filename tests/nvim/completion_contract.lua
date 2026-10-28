@@ -206,6 +206,14 @@ local templates = {
 	},
 	{ "tspec", { "template <>", "struct Box<int> {", "\t", "};" }, 2 },
 }
+for _, case in ipairs({
+	{ "struct", { "struct Name {", "\t", "};" }, 1 },
+	{ "class", { "class Name {", "public:", "\t", "};" }, 1 },
+	{ "enum", { "enum Name {", "\tValue", "};" }, 2 },
+	{ "enum class", { "enum class Name {", "\tValue", "};" }, 2 },
+}) do
+	templates[#templates + 1] = case
+end
 local compiler = vim.fn.exepath("c++")
 assert(compiler ~= "", "C++ compiler is required for the snippet contract")
 for _, width in ipairs({ 2, 4 }) do
@@ -273,6 +281,10 @@ for _, width in ipairs({ 2, 4 }) do
 		"#include <type_traits>",
 		"#include <utility>",
 		generated.tfn,
+		"namespace a {" .. generated.struct .. "}",
+		"namespace b {" .. generated.class .. "}",
+		"namespace c {" .. generated.enum .. "}",
+		"namespace d {" .. generated["enum class"] .. "}",
 		generated.tclass,
 		generated.tusing,
 		generated.concept,
@@ -308,9 +320,55 @@ assert(
 	end, 10),
 	"Editing a template parameter did not update its mirror"
 )
-print(
-	"C++ template snippets passed: 8 provider candidates, 2/4-space nesting, navigation, mirrors, C++23 instantiation."
-)
+print("C++ snippets passed: 8 templates and 4 definitions, 2/4-space nesting, navigation, mirrors, C++23 compilation.")
+-- Exercise the installed provider transform against current parser nodes,
+-- including edits that move the same trigger between code and prose.
+local filter = blink_config.sources.providers.snippets.transform_items
+local doc = luasnip.parser.parse_snippet({ trig = "docprobe" }, "// ${1:documentation}")
+luasnip.add_snippets("cpp", { doc }, { key = "completion-context-test" })
+local function filtered(line, needle)
+	unlink_snippet()
+	vim.api.nvim_buf_set_lines(snippet_buffer, 0, -1, false, { line })
+	local _, last = assert(line:find(needle, 1, true))
+	local ctx = {
+		bufnr = snippet_buffer,
+		line = line,
+		cursor = { 1, last },
+		get_cursor = function()
+			return { 1, last }
+		end,
+		get_line = function()
+			return line
+		end,
+	}
+	local response
+	snippet_source:get_completions(ctx, function(value)
+		response = value
+	end)
+	return filter(ctx, assert(response).items)
+end
+local function contains(items, label)
+	return vim.iter(items):any(function(item)
+		return item.label == label
+	end)
+end
+for _, line in ipairs({ "// tclass", "/* tclass */", 'const char* s = "tclass";', 'auto s = R"(tclass)";' }) do
+	assert(not contains(filtered(line, "tclass"), "tclass"), "C++ code snippet leaked into: " .. line)
+end
+assert(contains(filtered("// docprobe", "docprobe"), "docprobe"), "documentation snippet was suppressed")
+assert(contains(filtered("tclass", "tclass"), "tclass"), "code snippet did not return after editing out the comment")
+for _, line in ipairs({ "template<clas T>", "enum clas", "struct Name* value;", "stru;" }) do
+	local needle = line:find("clas", 1, true) and "clas" or "stru"
+	local items = filtered(line, needle)
+	for _, name in ipairs({ "struct", "class", "enum", "enum class" }) do
+		assert(not contains(items, name), "definition snippet leaked into: " .. line)
+	end
+end
+vim.bo[snippet_buffer].filetype = "python"
+local untouched = { { label = "tclass" } }
+assert_equal(filter({ bufnr = snippet_buffer }, untouched), untouched, "other languages retain snippet policy")
+luasnip.add_snippets("cpp", {}, { key = "completion-context-test" })
+print("Completion context contract passed: comments, strings, documentation and declaration boundaries.")
 unlink_snippet()
 vim.api.nvim_buf_delete(snippet_buffer, { force = true })
 feed("<Esc>")
