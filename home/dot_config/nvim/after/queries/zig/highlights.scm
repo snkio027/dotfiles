@@ -20,3 +20,11 @@
   (block_label (identifier) @keyword)
   (#any-of? @keyword "const" "var")
   (#set! priority 101))
+
+; Zig doc comments are //! or exactly ///, not //// separators. Their syntax
+; owns the foreground above ZLS comment tokens (125/127), including when ZLS
+; incorrectly marks a four-slash separator as documentation.
+((comment) @comment.documentation
+  (#lua-match? @comment.documentation "^//[!/]")
+  (#not-lua-match? @comment.documentation "^////")
+  (#set! priority 128))
