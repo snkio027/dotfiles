@@ -287,6 +287,128 @@ local ok, err = xpcall(function()
 	input("7")
 	jump(0)
 	equal(lines()[4], "    twice(7)", "constrained template argument replacement")
+	-- Default menu ordering must make complete declaration snippets discoverable,
+	-- while keeping clangd's bare keywords available as separate LSP candidates.
+	local function reset(contents, row, col, keys)
+		input("<Esc>")
+		wait("normal mode", function()
+			return lua("return vim.api.nvim_get_mode().mode") == "n"
+		end)
+		lua(
+			[[
+      require('blink.cmp').hide()
+      local ls=require('luasnip')
+      if ls.session.current_nodes[vim.api.nvim_get_current_buf()] then ls.unlink_current() end
+      local contents,row,col=...
+      vim.api.nvim_buf_set_lines(0,0,-1,false,contents)
+      vim.api.nvim_win_set_cursor(0,{row,col})
+    ]],
+			{ contents, row, col }
+		)
+		input(keys)
+	end
+	for _, case in ipairs({
+		{ "stru", "struct", { "struct Name {", "    ", "};", "" } },
+		{ "clas", "class", { "class Name {", "public:", "    ", "};", "" } },
+		{ "enu", "enum", { "enum Name {", "    Value", "};", "" } },
+		{ "enu", "enum class", { "enum class Name {", "    Value", "};", "" } },
+	}) do
+		local word, label, expected = unpack(case)
+		reset({ "", "" }, 1, 0, "i" .. word)
+		wait("typed declaration", function()
+			return lines()[1] == word
+		end)
+		lua("require('blink.cmp').show()")
+		wait("keyword and snippet arrived", function()
+			return lua(
+				[[
+        local word=...
+        local snippet,lsp=false,false
+        for _,i in ipairs(require('blink.cmp').get_items()) do
+          snippet=snippet or (i.source_id=='snippets' and i.label==word)
+          lsp=lsp or (i.client_name=='clangd' and i.filterText==word)
+        end
+        return snippet and lsp
+      ]],
+				{ label == "enum class" and "enum" or label }
+			)
+		end)
+		equal(
+			lua("local i=require('blink.cmp').get_items()[1]; return i.source_id"),
+			"snippets",
+			"declaration first candidate"
+		)
+		equal(
+			lua("local i=require('blink.cmp').get_items()[1]; return i.label"),
+			label == "enum class" and "enum" or label,
+			"declaration spelling"
+		)
+		if label == "enum class" then
+			local index = lua(
+				[[for i,item in ipairs(require('blink.cmp').get_items()) do if item.source_id=='snippets' and item.label=='enum class' then return i end end]]
+			)
+			assert(index, "scoped enum candidate missing")
+			for _ = 2, index do
+				input("<Down>")
+			end
+			wait("scoped enum selected", function()
+				return lua("return require('blink.cmp').get_selected_item().label") == label
+			end)
+		end
+		input("<CR>")
+		wait("definition accepted", function()
+			return at_node(1)
+		end)
+		equal(lines(), expected, "complete " .. label .. " definition including semicolon")
+		input("Example")
+		jump(label:find("enum", 1, true) and 2 or 0)
+		local compiler = vim.fn.exepath("c++")
+		local result = vim.system(
+			{ compiler, "-std=c++23", "-x", "c++", "-fsyntax-only", "-" },
+			{ stdin = table.concat(lines(), "\n"), text = true }
+		):wait(20000)
+		equal(result.code, 0, "accepted declaration compiles: " .. (result.stderr or ""))
+	end
+	-- Source badges are rendered, not just present in the configuration table.
+	reset({ "", "" }, 1, 0, "istru")
+	wait("struct typed", function()
+		return lines()[1] == "stru"
+	end)
+	lua("require('blink.cmp').show()")
+	wait("source badges visible", function()
+		return lua([[
+      local win=require('blink.cmp.completion.windows.menu').win
+      if not win:is_open() then return false end
+      local text=table.concat(vim.api.nvim_buf_get_lines(win:get_buf(),0,-1,false),'\n')
+      return text:find('Snippets',1,true) and text:find('LSP',1,true) and true or false
+    ]])
+	end)
+
+	-- Leave an active argument snippet with arrow keys, without cancelling it.
+	-- Global jumpable remains true; Tab must indent here instead of jumping back.
+	for _, key in ipairs({ "<Tab>", "<S-Tab>" }) do
+		reset({ "int main() {", "    ", "", "    int unrelated = 0;", "}" }, 2, 4, "A")
+		lua("require('blink.cmp').hide();require('luasnip').lsp_expand('compute(${1:first}, ${2:second})$0')")
+		wait("argument selected", function()
+			return at_node(1)
+		end)
+		input("value")
+		wait("argument replaced", function()
+			return lines()[2] == "    compute(value, second)"
+		end)
+		input("<Down><Down><End>")
+		wait("cursor left snippet", function()
+			return lua("return vim.api.nvim_win_get_cursor(0)[1]") == 4
+		end)
+		equal(lua("return require('luasnip').locally_jumpable(1)"), false, "outside snippet")
+		equal(lua("return require('luasnip').jumpable(1)"), true, "history still retains old snippet")
+		input(key .. "X")
+		wait("outside text inserted", function()
+			return lines()[4]:find("X", 1, true) ~= nil
+		end)
+		equal(lines()[2], "    compute(value, second)", "old snippet unchanged after " .. key)
+		equal(lua("return vim.api.nvim_win_get_cursor(0)[1]"), 4, "outside cursor after " .. key)
+	end
 	equal(lua("return _G.dotfiles_warm_installs"), {}, "warm UI must not start Mason installations")
 end, debug.traceback)
 

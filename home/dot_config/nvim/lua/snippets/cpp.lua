@@ -8,6 +8,27 @@ local function snippet(trigger, description, lines)
 end
 
 return {
+  snippet("struct", "Struct definition with trailing semicolon", {
+    "struct ${1:Name} {",
+    "\t${0}",
+    "};",
+  }),
+  snippet("class", "Class definition with trailing semicolon", {
+    "class ${1:Name} {",
+    "public:",
+    "\t${0}",
+    "};",
+  }),
+  snippet("enum", "Enum definition with trailing semicolon", {
+    "enum ${1:Name} {",
+    "\t${2:Value}${0}",
+    "};",
+  }),
+  snippet("enum class", "Scoped enum definition with trailing semicolon", {
+    "enum class ${1:Name} {",
+    "\t${2:Value}${0}",
+    "};",
+  }),
   luasnip.parser.parse_snippet(
     {
       trig = "forr",
