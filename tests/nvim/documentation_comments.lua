@@ -1,4 +1,4 @@
--- Actual comment positions, before and after native semantic tokens arrive.
+-- Actual prose, builtin and operator positions across native semantic tokens.
 -- The caller supplies an already attached fixture; edits remain buffer-local.
 return function(effective, language, buf, client)
 	local evidence = dofile("tests/nvim/highlight_evidence.lua")
@@ -18,6 +18,8 @@ return function(effective, language, buf, client)
 			{ "/// DormantDocs", "DormantDocs", "DxDocComment", "inactive" },
 			{ "int dormant = 2;" },
 			{ "#endif" },
+			{ "int builtin_value = 1;", "int", "DxBuiltin" },
+			{ "int add_value(int value) { return value + 2; }", "+", "DxOperator" },
 		},
 		zig = {
 			{ "//! ModuleDocs", "ModuleDocs", "DxDocComment" },
@@ -27,6 +29,8 @@ return function(effective, language, buf, client)
 			{ "//// Separator", "Separator", "DxComment" },
 			{ 'const literal = "/// Literal";', "Literal", "DxString" },
 			{ "pub fn main() void { _ = documented; _ = literal; }" },
+			{ "const builtin_value: u8 = 1;", "u8", "DxBuiltin" },
+			{ "const sum = builtin_value + 2;", "+", "DxOperator" },
 		},
 		rust = {
 			{ "//! ModuleDocs", "ModuleDocs", "DxDocComment" },
@@ -39,11 +43,13 @@ return function(effective, language, buf, client)
 			{ "//// Separator", "Separator", "DxComment" },
 			{ "/*** SeparatorBlock */", "SeparatorBlock", "DxComment" },
 			{ 'fn main() { documented(); let _ = "/// Literal"; }', "Literal", "DxString" },
+			{ "const COUNT: u32 = 1;", "u32", "DxBuiltin" },
+			{ "const SUM: u32 = COUNT + 2;", "+", "DxOperator" },
 		},
 		python = {
 			{ '"""ModuleDocs"""', "ModuleDocs", "DxDocComment" },
 			{ "# PlainLine", "PlainLine", "DxComment" },
-			{ "class Example:" },
+			{ "class Example:", "Example", "DxType" },
 			{ '    """ClassDocs"""', "ClassDocs", "DxDocComment" },
 			{ "    def method(self):" },
 			{ '        """MethodDocs"""', "MethodDocs", "DxDocComment" },
@@ -52,6 +58,11 @@ return function(effective, language, buf, client)
 			{ '    """FunctionDocs"""', "FunctionDocs", "DxDocComment" },
 			{ '    return "Literal"', "Literal", "DxString" },
 			{ 'data = """AssignedMultiline"""', "AssignedMultiline", "DxString" },
+			-- ty reports builtin classes exactly like user classes (class, no
+			-- defaultLibrary modifier). Preserve that semantic authority; do not
+			-- guess by spelling and miscolor a user class shadowing `int`.
+			{ "count: int = 1", "int", "DxBuiltin", "python-class" },
+			{ "sum_value = count + 2", "+", "DxOperator" },
 		},
 	}
 	cases.cpp = cases.c
@@ -95,11 +106,35 @@ return function(effective, language, buf, client)
 					if row[4] == "inactive" and stage == "semantic" and client then
 						role = "DxComment"
 					end
+					if row[4] == "python-class" and stage == "semantic" and client and client.name == "ty" then
+						local native_class = false
+						for _, token in ipairs(vim.lsp.semantic_tokens.get_at_pos(buf, line - 1, col) or {}) do
+							if token.client_id == client.id and token.type == "class" then
+								assert(
+									not token.modifiers.defaultLibrary,
+									context .. ": revisit builtin classification"
+								)
+								native_class = true
+							end
+						end
+						assert(native_class, context .. ": expected ty class evidence")
+						role = "DxType"
+					end
 					evidence.assert_role(group, role, hl.fg)
-					local expected = { DxDocComment = 0xAAA67A, DxComment = 0x7580A3, DxString = 0xB8D07A }
+					-- Independent approved palette values, not copied from live role groups.
+					local expected = {
+						DxDocComment = 0xAAA67A,
+						DxComment = 0x8490AE,
+						DxString = 0xB8D07A,
+						DxBuiltin = 0x8FBCE6,
+						DxOperator = 0xA7B5CC,
+						DxType = 0x3DD1BB,
+					}
 					assert(hl.fg == expected[role], context .. ": wrong final foreground")
-					if row[3] ~= "DxString" then
+					if row[3] == "DxDocComment" or row[3] == "DxComment" then
 						assert(hl.italic and not hl.bold, context .. ": comment style changed")
+					else
+						assert(not hl.italic and not hl.bold, context .. ": source style changed")
 					end
 					if
 						stage == "semantic"
@@ -159,5 +194,6 @@ return function(effective, language, buf, client)
 	semantic(true)
 	assert(ok, err)
 	io.stdout:write(("DOC_COMMENT_COMPLETE %s (%s)\n"):format(language, client and client.name or "syntax-only"))
+	io.stdout:write(("COLOR_HIERARCHY_COMPLETE %s (syntax/semantic/syntax-after-stop)\n"):format(language))
 	io.stdout:flush()
 end
