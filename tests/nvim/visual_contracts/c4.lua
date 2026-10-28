@@ -118,7 +118,7 @@ local expected_code = {
 	builtin = "#8FBCE6",
 	member = "#F29BC1",
 	lifetime = "#67D4C7",
-	parameter = "#C8B2E3",
+	parameter = "#CBB79A",
 	meta = "#FF8F7D",
 	namespace = "#79AAFF",
 	string = "#B8D07A",
@@ -149,6 +149,7 @@ local must_separate = {
 	{ "keyword_function", "namespace", 0.12 },
 	{ "namespace", "type", 0.11 },
 	{ "type", "builtin", 0.10 },
+	{ "builtin", "parameter", 0.11 }, -- Warm sand separates parameters from pale-blue builtins (0.1227).
 	{ "variable", "member", 0.12 },
 	{ "variable", "string", 0.14 },
 	{ "callable", "constant", 0.04 },
@@ -375,6 +376,13 @@ end
 ---@param context table
 function M.verify_negative_controls(context)
 	local cases = {
+		{
+			name = "old_lavender_parameter",
+			expected = "MUST-SEPARATE pairing builtin/parameter",
+			mutate = function(palette)
+				palette.code.parameter = "#C8B2E3"
+			end,
+		},
 		{
 			name = "old_green_builtin",
 			expected = "E admits green dominance only",

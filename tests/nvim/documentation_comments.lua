@@ -1,4 +1,4 @@
--- Actual prose, builtin and operator positions across native semantic tokens.
+-- Actual prose, builtin, operator and parameter positions across native semantic tokens.
 -- The caller supplies an already attached fixture; edits remain buffer-local.
 return function(effective, language, buf, client)
 	local evidence = dofile("tests/nvim/highlight_evidence.lua")
@@ -20,6 +20,10 @@ return function(effective, language, buf, client)
 			{ "#endif" },
 			{ "int builtin_value = 1;", "int", "DxBuiltin" },
 			{ "int add_value(int value) { return value + 2; }", "+", "DxOperator" },
+			{ "int parameter_probe(int input) {", "input", "DxParameter", "parameter-declaration" },
+			{ "    int local_value = input;", "input", "DxVariable", "parameter-reference" },
+			{ "    return local_value;", "local_value", "DxVariable" },
+			{ "}" },
 		},
 		zig = {
 			{ "//! ModuleDocs", "ModuleDocs", "DxDocComment" },
@@ -31,6 +35,10 @@ return function(effective, language, buf, client)
 			{ "pub fn main() void { _ = documented; _ = literal; }" },
 			{ "const builtin_value: u8 = 1;", "u8", "DxBuiltin" },
 			{ "const sum = builtin_value + 2;", "+", "DxOperator" },
+			{ "fn parameter_probe(input: u8) u8 {", "input", "DxParameter", "parameter-declaration" },
+			{ "    const local_value = input;", "input", "DxVariable", "parameter-reference" },
+			{ "    return local_value;", "local_value", "DxVariable" },
+			{ "}" },
 		},
 		rust = {
 			{ "//! ModuleDocs", "ModuleDocs", "DxDocComment" },
@@ -45,6 +53,10 @@ return function(effective, language, buf, client)
 			{ 'fn main() { documented(); let _ = "/// Literal"; }', "Literal", "DxString" },
 			{ "const COUNT: u32 = 1;", "u32", "DxBuiltin" },
 			{ "const SUM: u32 = COUNT + 2;", "+", "DxOperator" },
+			{ "fn parameter_probe(input: u32) -> u32 {", "input", "DxParameter", "parameter-declaration" },
+			{ "    let local_value = input;", "input", "DxVariable", "parameter-reference" },
+			{ "    local_value", "local_value", "DxVariable" },
+			{ "}" },
 		},
 		python = {
 			{ '"""ModuleDocs"""', "ModuleDocs", "DxDocComment" },
@@ -63,6 +75,9 @@ return function(effective, language, buf, client)
 			-- guess by spelling and miscolor a user class shadowing `int`.
 			{ "count: int = 1", "int", "DxBuiltin", "python-class" },
 			{ "sum_value = count + 2", "+", "DxOperator" },
+			{ "def parameter_probe(input: int) -> int:", "input", "DxParameter", "parameter-declaration" },
+			{ "    local_value = input", "input", "DxVariable", "parameter-reference" },
+			{ "    return local_value", "local_value", "DxVariable" },
 		},
 	}
 	cases.cpp = cases.c
@@ -120,6 +135,12 @@ return function(effective, language, buf, client)
 						assert(native_class, context .. ": expected ty class evidence")
 						role = "DxType"
 					end
+					local native = stage == "semantic" and client and client.server_capabilities.semanticTokensProvider
+					-- References need the language server to resolve their binding.
+					-- Syntax-only references remain ordinary variables in all five parsers.
+					if row[4] == "parameter-reference" and native then
+						role = "DxParameter"
+					end
 					evidence.assert_role(group, role, hl.fg)
 					-- Independent approved palette values, not copied from live role groups.
 					local expected = {
@@ -129,8 +150,40 @@ return function(effective, language, buf, client)
 						DxBuiltin = 0x8FBCE6,
 						DxOperator = 0xA7B5CC,
 						DxType = 0x3DD1BB,
+						DxParameter = 0xCBB79A,
+						DxVariable = 0xC4CAE0,
 					}
 					assert(hl.fg == expected[role], context .. ": wrong final foreground")
+					if
+						native
+						and (
+							row[4] == "parameter-declaration"
+							or row[4] == "parameter-reference"
+							or row[2] == "local_value"
+						)
+					then
+						local token_type = row[2] == "local_value" and "variable" or "parameter"
+						local found = false
+						for _, token in ipairs(vim.lsp.semantic_tokens.get_at_pos(buf, line - 1, col) or {}) do
+							found = found or (token.client_id == client.id and token.type == token_type)
+						end
+						assert(found, context .. ": missing native " .. token_type .. " evidence")
+					end
+					if row[4] == "parameter-declaration" then
+						local builtin = ({ c = "int", cpp = "int", rust = "u32", zig = "u8", python = "int" })[language]
+						local type_col = (language == "c" or language == "cpp")
+								and row[1]:find(builtin .. " " .. row[2], 1, true)
+							or row[1]:find(builtin, col + #row[2] + 1, true)
+						type_col = assert(type_col) - 1
+						vim.api.nvim_win_set_cursor(0, { line, type_col })
+						vim.cmd.redraw()
+						local type_group, type_hl = effective(buf, line - 1, type_col)
+						local type_role = language == "python" and native and client.name == "ty" and "DxType"
+							or "DxBuiltin"
+						evidence.assert_role(type_group, type_role, type_hl.fg)
+						assert(type_hl.fg == expected[type_role], context .. ": adjacent type foreground changed")
+						assert(type_hl.fg ~= hl.fg, context .. ": parameter merged with adjacent type")
+					end
 					if row[3] == "DxDocComment" or row[3] == "DxComment" then
 						assert(hl.italic and not hl.bold, context .. ": comment style changed")
 					else
@@ -195,5 +248,6 @@ return function(effective, language, buf, client)
 	assert(ok, err)
 	io.stdout:write(("DOC_COMMENT_COMPLETE %s (%s)\n"):format(language, client and client.name or "syntax-only"))
 	io.stdout:write(("COLOR_HIERARCHY_COMPLETE %s (syntax/semantic/syntax-after-stop)\n"):format(language))
+	io.stdout:write(("PARAMETER_COMPLETE %s (declaration/reference/local control)\n"):format(language))
 	io.stdout:flush()
 end

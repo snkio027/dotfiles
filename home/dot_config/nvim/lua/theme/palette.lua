@@ -20,7 +20,7 @@ function M.resolve(c)
 
     -- Secondary semantic structure
     lifetime = "#67D4C7",
-    parameter = "#C8B2E3",
+    parameter = "#CBB79A",
     meta = "#FF8F7D",
     namespace = "#79AAFF",
     string = "#B8D07A",
