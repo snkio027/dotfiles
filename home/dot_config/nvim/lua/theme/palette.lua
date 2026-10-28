@@ -32,7 +32,7 @@ function M.resolve(c)
     operator = "#89DDFF",
     punctuation = "#8991A8",
     comment = "#7580A3",
-    doc = "#929BC2",
+    doc = "#AAA67A",
   }
 
   local ui = {
