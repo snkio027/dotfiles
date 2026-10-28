@@ -128,7 +128,7 @@ local expected_code = {
 	operator = "#89DDFF",
 	punctuation = "#8991A8",
 	comment = "#7580A3",
-	doc = "#929BC2",
+	doc = "#AAA67A",
 }
 
 local function verify_fixed_palette(code)
@@ -320,7 +320,7 @@ local function verify_policy(context)
 	assert_ratio_range("DxLabel", ratios.label, 5.7, 6.2)
 	assert_ratio_range("DxPunctuation", ratios.punctuation, 5.3, 5.8)
 	assert_ratio_range("DxComment", ratios.comment, 4.1, 4.6)
-	assert_ratio_range("DxDocComment", ratios.doc, 6.0, 6.5)
+	assert_ratio_range("DxDocComment", ratios.doc, 6.6, 7.1)
 	if ratios.operator < 10.8 then
 		fail("DxOperator must retain high local micro-syntax energy")
 	end
