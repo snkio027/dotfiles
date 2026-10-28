@@ -10,3 +10,15 @@
   (#lua-match? @_directive "^#%s*pragma$")
   (#not-lua-match? @attribute "[^%w_%s]")
   (#set! priority 101))
+
+; Doxygen line/bang comments are documentation too. C++ inherits this query.
+; Exclude //// and /*** separators; stay below clangd inactive-code tokens.
+((comment) @comment.documentation
+  (#lua-match? @comment.documentation "^//[!/]")
+  (#not-lua-match? @comment.documentation "^////")
+  (#set! priority 101))
+
+((comment) @comment.documentation
+  (#lua-match? @comment.documentation "^/[*][*!]")
+  (#not-lua-match? @comment.documentation "^/[*][*][*]")
+  (#set! priority 101))

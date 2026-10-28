@@ -718,10 +718,26 @@ end
 -- C/C++ import/Zig bindings before replaying the earlier visual evidence.
 assert(vim.deep_equal(full_hl.DiagnosticUnnecessary, { italic = true }), "Unused state gained foreground authority")
 local production_count, production_digest = normalized_graph_digest(full_hl)
-local PRODUCTION_GRAPH_SHA256 = "e3e8f17f60b2aaa2ae7fbeee5b649bf1c964579b7ab729c051193b19d834ef11"
-assert_eq(production_count, E_GRAPH_COUNT + 4, "Production highlight group count changed")
+local PRODUCTION_GRAPH_SHA256 = "fad47868f297cf9ebf6d663290eef13db2dc24a4926d048aab2a2257288addf4"
+assert_eq(production_count, E_GRAPH_COUNT + 6, "Production highlight group count changed")
 assert_eq(production_digest, PRODUCTION_GRAPH_SHA256, "Unrelated production resolved graph changed")
 local original_graph = vim.deepcopy(full_hl)
+-- Only two scoped documentation bindings are added. Removing them must
+-- recover the complete deployed graph, including all unrelated UI/styles.
+for _, group in ipairs({
+	"@lsp.typemod.comment.documentation.rust",
+	"@lsp.typemod.string.documentation.python",
+}) do
+	assert_eq(original_graph[group].link, "DxDocComment", "Documentation modifier lost its role")
+	original_graph[group] = nil
+end
+local pre_doc_authority_count, pre_doc_authority_digest = normalized_graph_digest(original_graph)
+assert_eq(pre_doc_authority_count, E_GRAPH_COUNT + 4, "Documentation fix changed unrelated group counts")
+assert_eq(
+	pre_doc_authority_digest,
+	"e3e8f17f60b2aaa2ae7fbeee5b649bf1c964579b7ab729c051193b19d834ef11",
+	"Documentation bindings changed unrelated highlights or styles"
+)
 assert_eq(original_graph.DxDocComment.fg, "#AAA67A", "Documentation foreground migration missing")
 original_graph.DxDocComment.fg = "#929BC2"
 local _, pre_doc_digest = normalized_graph_digest(original_graph)
@@ -932,7 +948,7 @@ print(("M1 historical graph reconstructed from M5 production: %d groups, sha256=
 
 local function assert_production_graph(candidate)
 	local count, digest = normalized_graph_digest(candidate)
-	assert_eq(count, E_GRAPH_COUNT + 4, "E production graph count changed")
+	assert_eq(count, E_GRAPH_COUNT + 6, "E production graph count changed")
 	assert_eq(digest, PRODUCTION_GRAPH_SHA256, "E production graph digest changed")
 end
 

@@ -28,6 +28,10 @@ function M.groups()
     ["@lsp.type.number"] = { link = "DxNumber" },
     ["@lsp.type.operator"] = { link = "DxOperator" },
     ["@lsp.type.comment"] = { link = "DxComment" },
+    -- rust-analyzer doc comments and ty docstrings retain their native
+    -- documentation modifier instead of inheriting the ordinary base token.
+    ["@lsp.typemod.comment.documentation.rust"] = { link = "DxDocComment" },
+    ["@lsp.typemod.string.documentation.python"] = { link = "DxDocComment" },
     ["@lsp.type.event"] = { link = "DxMember" },
 
     -- Provider-independent audited extension shared by the current provider set.

@@ -921,6 +921,13 @@ local function main()
 				probe_sentinel_at(bufnr, s, lang_key, client)
 			end
 
+			dofile(repo_root .. "/tests/nvim/documentation_comments.lua")(
+				get_effective_highlight_at_pos,
+				lang_key,
+				bufnr,
+				client
+			)
+
 			local attached_clients = vim.lsp.get_clients({ bufnr = bufnr })
 			vim.cmd.bdelete({ bang = true })
 			shutdown(attached_clients, lang_key, 5000)
