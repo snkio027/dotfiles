@@ -35,6 +35,110 @@ dotenv "$test_dir/valid.env"
 [[ "$DOUBLE" == "literal value" ]]
 [[ "$HASH" == "abc#def" ]]
 
+# Parser scratch names are legal environment names, whether new or already set.
+export file=previous_file
+typeset values=previous_values
+cat > "$test_dir/lowercase.env" <<'EOF'
+file=lowercase file
+line=lowercase line
+trimmed=lowercase trimmed
+key=overwritten
+key=lowercase key
+value=
+values='literal $HOME and ${HOME} \ slash # hash'
+EOF
+dotenv "$test_dir/lowercase.env"
+[[ "$file" == 'lowercase file' && "$line" == 'lowercase line' ]]
+[[ "$trimmed" == 'lowercase trimmed' && "$key" == 'lowercase key' ]]
+[[ -z "$value" && "$values" == 'literal $HOME and ${HOME} \ slash # hash' ]]
+zsh -f <<'EOF'
+[[ "$file" == 'lowercase file' && "$line" == 'lowercase line' ]] &&
+  [[ "$trimmed" == 'lowercase trimmed' && "$key" == 'lowercase key' ]] &&
+  [[ -z "$value" && "$values" == 'literal $HOME and ${HOME} \ slash # hash' ]]
+EOF
+unset file line trimmed key value values
+
+# A rejected target must not partially export other values or alter shell state.
+for dotenv_target in file status path integer_target array_target; do
+  print -r -- 'SAFE=changed' > "$test_dir/parameter.env"
+  print -r -- "$dotenv_target=changed" >> "$test_dir/parameter.env"
+  (
+    export SAFE=unchanged
+    readonly file=locked
+    integer integer_target=42
+    typeset -A array_target=(kept value)
+    saved_path=("${path[@]}")
+    if dotenv "$test_dir/parameter.env" 2>/dev/null; then
+      print -u2 "dotenv accepted an incompatible parameter: $dotenv_target"
+      exit 1
+    fi
+    [[ "$SAFE" == unchanged && "$file" == locked && "$integer_target" == 42 ]]
+    [[ "${array_target[kept]}" == value && "${(j.:.)path}" == "${(j.:.)saved_path}" ]]
+  )
+done
+
+# Scalar attributes must not silently change imported values or be stripped.
+for dotenv_attribute in -u -l -L8 -R8 -Z8; do
+  print -rl -- 'SAFE=changed' 'TARGET=MiXeD' > "$test_dir/attribute.env"
+  (
+    export SAFE=unchanged
+    typeset "$dotenv_attribute" TARGET=prior
+    before_value="$TARGET"
+    before_attributes="${parameters[TARGET]}"
+    if dotenv "$test_dir/attribute.env" 2>/dev/null; then
+      print -u2 "dotenv accepted a transforming attribute: $dotenv_attribute"
+      exit 1
+    fi
+    [[ "$SAFE" == unchanged && "$TARGET" == "$before_value" ]]
+    [[ "${parameters[TARGET]}" == "$before_attributes" ]]
+  )
+done
+print -rl -- 'SAFE=changed' 'TARGET=first:first:second' > "$test_dir/unique.env"
+(
+  export SAFE=unchanged
+  typeset -TU TARGET target_parts
+  TARGET=prior
+  before_attributes="${parameters[TARGET]}"
+  if dotenv "$test_dir/unique.env" 2>/dev/null; then
+    print -u2 'dotenv accepted a deduplicating tied scalar'
+    exit 1
+  fi
+  [[ "$SAFE" == unchanged && "$TARGET" == prior && "$target_parts[1]" == prior ]]
+  [[ "${parameters[TARGET]}" == "$before_attributes" ]]
+)
+
+# These scalar special setters truncate or reject text instead of storing it.
+for dotenv_target in HISTCHARS histchars KEYBOARD_HACK USERNAME; do
+  print -rl -- 'SAFE=changed' "$dotenv_target=__dotenv_nonexistent_fixture_user__" \
+    > "$test_dir/special.env"
+  (
+    export SAFE=unchanged
+    before_value="${(P)dotenv_target}"
+    before_attributes="${parameters[$dotenv_target]}"
+    if dotenv "$test_dir/special.env" 2>/dev/null; then
+      print -u2 "dotenv accepted a transforming special parameter: $dotenv_target"
+      exit 1
+    fi
+    [[ "$SAFE" == unchanged && "${(P)dotenv_target}" == "$before_value" ]]
+    [[ "${parameters[$dotenv_target]}" == "$before_attributes" ]]
+  )
+done
+
+# Ordinary scalar exports retain standard behavior, including PATH's tied array.
+print -r -- 'PATH=/dotenv/first:/dotenv/second' > "$test_dir/path.env"
+(
+  dotenv "$test_dir/path.env"
+  [[ "$PATH" == /dotenv/first:/dotenv/second ]]
+  [[ "${path[1]}" == /dotenv/first && "${path[2]}" == /dotenv/second ]]
+)
+
+# Empty files succeed, and missing files keep the ordinary read-error status.
+: > "$test_dir/empty.env"
+dotenv "$test_dir/empty.env"
+result=0
+dotenv "$test_dir/missing.env" 2>/dev/null || result=$?
+[[ "$result" == 1 ]]
+
 export SAFE=unchanged
 unset PWNED 2>/dev/null || true
 print -r -- 'SAFE=changed' > "$test_dir/unsafe.env"

@@ -23,7 +23,7 @@ Dev Container 使用 `CHEZMOI_PROFILE=devcontainer` 和独立的 `devcontainer.B
 - Starship 使用 Quiet Ops Prompt：默认只显示目录、Git 状态和低频高价值反馈；语言、构建工具、包版本、Python 环境、容器、Docker context 与 Kubernetes 保持静默。非零退出只将输入箭头变红，后台任务数与超过 2 秒的命令耗时显示在第二行右侧。
 - Ghostty 固定使用 Catppuccin Mocha 暗色主题；MonoLisa customizer 输出的 `MonoLisaCode Variable-cv04-cv08-ss03-ss07-ss11` 变量字体负责拉丁文字与真实字重/斜体，PingFang SC 负责中文，Maple Mono NF CN 是 Nerd Font 图标的首选 fallback，`Symbols Nerd Font Mono` 保留为单字符宽度末级兜底，并提供 GPU 渲染和原生分屏。
 - Zellij 默认处于 locked mode，避免在 macOS 和 Linux 上占用 Shell、Neovim 的 Alt 快捷键。
-- Zsh 将原生历史持久化到 `$XDG_STATE_HOME/zsh/history`；Atuin 独占 `Ctrl-R` 并负责加密同步，选中命令只回填供复核，fzf 仅管理 `Ctrl-T/Alt-C`。
+- Zsh 新安装将原生历史持久化到 `$XDG_STATE_HOME/zsh/history`，已有旧历史时保留兼容路径（见 XDG 目录策略）；Atuin 独占 `Ctrl-R` 并负责加密同步，选中命令只回填供复核，fzf 仅管理 `Ctrl-T/Alt-C`。
 - Neovim 是唯一编辑器；Git、Yazi、sudo、systemd 与 kubectl 的编辑入口统一指向 Neovim。
 - Neovim/LazyVim、LazyGit、Yazi 与全部颜色配置均由 chezmoi 纳管。
 - Neovim 使用 Catppuccin Mocha 宿主与单一 DX E 源码投影；19 个源码角色允许两组有意共色，角色身份独立验证。背景、状态与装饰 UI 保持既有基线；[E 迁移记录与验收边界](../tests/nvim/E-VISUAL-MIGRATION.md)单独记录，自动化通过不等于人眼验收完成。
@@ -87,7 +87,7 @@ dotfiles/
 | 缓存 | `~/.cache` | Zsh 初始化缓存、补全、uv 与可安全重建的数据 |
 | 可执行文件 | `~/.local/bin` | 用户级引导程序与脚本 |
 
-`~/.zshenv`、`~/.zprofile`、`~/.zshrc` 是 Zsh 原生启动入口，`~/.ssh` 是 OpenSSH 固定发现位置，因此保留在 HOME。首次应用会把旧 `~/.zsh_history` 无损迁移到 XDG state，并保留兼容 symlink。Neovim 的 markdownlint-cli2 显式加载 XDG 主配置，项目内规则仍可覆盖。Cargo 与 Go 保留各自官方数据目录，避免破坏已安装工具和升级机制。
+`~/.zshenv`、`~/.zprofile`、`~/.zshrc` 是 Zsh 原生启动入口，`~/.ssh` 是 OpenSSH 固定发现位置，因此保留在 HOME。Zsh 不再自动搬移或合并历史：已有普通 `~/.zsh_history`，或旧迁移留下的指向当前 XDG 历史的绝对 symlink 时，新会话继续使用 `~/.zsh_history`。默认 `HIST_SAVE_BY_COPY` 原子写入仍启用；它会在重写时将该 symlink 替换为普通文件，因此不能依靠 symlink 让不同历史路径永久共享。新安装和其他自定义 symlink 使用 `${XDG_STATE_HOME:-$HOME/.local/state}/zsh/history`，自定义链接不被改写。已经分别写入旧路径与 XDG 的会话须全部退出并重启；两个文件原样保留，已有分流内容须在会话退出后备份、人工核对，再决定是否合并或迁移，重启本身不会合并旧内容。Neovim 的 markdownlint-cli2 显式加载 XDG 主配置，项目内规则仍可覆盖。Cargo 与 Go 保留各自官方数据目录，避免破坏已安装工具和升级机制。
 
 ## 日常维护
 

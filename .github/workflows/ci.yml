@@ -34,6 +34,7 @@ jobs:
           python3 tests/ci/test_nvim_evidence.py
           python3 tests/ci/test_merge_gate.py
           python3 tests/ci/test_pr_path_classifier.py
+          python3 tests/ci/test_rolling_failure.py
 
   plan:
     name: Plan full candidate coverage
@@ -188,6 +189,8 @@ jobs:
           shfmt -d -i 4 -ci scripts/cpp/provision-vcpkg.sh tests/cpp/vcpkg_environment_test.sh
           shellcheck -S warning -s bash tests/git/sweep_test.sh
           shfmt -d -i 4 -ci tests/git/sweep_test.sh
+          shellcheck -S warning -s bash home/.chezmoitemplates/git_config_migration.sh home/.chezmoitemplates/git_hook_policy.sh tests/git/config_and_hooks_policy_test.sh
+          shfmt -d -i 4 -ci home/.chezmoitemplates/git_config_migration.sh home/.chezmoitemplates/git_hook_policy.sh tests/git/config_and_hooks_policy_test.sh
           shellcheck -S warning -s bash scripts/supply-chain/*.sh tests/supply-chain/*.sh
           shfmt -d -i 4 -ci scripts/supply-chain/*.sh tests/supply-chain/*.sh
 
@@ -196,12 +199,14 @@ jobs:
           bash tests/devcontainer/provisioning_contract_test.sh
           zsh -f tests/zsh/aliases_test.zsh
           zsh -f tests/zsh/history_test.zsh
+          zsh -f tests/zsh/history_compatibility_test.zsh
           bash tests/zsh/linux_homebrew_test.sh
           bash tests/chezmoi/apply_contract_test.sh
           bash tests/chezmoi/fresh_apply_contract_test.sh
           bash tests/rust/ownership_test.sh
           bash tests/cpp/vcpkg_environment_test.sh
           bash tests/git/sweep_test.sh
+          bash tests/git/config_and_hooks_policy_test.sh
           bash tests/supply-chain/chezmoi_bootstrap_test.sh
           bash tests/supply-chain/brew_vulnerabilities_test.sh
 
@@ -226,6 +231,7 @@ jobs:
           python3 tests/ci/test_install_cost_contract.py
           python3 tests/ci/test_pr_path_classifier.py
           python3 tests/ci/test_merge_gate.py
+          python3 tests/ci/test_rolling_failure.py
           python3 tests/fonts/test_monolisa_manifest.py
           python3 brew/generate.py --check
           python3 tests/brew/test_profiles.py
@@ -534,6 +540,8 @@ jobs:
           brew bundle --file=brew/profiles/quality.Brewfile
 
       - name: Update plugins and tools from empty data directories
+        # Explicit bash enables pipefail: tee must not hide a failed contract.
+        shell: bash
         env:
           RUSTUP_HOME: ${{ runner.temp }}/dotfiles-rustup
           CARGO_HOME: ${{ runner.temp }}/dotfiles-cargo

@@ -6,6 +6,7 @@
 
 set -euo pipefail
 
+{{ includeTemplate "git_config_migration.sh" . }}
 XDG_GIT_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/git/config"
 LEGACY_GIT_CONFIG="$HOME/.gitconfig"
 XDG_MARKDOWNLINT_CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/markdownlint-cli2/config.yaml"
@@ -19,12 +20,9 @@ if [ ! -f "$LEGACY_GIT_CONFIG" ] || [ ! -f "$XDG_GIT_CONFIG" ]; then
     exit 0
 fi
 
-LEGACY_VALUES="$(git config --file "$LEGACY_GIT_CONFIG" --list | LC_ALL=C sort)"
-XDG_VALUES="$(git config --file "$XDG_GIT_CONFIG" --list | LC_ALL=C sort)"
-
-if [ "$LEGACY_VALUES" = "$XDG_VALUES" ]; then
+if git_configs_match_for_migration "$LEGACY_GIT_CONFIG" "$XDG_GIT_CONFIG"; then
     rm -f -- "$LEGACY_GIT_CONFIG"
     echo "✅  Git 全局配置已迁移至 ${XDG_GIT_CONFIG}。"
 else
-    echo "⚠️  ${LEGACY_GIT_CONFIG} 含有未合并的本地设置，已保留；请审核后手动合并至 ${XDG_GIT_CONFIG}。"
+    echo "⚠️  无法确认 ${LEGACY_GIT_CONFIG} 可安全移除，已保留；请审核后手动合并至 ${XDG_GIT_CONFIG}。"
 fi
