@@ -173,8 +173,8 @@ jobs:
             shfmt -d -i 4 -ci "$rendered"
           done
 
-          shellcheck -S warning -s bash tests/nvim/cold_start.sh tests/nvim/python_provider_ownership.sh
-          shfmt -d -i 4 -ci tests/nvim/cold_start.sh tests/nvim/python_provider_ownership.sh
+          shellcheck -S warning -s bash tests/nvim/cold_start.sh tests/nvim/python_provider_ownership.sh tests/nvim/python_workflow.sh
+          shfmt -d -i 4 -ci tests/nvim/cold_start.sh tests/nvim/python_provider_ownership.sh tests/nvim/python_workflow.sh
           shellcheck -S warning -s bash tests/zsh/linux_homebrew_test.sh
           shfmt -d -i 4 -ci tests/zsh/linux_homebrew_test.sh
           shellcheck -S warning -s bash tests/chezmoi/apply_contract_test.sh tests/chezmoi/fresh_apply_contract_test.sh

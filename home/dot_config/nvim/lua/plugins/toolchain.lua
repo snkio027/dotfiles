@@ -45,11 +45,6 @@ local function extend_unique(target, values)
   end
 end
 
-local function project_executable(subdir)
-  local root = LazyVim.root()
-  return vim.fn.input("Path to executable: ", vim.fs.joinpath(root, subdir), "file")
-end
-
 -- rustup also ships an analyzer proxy. Keep the independently Brew-owned
 -- language server explicit while Cargo/rustc follow the project toolchain.
 local rust_prefix = "/home/linuxbrew/.linuxbrew"
@@ -277,6 +272,9 @@ return {
     keys = {
       { "<leader>ob", "<cmd>CMakeBuild<cr>", desc = "Build (CMake)" },
       { "<leader>or", "<cmd>CMakeRun<cr>", desc = "Build and Run (CMake)" },
+      { "<leader>ot", "<cmd>CMakeBuildTest<cr>", desc = "Build and Test (CMake)" },
+      { "<leader>oD", "<cmd>CMakeDebug<cr>", desc = "Build and Debug Target (CMake)" },
+      { "<leader>oT", "<cmd>CMakeSelectTestPreset<cr>", desc = "Select Test Preset (CMake)" },
       { "<leader>oc", "<cmd>CMakeGenerate<cr>", desc = "Configure (CMake)" },
       { "<leader>os", "<cmd>CMakeSelectLaunchTarget<cr>", desc = "Select Run Target (CMake)" },
       { "<leader>oa", "<cmd>CMakeLaunchArgs<cr>", desc = "Run Arguments (CMake)" },
@@ -345,9 +343,6 @@ return {
           go_test_args = { "-v", "-count=1", "-timeout=60s" },
           dap_go_enabled = true,
         },
-        ["neotest-python"] = {
-          runner = "pytest",
-        },
       },
     },
   },
@@ -360,16 +355,7 @@ return {
     opts = function()
       local dap = require("dap")
       dap.configurations.zig = {
-        {
-          type = "codelldb",
-          request = "launch",
-          name = "Launch Zig executable",
-          program = function()
-            return project_executable("zig-out/bin/")
-          end,
-          cwd = "${workspaceFolder}",
-          stopOnEntry = false,
-        },
+        require("config.zig_debug").launch(),
         {
           type = "codelldb",
           request = "attach",
@@ -389,11 +375,7 @@ return {
       {
         "<leader>cT",
         function()
-          if vim.fn.executable("ty") == 0 then
-            LazyVim.warn("ty is not installed yet; run :Mason and install it", { title = "Python" })
-            return
-          end
-          Snacks.terminal({ "ty", "check" }, { cwd = LazyVim.root() })
+          require("config.python_context").ty_check()
         end,
         desc = "Ty Check Project",
         ft = "python",

@@ -86,7 +86,13 @@ for _, tool in ipairs({ "pyright", "ruff", "ty" }) do
 		tool .. " must appear exactly once in the Mason tool inventory"
 	)
 end
-assert_equal(occurrences(toolchain, '{ "ty", "check" }'), 1, "explicit whole-project Ty check drifted")
+local python_context = read(repo_root .. "/home/dot_config/nvim/lua/config/python_context.lua")
+assert_equal(occurrences(python_context, '{ "ty", "check" }'), 1, "explicit whole-project Ty check drifted")
+assert_equal(
+	occurrences(toolchain, 'require("config.python_context").ty_check()'),
+	1,
+	"target-aware Ty check wiring drifted"
+)
 
 local python_config = read(repo_root .. "/home/dot_config/nvim/lua/plugins/python.lua")
 if python_config:find("servers%s*=%s*{.-ty%s*=") then

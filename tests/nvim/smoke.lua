@@ -334,7 +334,40 @@ assert(
 	"SMOKE_NEOTEST_SETUP_FAILED" .. (injected_config_error and ": SMOKE_CONFIG_NEGATIVE_CONTROL" or "")
 )
 assert(neotest_opts.adapters["neotest-golang"].dap_go_enabled, "Go tests are not debuggable")
-assert(neotest_opts.adapters["neotest-python"].runner == "pytest", "Python tests are not using pytest")
+local python_spec, python_spec_error
+require("nio").run(function()
+	local ok, result = pcall(function()
+		for _, adapter in ipairs(require("neotest.config").adapters) do
+			if adapter.name == "neotest-python" then
+				local source = vim.fs.joinpath(vim.fn.tempname(), "test_smoke.py")
+				vim.fn.mkdir(vim.fs.dirname(source), "p")
+				local spec = adapter.build_spec({
+					tree = {
+						data = function()
+							return { path = source, id = source }
+						end,
+					},
+				})
+				spec.context.stop_stream()
+				return spec
+			end
+		end
+	end)
+	if ok then
+		python_spec = result
+	else
+		python_spec_error = result
+	end
+end)
+assert(
+	vim.wait(5000, function()
+		return python_spec ~= nil or python_spec_error ~= nil
+	end),
+	"Python adapter did not build a run spec"
+)
+assert(not python_spec_error, python_spec_error)
+local runner_index = vim.fn.index(python_spec.command, "--runner") + 1
+assert(runner_index > 0 and python_spec.command[runner_index + 1] == "pytest", "Python tests are not using pytest")
 local active_adapters = {}
 for _, adapter in ipairs(require("neotest.config").adapters) do
 	active_adapters[adapter.name] = true

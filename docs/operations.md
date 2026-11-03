@@ -32,7 +32,7 @@ Dev Container 使用 `CHEZMOI_PROFILE=devcontainer` 和独立的 `devcontainer.B
 - markdownlint-cli2 明确归 Mason 所有，仅供 Neovim lint/format 使用；XDG 配置保留结构与语义检查，只关闭对表格、URL 和 CJK 文档噪音较大的 `MD013` 行宽规则。Shell 不声明全局 markdownlint 命令。
 - `CMakeLists.txt` 是 CMake 源文件而非 Markdown；neocmake 负责语义和 100 列诊断，gersemi 按同一宽度统一格式。
 - `cxx init <name>` 从离线内置模板创建 C++23/CMake/Ninja 项目，生成后直接使用标准工具链，不依赖 cxx-init 运行。
-- uv 项目中存在 `uv.lock` 和 `.venv` 时，Neovim 会自动将 Ty、Ruff、DAP、Neotest 与内置终端统一到项目 Python；Pyright 保留安装但默认不启用，作为回滚资产。
+- uv 项目按 `uv.lock` 与项目环境选择 Python；测试、调试与 `<leader>cT` 按目标项目解析解释器。Pyright 保留安装但默认不启用，作为回滚资产。
 - C/C++、Python、Zig、Go 与 Rust 共用 LSP、格式化、测试、任务和 DAP 工作流；项目的 `.vscode/launch.json` 也可直接复用。
 
 ## 目录
@@ -315,11 +315,11 @@ Quiet Ops Prompt 将第一行留给位置与 Git 状态，第二行留给命令�
 
 | 快捷键 | 功能 |
 | --- | --- |
-| `grn` / `gra` | 重命名符号 / Code Action |
-| `grr` / `gri` / `grt` | 查找引用 / 实现 / 类型定义 |
+| `<leader>cr` / `<leader>ca` | 重命名符号（预览） / Code Action |
+| `gd` / `gr` / `gI` / `gy` | 定义 / 引用 / 实现 / 类型定义；`gr` 即时打开引用，不作为原生 `gr*` 前缀 |
 | `gO` | 文档符号与大纲 |
 | `[d` / `]d` | 上一个 / 下一个诊断 |
-| `<leader>sd` / `<leader>sD` | Buffer / 工作区诊断检索 |
+| `<leader>sd` / `<leader>sD` | 工作区 / 当前 Buffer 诊断检索 |
 | `<leader>xx` / `<leader>xX` | Trouble 工作区 / Buffer 诊断 |
 | `gcc` / `gc` | 注释当前行 / 选区或动作范围 |
 | `gsa` / `gsd` / `gsr` | 添加 / 删除 / 替换包围符号 |
@@ -329,16 +329,20 @@ Quiet Ops Prompt 将第一行留给位置与 Git 状态，第二行留给命令�
 
 | 快捷键 | 功能 |
 | --- | --- |
-| `<leader>tr` / `<leader>tt` | 运行最近测试 / 当前文件测试 |
-| `<leader>tT` / `<leader>tl` | 运行全部测试文件 / 重新运行上次测试 |
-| `<leader>td` / `<leader>ts` | 调试最近测试 / 测试摘要 |
+| `<leader>tr` / `<leader>tt` | 运行光标附近测试 / 当前文件测试 |
+| `<leader>tT` / `<leader>tl` | 运行当前目录下测试 / 重新运行上次测试 |
+| `<leader>td` / `<leader>ts` | 调试光标附近测试 / 测试摘要 |
 | `<leader>tw` / `<leader>to` | Watch 模式 / 测试输出 |
+| `<leader>tq` | 重开测试失败列表；测试结果只更新自己的 Trouble 视图，不改写 quickfix 或关闭其他诊断／引用窗口 |
 | `<leader>db` / `<leader>dc` | 设置断点 / 继续调试 |
 | `<leader>di` / `<leader>dO` / `<leader>do` | 步入 / 步过 / 步出 |
 | `<leader>du` / `<leader>de` / `<leader>dt` | DAP UI / 计算表达式 / 终止调试 |
-| `<leader>oo` / `<leader>ow` / `<leader>ot` | 运行任务 / 任务列表 / 对任务执行操作 |
-| `<leader>gs` / `<leader>gd` | Git 状态 / 当前文件 Diff |
-| `<leader>gc` / `<leader>gS` | 提交历史 / Stash |
+| `<leader>oo` / `<leader>ow` | 运行任务 / 任务列表 |
+| `<leader>ot` / `<leader>oD` / `<leader>oT` | CMake 构建并测试 / 构建并调试 / 选择 CTest preset |
+| `<leader>gs` / `<leader>gd` | Git 状态 / 仓库 Diff hunks |
+| `<leader>gl` / `<leader>gS` | 仓库提交历史 / Stash |
+| `<leader>gL` / `<leader>gf` | 当前目录提交历史 / 当前文件提交历史 |
+| `<leader>g/` | GitHub 综合检索（Octo）；与 Stash 独立 |
 | `lg` | 在终端中启动 LazyGit |
 
 ### 多语言开发环境
@@ -351,7 +355,7 @@ Quiet Ops Prompt 将第一行留给位置与 Git 状态，第二行留给命令�
 | Go | gopls、gofumpt、goimports、golangci-lint | `go test`、Neotest、Delve |
 | Rust | rust-analyzer、rustaceanvim、rustfmt、Clippy | Cargo、Neotest、codelldb |
 
-Mason 只安装编辑器侧的 LSP、格式化器与调试适配器；Rust 编译工具链由 rustup 提供，其余声明的全局编译器和构建系统由 Homebrew 提供。C/C++ 的 clangd 与 clang-format 是例外：两者显式使用 Homebrew LLVM 的同一滚动版本，避免 Mason 与终端工具链发生版本漂移。CMake 使用 neocmake 与 gersemi，两者统一为 100 列；neocmake 保留内置语义和样式诊断，不再额外启动固定 80 列且维护停滞的 cmakelint。CMake 和通用任务输出统一进入 Overseer，测试统一进入 Neotest，原生语言统一使用 codelldb。调试配置优先读取项目的 `.vscode/launch.json`，也可以使用内置的 launch/attach 配置。
+Mason 只安装编辑器侧的 LSP、格式化器与调试适配器；Rust 编译工具链由 rustup 提供，其余声明的全局编译器和构建系统由 Homebrew 提供。C/C++ 的 clangd 与 clang-format 是例外：两者显式使用 Homebrew LLVM 的同一滚动版本，避免 Mason 与终端工具链发生版本漂移。CMake 使用 neocmake 与 gersemi，两者统一为 100 列；neocmake 保留内置语义和样式诊断，不再额外启动固定 80 列且维护停滞的 cmakelint。CMake 和通用任务输出进入 Overseer；C/C++ 测试使用 CTest/presets，`<leader>ot` 构建并测试、`<leader>oD` 构建并调试、`<leader>oT` 选择 test preset；Python、Go、Rust、Zig 测试使用 Neotest。原生语言使用 codelldb。调试配置优先读取项目的 `.vscode/launch.json`，也可以使用内置的 launch/attach 配置。Zig 内置 launch 的程序选择与工作目录采用同一当前项目，启动前仍须手动构建，不会自动执行 `zig build`。
 
 #### 编辑器工具与项目格式化
 
@@ -427,7 +431,9 @@ Markdown 在普通、命令和终端模式渲染标题、任务、表格、代�
 | `<leader>cv` | 在 Python Buffer 中手动选择虚拟环境 |
 | `<leader>cT` | 使用 ty 对整个 Python 项目做补充类型检查 |
 
-新 uv 项目先执行 `uv sync`，再打开 Neovim。打开项目中的 Python 文件时，会依据 `uv.lock` 自动激活 `.venv/bin/python`，并把同一环境交给 Ty、Ruff、DAP 与 Neotest；Ty 是主交互 LSP，负责补全、导航、重构与类型分析，Ruff 负责 Lint、修复与 Code Action。Pyright 仍由 Mason 安装，但默认禁用且不附着，作为显式回滚资产。
+新 uv 项目先执行 `uv sync`，再打开 Neovim。打开 Python 文件时，默认使用 `uv.lock` 根下的 `.venv/bin/python`；`UV_PROJECT_ENVIRONMENT` 支持相对于该根的路径和绝对路径。手动选择的环境按项目记忆，不被下一次进入 Buffer 的自动选择覆盖；显式停用后不自动重新激活。已知项目环境缺失时提示修复，不偷偷使用另一个项目的环境或自动安装。
+
+Neotest 的 Run Last、测试摘要与测试调试按测试所属项目选择解释器及工作目录，切换到另一个项目不改变原测试的环境。普通 Python 调试同样按目标程序或配置的 cwd 解析，保留显式指定的解释器；`<leader>cT` 向 Ty 传递目标项目和解释器。Ty 继续负责补全、导航、重构与类型分析，Ruff 负责 Lint、修复与 Code Action；Python 的语义分类不变。Pyright 默认禁用且不附着，保留为显式回滚资产。
 
 ### Ghostty（macOS）与 Zellij（macOS/Linux）
 

@@ -11,7 +11,9 @@ LIMIT = 10 * 1024 * 1024
 def collect(state, logs, output, status):
     output.mkdir(parents=True, exist_ok=True)
     entries = []
-    sources = [(state / "nvim" / name, "nvim/" + name) for name in ("lsp.log", "mason.log")]
+    sources = [(state / "nvim" / name, "nvim/" + name) for name in (
+        "lsp.log", "mason.log", "dap.log", "dap-codelldb-stderr.log", "dap-python-stderr.log"
+    )]
     sources += [(p, "commands/" + p.name) for p in sorted(logs.glob("*.log"))]
     evidence = state / "nvim" / "dotfiles-ci-evidence"
     sources += [
