@@ -86,8 +86,21 @@ assert_container_state() {
         nvim --headless "+luafile tests/nvim/startup_policy.lua" +qa || exit "$?"
         nvim -u NONE -n -i NONE --headless "+set rtp^=$PWD/home/dot_config/nvim" \
             "+luafile tests/nvim/run_contract.lua" "tests/nvim/mason_recovery.lua" || exit "$?"
+        nvim -u NONE -n -i NONE --headless "+set rtp^=$PWD/home/dot_config/nvim" \
+            "+lua vim.g.dotfiles_contract_file = 'tests/nvim/python_workflow_contract.lua'" \
+            "+luafile tests/nvim/run_contract.lua" || exit "$?"
         nvim -n --headless "+lua vim.g.dotfiles_contract_file = 'tests/nvim/smoke.lua'" \
             "+luafile tests/nvim/run_contract.lua" || exit "$?"
+        for contract in cmake_test_debug zig_debug workflow_ui; do
+            nvim -n --headless "+lua vim.g.dotfiles_contract_file = 'tests/nvim/$contract.lua'" \
+                "+luafile tests/nvim/run_contract.lua" || exit "$?"
+        done
+        workflow_deps="$(mktemp -d)" || exit "$?"
+        uv pip install --no-config --no-python-downloads --python "$(command -v python3)" \
+            --target "$workflow_deps" 'pytest==9.0.3' || exit "$?"
+        XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}" \
+            XDG_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}" \
+            DOTFILES_PYTHON_PACKAGES="$workflow_deps" bash tests/nvim/python_workflow.sh || exit "$?"
         nvim -n --headless "+luafile tests/nvim/run_contract.lua" "tests/nvim/completion_contract.lua" || exit "$?"
         nvim -u NONE -n -i NONE --headless "+luafile tests/nvim/run_contract.lua" \
             "tests/nvim/clangd_completion.lua" || exit "$?"
@@ -110,6 +123,9 @@ assert_container_state() {
         cat "$nvim_log" >&2
         fail "Neovim warm smoke did not complete"
     }
+    for marker in CMAKE_TEST_DEBUG_COMPLETE ZIG_DEBUG_COMPLETE WORKFLOW_UI_COMPLETE PYTHON_WORKFLOW_COMPLETE; do
+        grep -Fq "$marker" "$nvim_log" || fail "Development workflow contract incomplete: $marker"
+    done
     grep -Fq "Mason recovery contract passed:" "$nvim_log" || fail "Mason recovery contract did not complete"
     grep -Fq "Tier-2 Runtime Integration Contract passed cleanly." "$nvim_log" || {
         cat "$nvim_log" >&2

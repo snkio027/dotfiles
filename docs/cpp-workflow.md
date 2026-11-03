@@ -173,6 +173,9 @@ ctest --preset dev
 | --- | --- | --- |
 | `Space o b` | `CMakeBuild` | 只做增量构建 |
 | `Space o r` | `CMakeRun` | 构建所选运行目标，成功后运行 |
+| `Space o D` | `CMakeDebug` | 构建所选运行目标，成功后调试；复用该目标的参数和运行目录 |
+| `Space o t` | `CMakeBuildTest` | 构建所选 build preset，成功后用原生 CTest 选择器测试 |
+| `Space o T` | `CMakeSelectTestPreset` | 选择与 configure/build 配对的 test preset |
 | `Space o c` | `CMakeGenerate` | 新依赖、manifest 或构建配置变化后 |
 | `Space o s` | `CMakeSelectLaunchTarget` | 在多个程序之间切换 |
 | `Space o a` | `CMakeLaunchArgs` | 设置当前程序的参数 |
@@ -183,9 +186,19 @@ ctest --preset dev
 Configure / Build 会先保存 **CMakeTools 当前项目目录内**已命名、已修改的普通 buffer，
 保留正常保存与格式化钩子。只读、写入异常或保存后仍有未保存内容都会停止任务并提示文件；
 之前已成功保存的文件不会回滚。其他项目、指向项目外的符号链接和未命名草稿不会被自动写入。
-构建期间继续编辑导致运行前仍有未保存内容时，也会停止运行，需再次 Build / Run。
+构建期间继续编辑或保存项目文件时，也会停止后续运行、测试或调试，需再次构建。
 `CMakeRun` 使用磁盘源码，未命名草稿需自行命名保存。`CMakeQuickRun` 可临时选择其他目标，
 它同样会先构建；日常固定目标用 `Space o r` 即可。
+
+测试先选与 configure/build 对应的 test preset，再用 `Space o t`。
+此入口保留 CTest preset 的筛选、环境和执行策略，仍可在原生选择器中选择全部、标签或单个测试。
+build preset 必须包含测试所需的目标；它不会把当前 launch target 当成全部测试目标。
+目前自动衔接要求 build/test preset **直接声明同一个 configurePreset**，且 configuration 相同；
+不支持 build/test 的 `inherits`，因为锁定插件无法可靠解析这两类 preset 的继承关系。
+不符合条件时会明确停止；请运行项目原生 `cmake --workflow --preset <name>`，
+或自行构建后用 `:CMakeRunTest`。后者保留原生行为，**不会自动构建**，也不代表完成整个 workflow。
+测试选择器打开后再编辑或保存源码，也需重新执行 `CMakeBuildTest`。
+从父目录通过 `:CMakeSelectCwd` 选项目时，测试发现和运行都使用所选项目目录，不修改编辑器 cwd。
 
 界面使用英文 `Configure / Build / Run / Test · project · preset`。配置和构建成功只显示
 一条完成通知，不自动打开任务面板；手动打开历史时，成功任务只展示状态、名称和耗时。
@@ -240,8 +253,9 @@ set_tests_properties(demo.smoke PROPERTIES TIMEOUT 10)
 ```
 
 程序必须检查解析结果并正确返回非零。另补缺键、无效 TOML、文件不存在等业务测试；
-不要只搜索一行成功输出就宣告通过。CTest preset 与 workflow 的完整验收仍以终端命令为准，
-不能把编辑器插件的单次 `CMakeRunTest` 当成执行了全部 preset 策略。
+不要只搜索一行成功输出就宣告通过。CTest preset 的执行仍由原生 CTest 决定；
+`CMakeBuildTest` 只衔接所选 build/test preset，不执行 workflow 中其他步骤。
+完整 workflow 的验收仍以项目声明的 `cmake --workflow --preset <name>` 为准。
 
 ## 为什么跳到库内部后仍可能有诊断
 

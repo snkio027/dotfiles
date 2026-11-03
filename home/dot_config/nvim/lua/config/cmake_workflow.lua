@@ -2,6 +2,21 @@
 -- target selection and task execution, but not its unsafe global autosave.
 local M = {}
 local installed, saving = false, false
+local preset_targets = false
+
+local function build_identity(config)
+  return vim.deepcopy({
+    cwd = config.cwd,
+    configure = config.configure_preset,
+    build = config.build_preset,
+    test = config.test_preset,
+    build_type = config.build_type,
+    build_target = config.build_target,
+    launch_target = config.launch_target,
+    base = config.base_settings,
+    targets = config.target_settings,
+  })
+end
 
 -- Resolve existing ancestors too: new files need saving, while symlinks into
 -- another project must never give us ownership of that project's drafts.
@@ -93,6 +108,16 @@ function M.setup()
         local reason = tostring(err):match("^[^\n]+")
         return fail(callback, "save failed: " .. (filename or config.cwd) .. "\n" .. reason)
       end
+      if method == "build" and opts and opts.dotfiles_preset_targets then
+        local previous = preset_targets
+        preset_targets = true
+        local called, result = pcall(original, opts, callback)
+        preset_targets = previous
+        if not called then
+          error(result, 0)
+        end
+        return result
+      end
       return original(opts, callback)
     end
   end
@@ -111,10 +136,28 @@ function M.setup()
         )
       end
       if method == "execute" and vim.tbl_contains(args, "--build") then
+        if preset_targets then
+          -- BuildTest uses the native preset targets, including macro expansion.
+          -- Upstream may append an editor target (or raw preset targets) to argv.
+          -- Remove only that CLI override; do not mutate shared target selection.
+          local clean, skip = {}, false
+          for _, arg in ipairs(args) do
+            if arg == "--target" or arg == "-t" then
+              skip = true
+            elseif skip and arg:sub(1, 1) ~= "-" then
+              -- Skip the values of this target override.
+            else
+              skip = false
+              clean[#clean + 1] = arg
+            end
+          end
+          args = clean
+        end
         -- Observe writes for this actual build, after autosave/configure/pickers.
         -- `modified` alone misses edits saved while the compiler is running,
         -- including newly opened files and buffers unloaded before completion.
         local config = cmake.get_config()
+        local identity = build_identity(config)
         local root = real_path(config.cwd):gsub("/$", "") .. "/"
         local written
         local watcher = vim.api.nvim_create_autocmd("BufWritePost", {
@@ -135,11 +178,18 @@ function M.setup()
         local ok, err = pcall(original, cmd, env_script, env, args, cwd, backend, function(result)
           cleanup()
           if result:is_ok() then
-            if cmake.get_config() ~= config then
+            if cmake.get_config() ~= config or real_path(config.cwd):gsub("/$", "") .. "/" ~= root then
               return fail(callback, "project changed during build; build again")
+            end
+            if not vim.deep_equal(build_identity(config), identity) then
+              return fail(callback, "presets, targets or settings changed during build; build again")
             end
             if written then
               return fail(callback, "project file saved during build; build again: " .. written)
+            end
+            local modified = modified_buffers(cmake)
+            if #modified > 0 then
+              return fail(callback, "unsaved project changes; build again: " .. vim.api.nvim_buf_get_name(modified[1]))
             end
           end
           if callback then
@@ -158,35 +208,52 @@ function M.setup()
 
   -- Upstream's cold-run branch checks the *old* NOT_CONFIGURED result after
   -- Generate. Continue only on the new result and a real, readable codemodel.
-  local run = cmake.run
-  cmake.run = function(opts, callback)
-    local config = cmake.get_config()
-    local result = config:get_launch_target()
-    if not (opts and opts.target) and not utils.has_active_job(config.runner, config.executor) then
-      if result.code == Types.NOT_CONFIGURED or result.code == Types.CANNOT_FIND_CODEMODEL_FILE then
-        return cmake.generate({ bang = false, fargs = vim.deepcopy(opts and opts.fargs or {}) }, function(generated)
-          if not generated:is_ok() then
-            if callback then
-              callback(generated)
+  for _, method in ipairs({ "run", "debug" }) do
+    local original = cmake[method]
+    cmake[method] = function(opts, callback)
+      local config = cmake.get_config()
+      local result = config:get_launch_target()
+      if not (opts and opts.target) and not utils.has_active_job(config.runner, config.executor) then
+        if result.code == Types.NOT_CONFIGURED or result.code == Types.CANNOT_FIND_CODEMODEL_FILE then
+          return cmake.generate({ bang = false, fargs = vim.deepcopy(opts and opts.fargs or {}) }, function(generated)
+            if not generated:is_ok() then
+              if callback then
+                callback(generated)
+              end
+              return
             end
-            return
+            if cmake.get_config() ~= config or not config:get_codemodel_targets():is_ok() then
+              return fail(callback, "configure did not produce a codemodel for the current project")
+            end
+            return cmake[method](opts, callback)
+          end)
+        end
+      end
+      if
+        method == "debug"
+        and not utils.has_active_job(config.runner, config.executor)
+        and config:validate_for_debugging().code == Types.CANNOT_DEBUG_LAUNCH_TARGET
+      then
+        return cmake.select_build_type(function(selected)
+          if selected:is_ok() then
+            return cmake.debug(opts, callback)
+          elseif callback then
+            callback(selected)
           end
-          if cmake.get_config() ~= config or not config:get_codemodel_targets():is_ok() then
-            return fail(callback, "configure did not produce a codemodel for the current project")
-          end
-          return run(opts, callback)
         end)
       end
+      return original(opts, callback)
     end
-    return run(opts, callback)
   end
 
+  require("config.cmake_test").setup(cmake, fail)
+
   -- plugin/cmake-tools.lua binds function values before lazy calls setup.
-  -- Rebind the three public commands too, not just their Lua API entry points.
-  for suffix, method in pairs({ Generate = "generate", Build = "build", Run = "run" }) do
+  -- Rebind public commands too, not just their Lua API entry points.
+  for suffix, method in pairs({ Generate = "generate", Build = "build", Run = "run", Debug = "debug" }) do
     vim.api.nvim_create_user_command("CMake" .. suffix, function(opts)
       return cmake[method](opts)
-    end, { nargs = "*", bang = method ~= "run", desc = "CMake " .. method })
+    end, { nargs = "*", bang = method == "generate" or method == "build", desc = "CMake " .. method })
   end
 end
 

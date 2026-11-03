@@ -121,8 +121,30 @@ run_nvim color-unit "-n" "+set rtp^=$PWD/home/dot_config/nvim" "+luafile tests/n
 run_nvim production-visual "-n" "+luafile tests/nvim/production_visual_runtime.lua" +qa
 run_nvim python-provider-unit "-n" "+set rtp^=$PWD/home/dot_config/nvim" \
     "+luafile tests/nvim/run_contract.lua" "tests/nvim/python_provider_ownership_contract.lua"
+run_nvim python-workflow-config "-u" "NONE" "-n" "-i" "NONE" "+set rtp^=$PWD/home/dot_config/nvim" \
+    "+lua vim.g.dotfiles_contract_file = 'tests/nvim/python_workflow_contract.lua'" "+luafile tests/nvim/run_contract.lua"
+grep -Fq "Python workflow configuration contract passed" "$LOG_DIR/python-workflow-config.log"
 run_nvim smoke "-n" "+lua vim.g.dotfiles_contract_file = 'tests/nvim/smoke.lua'" "+luafile tests/nvim/run_contract.lua"
 grep -Fq "Neovim toolchain smoke tests passed" "$LOG_DIR/smoke.log"
+run_nvim cmake-test-debug "-n" "+lua vim.g.dotfiles_contract_file = 'tests/nvim/cmake_test_debug.lua'" \
+    "+luafile tests/nvim/run_contract.lua"
+grep -Fq "CMAKE_TEST_DEBUG_COMPLETE" "$LOG_DIR/cmake-test-debug.log"
+run_nvim zig-debug "-n" "+lua vim.g.dotfiles_contract_file = 'tests/nvim/zig_debug.lua'" \
+    "+luafile tests/nvim/run_contract.lua"
+grep -Fq "ZIG_DEBUG_COMPLETE" "$LOG_DIR/zig-debug.log"
+run_nvim workflow-ui "-n" "+lua vim.g.dotfiles_contract_file = 'tests/nvim/workflow_ui.lua'" \
+    "+luafile tests/nvim/run_contract.lua"
+grep -Fq "WORKFLOW_UI_COMPLETE" "$LOG_DIR/workflow-ui.log"
+# Test-only dependencies live inside this disposable cold-start root. Never
+# install pytest into the user's Python, plugin environment, or project venv.
+uv pip install --no-config --no-python-downloads --python "$(command -v python3)" \
+    --target "$TEST_ROOT/python-workflow-deps" 'pytest==9.0.3'
+DOTFILES_PYTHON_PACKAGES="$TEST_ROOT/python-workflow-deps" \
+    bash tests/nvim/python_workflow.sh >"$LOG_DIR/python-workflow.log" 2>&1 || {
+    cat "$LOG_DIR/python-workflow.log" >&2
+    exit 1
+}
+grep -Fq "PYTHON_WORKFLOW_COMPLETE" "$LOG_DIR/python-workflow.log"
 run_nvim_expected_failure smoke-config-negative "-n" \
     "+lua vim.g.dotfiles_smoke_config_negative = true" \
     "+lua vim.g.dotfiles_contract_file = 'tests/nvim/smoke.lua'" "+luafile tests/nvim/run_contract.lua"
