@@ -604,6 +604,8 @@ PATH="$SANITIZED_PATH" /bin/bash "$UV_SCRIPT" >"$TEST_ROOT/uv.log"
 
 # The hook installer and the generated hook both use the Brew-owned scanner
 # without relying on the fresh parent process PATH.
+export GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_COUNT=0
+git init -q --template='' --initial-branch=main "$CONSUMER_WORKTREE"
 mkdir -p "$CONSUMER_WORKTREE/.git/hooks"
 HOOK_FILE="$CONSUMER_WORKTREE/.git/hooks/pre-commit"
 

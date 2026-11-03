@@ -11,6 +11,8 @@ echo "ℹ️  DevContainer 不修改宿主仓库的 Git hooks。"
 exit 0
 {{- end }}
 
+{{ includeTemplate "git_hook_policy.sh" . }}
+
 {{- if .is_mac }}
 {{-   if .is_arm64 }}
 GITLEAKS_BIN="/opt/homebrew/bin/gitleaks"
@@ -23,22 +25,29 @@ GITLEAKS_BIN="/home/linuxbrew/.linuxbrew/bin/gitleaks"
 {{-   fail (printf "unsupported gitleaks platform: %s/%s" .chezmoi.os .chezmoi.arch) }}
 {{- end }}
 WORKING_TREE={{ .chezmoi.workingTree | quote }}
-GIT_DIR="$WORKING_TREE/.git"
-HOOK_DIR="$GIT_DIR/hooks"
-HOOK_FILE="$HOOK_DIR/pre-commit"
-
-if [ ! -d "$GIT_DIR" ]; then
-    echo "❌  dotfiles 工作树不是可管理的 Git 仓库: $WORKING_TREE" >&2
-    exit 1
+if HOOK_FILE="$(git_default_pre_commit_path "$WORKING_TREE")"; then
+    :
+else
+    status=$?
+    if [ "$status" -eq 2 ]; then
+        echo "ℹ️  已配置 core.hooksPath，保留现有 Git hooks 设置: $WORKING_TREE"
+        exit 0
+    fi
+    echo "❌  dotfiles 工作树不是可管理的 Git 仓库，或无法读取 hooks 设置: $WORKING_TREE" >&2
+    exit "$status"
 fi
+HOOK_DIR="${HOOK_FILE%/*}"
 mkdir -p "$HOOK_DIR"
 
-if [ -L "$HOOK_FILE" ] || { [ -e "$HOOK_FILE" ] && [ ! -f "$HOOK_FILE" ]; }; then
-    echo "⚠️  pre-commit hook 是符号链接或非普通文件，原样保留: $HOOK_FILE"
-    exit 0
-fi
-if [ -f "$HOOK_FILE" ] && [ "$(sed -n '2p' "$HOOK_FILE")" != "# Managed by chezmoi" ]; then
-    echo "⚠️  已存在非 Chezmoi 管理的 pre-commit hook，跳过覆盖: $HOOK_FILE"
+if git_pre_commit_replace_status "$HOOK_FILE"; then
+    :
+else
+    status=$?
+    if [ "$status" -eq 2 ]; then
+        echo "⚠️  pre-commit hook 是符号链接或非普通文件，原样保留: $HOOK_FILE"
+    else
+        echo "⚠️  已存在非 Chezmoi 管理的 pre-commit hook，跳过覆盖: $HOOK_FILE"
+    fi
     exit 0
 fi
 

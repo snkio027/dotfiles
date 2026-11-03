@@ -8,8 +8,28 @@ typeset -g HISTFILE="${XDG_STATE_HOME:-$HOME/.local/state}/zsh/history"
 typeset -g HISTSIZE=200000
 typeset -g SAVEHIST=100000
 
-# Atuin 是主要检索界面，但原生历史仍是 Shell 降级与 fzf/`fc` 的可恢复底座。
+# 旧 Shell 仍持有 ~/.zsh_history，默认原子重写会替换旧迁移留下的 symlink。
+# 新会话沿用同一路径，不在启动时移动、合并或删除任一历史文件。
+# 只接管普通旧文件与指向当前 XDG 历史的绝对 symlink；自定义链接保持原样。
 _zsh_history_dir="${HISTFILE:h}"
+_zsh_legacy_history="$HOME/.zsh_history"
+if [[ -L "$_zsh_legacy_history" ]]; then
+    _zsh_history_target="$(command readlink "$_zsh_legacy_history" 2>/dev/null)" || _zsh_history_target=''
+    # '..' 穿过目录 symlink 时不能按字符串折叠；这类路径只接受完全相同的目标。
+    if [[ "$_zsh_history_target" == /* && ( "$_zsh_history_target" == "$HISTFILE" ||
+        ( "$_zsh_history_target/" != */../* && "$HISTFILE/" != */../* &&
+          "${_zsh_history_target:a}" == "${HISTFILE:a}" ) ) ]]; then
+        HISTFILE="$_zsh_legacy_history"
+    fi
+fi
+# 同时涵盖读取 symlink 期间被旧 Shell 原子重写为普通文件的情况。
+if [[ ! -L "$_zsh_legacy_history" && -f "$_zsh_legacy_history" ]]; then
+    HISTFILE="$_zsh_legacy_history"
+    _zsh_history_dir="$HOME"
+fi
+unset _zsh_legacy_history _zsh_history_target
+
+# Atuin 是主要检索界面，但原生历史仍是 Shell 降级与 fzf/`fc` 的可恢复底座。
 if [[ ! -d "$_zsh_history_dir" ]]; then
     command mkdir -p -- "$_zsh_history_dir" 2>/dev/null || true
     command chmod 700 -- "$_zsh_history_dir" 2>/dev/null || true

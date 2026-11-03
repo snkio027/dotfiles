@@ -16,9 +16,6 @@ chezmoi execute-template --source="$repo_root" \
 chezmoi execute-template --source="$repo_root" \
     < "$repo_root/home/dot_zshrc.tmpl" \
     > "$test_root/zshrc"
-chezmoi execute-template --source="$repo_root" \
-    < "$repo_root/home/.chezmoiscripts/run_once_after_45_migrate_zsh_history.sh.tmpl" \
-    > "$test_root/migrate_history.sh"
 ln -s "$repo_root/home/dot_config/zsh/aliases.zsh" "$test_root/config/zsh/aliases.zsh"
 ln -s "$repo_root/home/dot_config/zsh/plugins.zsh" "$test_root/config/zsh/plugins.zsh"
 
@@ -32,14 +29,12 @@ export XDG_DATA_HOME="$test_root/data"
 export ATUIN_CONFIG_DIR="$test_root/atuin"
 export TERM="xterm-256color"
 
-bash "$test_root/migrate_history.sh" >/dev/null
-[[ -L "$HOME/.zsh_history" ]]
-[[ "$(readlink "$HOME/.zsh_history")" == "$XDG_STATE_HOME/zsh/history" ]]
-grep -q 'legacy-history-sentinel' "$XDG_STATE_HOME/zsh/history"
-
 source "$repo_root/home/dot_config/zsh/plugins.zsh"
 
-[[ "$HISTFILE" == "$XDG_STATE_HOME/zsh/history" ]]
+[[ "$HISTFILE" == "$HOME/.zsh_history" ]]
+[[ ! -L "$HOME/.zsh_history" ]]
+[[ ! -e "$XDG_STATE_HOME/zsh/history" ]]
+grep -q 'legacy-history-sentinel' "$HISTFILE"
 [[ "$HISTSIZE" == 200000 ]]
 [[ "$SAVEHIST" == 100000 ]]
 [[ -d "${HISTFILE:h}" ]]
@@ -47,6 +42,7 @@ source "$repo_root/home/dot_config/zsh/plugins.zsh"
 [[ -o sharehistory ]]
 [[ -o histfcntllock ]]
 [[ -o histsavenodups ]]
+[[ -o histsavebycopy ]]
 
 if ! zsh -dfi -c '
     source "$1" || {

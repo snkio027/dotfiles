@@ -176,59 +176,84 @@ function ghc() { git clone "git@github.com:$1.git"; }
 # 支持空行、整行注释、可选 export、KEY=value、空值及成对单/双引号。
 # 值按字面量导出；拒绝命令替换、反引号、续行、非法键名与不成对引号。
 function dotenv() {
-    local file="${1:-.env}" line trimmed key value
-    local -A values
+    # Parse in a subshell so its locals cannot shadow legal environment keys.
+    # Each validated assignment occupies one line; values never span lines.
+    set -- "${(@f)$(
+        () {
+            local file="${1:-.env}" line trimmed key value
+            local -A values
 
-    [[ -f "$file" && -r "$file" && ! -L "$file" ]] || {
-        print -u2 "dotenv: 需要可读的非符号链接文件: $file"
-        return 1
-    }
+            [[ -f "$file" && -r "$file" && ! -L "$file" ]] || {
+                print -u2 "dotenv: 需要可读的非符号链接文件: $file"
+                return 1
+            }
 
-    while IFS= read -r line || [[ -n "$line" ]]; do
-        line="${line%$'\r'}"
-        [[ -n "$line" && "${line[-1]}" == "\\" ]] && {
-            print -u2 "dotenv: 不支持续行: $line"
-            return 2
-        }
-        trimmed="${line#"${line%%[![:space:]]*}"}"
-        [[ -z "$trimmed" || "${trimmed[1]}" == "#" ]] && continue
+            while IFS= read -r line || [[ -n "$line" ]]; do
+                line="${line%$'\r'}"
+                [[ -n "$line" && "${line[-1]}" == "\\" ]] && {
+                    print -u2 "dotenv: 不支持续行: $line"
+                    return 2
+                }
+                trimmed="${line#"${line%%[![:space:]]*}"}"
+                [[ -z "$trimmed" || "${trimmed[1]}" == "#" ]] && continue
 
-        if [[ "$trimmed" == export[[:space:]]* ]]; then
-            trimmed="${trimmed#export}"
-            trimmed="${trimmed#"${trimmed%%[![:space:]]*}"}"
-        fi
-        [[ "$trimmed" == *"="* ]] || {
-            print -u2 "dotenv: 非法赋值: $line"
-            return 2
-        }
+                if [[ "$trimmed" == export[[:space:]]* ]]; then
+                    trimmed="${trimmed#export}"
+                    trimmed="${trimmed#"${trimmed%%[![:space:]]*}"}"
+                fi
+                [[ "$trimmed" == *"="* ]] || {
+                    print -u2 "dotenv: 非法赋值: $line"
+                    return 2
+                }
 
-        key="${trimmed%%=*}"
-        value="${trimmed#*=}"
-        key="${key#"${key%%[![:space:]]*}"}"
-        key="${key%"${key##*[![:space:]]}"}"
-        [[ "$key" =~ '^[A-Za-z_][A-Za-z0-9_]*$' ]] || {
-            print -u2 "dotenv: 非法变量名: $key"
-            return 2
-        }
+                key="${trimmed%%=*}"
+                value="${trimmed#*=}"
+                key="${key#"${key%%[![:space:]]*}"}"
+                key="${key%"${key##*[![:space:]]}"}"
+                [[ "$key" =~ '^[A-Za-z_][A-Za-z0-9_]*$' ]] || {
+                    print -u2 "dotenv: 非法变量名: $key"
+                    return 2
+                }
 
-        value="${value#"${value%%[![:space:]]*}"}"
-        value="${value%"${value##*[![:space:]]}"}"
-        [[ "$value" == *'$('* || "$value" == *'`'* ]] && {
-            print -u2 "dotenv: 不允许命令替换: $key"
-            return 2
-        }
-        if [[ "$value" == \"*\" || "$value" == \'*\' ]]; then
-            value="${value[2,-2]}"
-        elif [[ "$value" == \"* || "$value" == *\" || "$value" == \'* || "$value" == *\' ]]; then
-            print -u2 "dotenv: 引号不匹配: $key"
-            return 2
-        fi
-        values[$key]="$value"
-    done < "$file"
+                value="${value#"${value%%[![:space:]]*}"}"
+                value="${value%"${value##*[![:space:]]}"}"
+                [[ "$value" == *'$('* || "$value" == *'`'* ]] && {
+                    print -u2 "dotenv: 不允许命令替换: $key"
+                    return 2
+                }
+                if [[ "$value" == \"*\" || "$value" == \'*\' ]]; then
+                    value="${value[2,-2]}"
+                elif [[ "$value" == \"* || "$value" == *\" || "$value" == \'* || "$value" == *\' ]]; then
+                    print -u2 "dotenv: 引号不匹配: $key"
+                    return 2
+                fi
+                values[$key]="$value"
+            done < "$file"
 
-    for key in "${(@k)values}"; do
-        export "$key=${values[$key]}"
-    done
+            print -r -- 0
+            for key in "${(@k)values}"; do
+                print -r -- "$key=${values[$key]}"
+            done
+        } "$@" || print -r -- "$?"
+    )}"
+    [[ "$1" == 0 ]] || return "$1"
+    shift
+
+    # Check the caller's parameters without introducing any named locals.
+    # Reject parameters whose attributes or special setters change literal values.
+    () {
+        while (( $# )); do
+            if [[ -n "${parameters[${1%%=*}]-}" && "${parameters[${1%%=*}]}" != scalar* ||
+                "${parameters[${1%%=*}]-}" == *-(readonly|upper|lower|left|right_blanks|right_zeros|unique)* ||
+                ( "${parameters[${1%%=*}]-}" == *special* &&
+                  "${1%%=*}" == (HISTCHARS|histchars|KEYBOARD_HACK|USERNAME) ) ]]; then
+                print -u2 "dotenv: 不能按字面量导出变量: ${1%%=*}"
+                return 2
+            fi
+            shift
+        done
+    } "$@" || return
+    (( $# == 0 )) || export "$@"
 }
 function cze() {
     local target="${1:-}"
