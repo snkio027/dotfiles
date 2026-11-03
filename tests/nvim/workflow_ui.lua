@@ -17,11 +17,14 @@ vim.api.nvim_exec_autocmds("User", { pattern = "VeryLazy" })
 
 local root = vim.fn.tempname()
 vim.fn.mkdir(root, "p")
+root = assert(vim.uv.fs_realpath(root))
 local filename = root .. "/workflow.lua"
 vim.fn.writefile({ "first failure", "second failure", "user diagnostic" }, filename)
 vim.cmd("noautocmd edit " .. vim.fn.fnameescape(filename))
 local buffer = vim.api.nvim_get_current_buf()
 local editor = vim.api.nvim_get_current_win()
+eq(vim.api.nvim_buf_get_name(buffer), filename, "fixture and buffer paths must match")
+local reference_requests = {}
 
 -- A real in-process LSP client triggers the configured LspAttach/keymap path.
 -- Requests never leave this process or start a language-server installer.
@@ -32,7 +35,7 @@ local client_id = vim.lsp.start({
 		local closing = false
 		local request_id = 0
 		return {
-			request = function(method, _, callback)
+			request = function(method, params, callback)
 				request_id = request_id + 1
 				vim.schedule(function()
 					if method == "initialize" then
@@ -47,10 +50,15 @@ local client_id = vim.lsp.start({
 							},
 						})
 					elseif method == "textDocument/references" then
+						reference_requests[#reference_requests + 1] = params
 						callback(nil, {
 							{
 								uri = vim.uri_from_fname(filename),
 								range = { start = { line = 0, character = 0 }, ["end"] = { line = 0, character = 5 } },
+							},
+							{
+								uri = vim.uri_from_fname(filename),
+								range = { start = { line = 1, character = 0 }, ["end"] = { line = 1, character = 6 } },
 							},
 						})
 					else
@@ -159,10 +167,18 @@ local diagnostics = trouble.open({ mode = "diagnostics", focus = false, auto_clo
 wait_for(function()
 	return diagnostics:is_open()
 end, "diagnostics window did not open")
+-- Trouble excludes references on the current line. Exercise that real filter,
+-- while retaining a distinct reference, with identical paths on macOS/Linux.
+vim.api.nvim_win_set_cursor(editor, { 1, 0 })
 local references = trouble.open({ mode = "lsp_references", focus = false, auto_jump = false, auto_close = false })
 wait_for(function()
 	return references:is_open()
 end, "references window did not open")
+local reference_items = trouble.get_items({ mode = "lsp_references" })
+eq(#reference_items, 1, "current reference must be filtered, distinct reference retained")
+eq(reference_items[1].pos, { 2, 0 }, "retained reference position")
+eq(reference_items[1].item.client_id, client_id, "reference must come from the fixture LSP")
+eq(reference_requests[#reference_requests].textDocument.uri, vim.uri_from_fname(filename), "reference request target")
 local quickfix = vim.fn.getqflist({ all = true })
 local late_diagnostics
 local preview = require("trouble.view.preview")
