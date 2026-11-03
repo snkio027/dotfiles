@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -Eeuo pipefail
+report_failure() {
+    printf 'fresh-apply assertion failed at line %s (exit %s)\n' "$1" "$2" >&2
+    exit "$2"
+}
+trap 'report_failure "$LINENO" "$?"' ERR
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TEST_ROOT="$(mktemp -d)"

@@ -1,6 +1,6 @@
 # Read-only policy helpers; no hook installation or scanner execution occurs here.
 git_default_pre_commit_path() {
-    local working_tree="$1" status
+    local working_tree="$1" status hook_dir
     # Both a normal .git directory and a linked worktree's .git file are valid.
     # Requiring the marker also prevents accidentally discovering a parent repo.
     [ -e "$working_tree/.git" ] || return 1
@@ -15,8 +15,13 @@ git_default_pre_commit_path() {
         [ "$status" -eq 1 ] || return "$status"
     fi
 
-    # Git resolves linked worktrees to their common hooks directory.
-    git -C "$working_tree" rev-parse --path-format=absolute --git-path hooks/pre-commit
+    # Git resolves linked worktrees to their common hooks directory. Resolve
+    # only the directory: canonicalizing pre-commit would follow a final symlink
+    # before the ownership check has a chance to preserve it.
+    # A sentinel preserves trailing newline bytes in a symlinked directory name.
+    hook_dir="$(git -C "$working_tree" rev-parse --path-format=absolute --git-path hooks && printf '.')" || return
+    hook_dir="${hook_dir%$'\n.'}"
+    printf '%s/pre-commit\n' "$hook_dir"
 }
 
 git_pre_commit_replace_status() {

@@ -147,30 +147,74 @@ assert_status 0 git_default_pre_commit_path "$NORMAL_REPO"
 cmp "$CUSTOM_HOOKS/pre-commit" "$TEST_ROOT/custom-original"
 [ ! -e "$NORMAL_REPO/.custom-hooks" ]
 [ ! -e "$LINKED_REPO/.worktree-hooks" ]
+git -C "$LINKED_REPO" config --worktree --unset core.hooksPath
 
-assert_status 0 git_pre_commit_replace_status "$HOOK_FILE"
+# Resolve after each filesystem fixture exists, as the entry script does.
+# Checking ownership of a hand-built path alone misses final-symlink traversal.
+assert_shared_pre_commit_status() {
+    local expected="$1" worktree resolved
+    for worktree in "$NORMAL_REPO" "$LINKED_REPO"; do
+        assert_status 0 git_default_pre_commit_path "$worktree"
+        resolved="$(cat "$TEST_ROOT/result")"
+        if [ "$resolved" != "$HOOK_FILE" ]; then
+            printf 'Hook resolver followed the final component: %s -> %s\n' "$HOOK_FILE" "$resolved" >&2
+            exit 1
+        fi
+        assert_status "$expected" git_pre_commit_replace_status "$resolved"
+    done
+}
+
+assert_shared_pre_commit_status 0
 mkdir -p "${HOOK_FILE%/*}"
 printf '#!/bin/sh\nprintf unmanaged\\n\n' >"$HOOK_FILE"
 cp "$HOOK_FILE" "$TEST_ROOT/unmanaged-original"
-assert_status 1 git_pre_commit_replace_status "$HOOK_FILE"
+assert_shared_pre_commit_status 1
 cmp "$HOOK_FILE" "$TEST_ROOT/unmanaged-original"
 printf '#!/bin/sh\n# Managed by chezmoi extra\n' >"$HOOK_FILE"
-assert_status 1 git_pre_commit_replace_status "$HOOK_FILE"
+assert_shared_pre_commit_status 1
 printf '#!/bin/sh\n# Managed by chezmoi\n' >"$HOOK_FILE"
-assert_status 0 git_pre_commit_replace_status "$HOOK_FILE"
+assert_shared_pre_commit_status 0
 rm "$HOOK_FILE"
 ln -s "$CUSTOM_HOOKS/pre-commit" "$HOOK_FILE"
-assert_status 2 git_pre_commit_replace_status "$HOOK_FILE"
+assert_shared_pre_commit_status 2
+[ -L "$HOOK_FILE" ]
+[ "$(readlink "$HOOK_FILE")" = "$CUSTOM_HOOKS/pre-commit" ]
 cmp "$CUSTOM_HOOKS/pre-commit" "$TEST_ROOT/custom-original"
 rm "$HOOK_FILE"
-ln -s "$TEST_ROOT/missing-hook" "$HOOK_FILE"
-assert_status 2 git_pre_commit_replace_status "$HOOK_FILE"
+
+# A managed marker in an external target must never grant ownership through a
+# symlink, even though that marker would permit replacing a direct regular file.
+MANAGED_EXTERNAL_HOOK="$TEST_ROOT/managed-external-pre-commit"
+printf '#!/bin/sh\n# Managed by chezmoi\nprintf external\\n\n' >"$MANAGED_EXTERNAL_HOOK"
+cp "$MANAGED_EXTERNAL_HOOK" "$TEST_ROOT/managed-external-original"
+ln -s "$MANAGED_EXTERNAL_HOOK" "$HOOK_FILE"
+assert_shared_pre_commit_status 2
 [ -L "$HOOK_FILE" ]
+[ "$(readlink "$HOOK_FILE")" = "$MANAGED_EXTERNAL_HOOK" ]
+cmp "$MANAGED_EXTERNAL_HOOK" "$TEST_ROOT/managed-external-original"
+rm "$HOOK_FILE"
+ln -s "$TEST_ROOT/missing-hook" "$HOOK_FILE"
+assert_shared_pre_commit_status 2
+[ -L "$HOOK_FILE" ]
+[ "$(readlink "$HOOK_FILE")" = "$TEST_ROOT/missing-hook" ]
 [ ! -e "$TEST_ROOT/missing-hook" ]
 rm "$HOOK_FILE"
 mkfifo "$HOOK_FILE"
-assert_status 2 git_pre_commit_replace_status "$HOOK_FILE"
+assert_shared_pre_commit_status 2
 [ -p "$HOOK_FILE" ]
+
+# Directory resolution must preserve path bytes before appending the filename,
+# even when hooks points to a directory whose name ends with a newline.
+rm "$HOOK_FILE"
+rmdir "$NORMAL_REPO/.git/hooks"
+NEWLINE_HOOK_DIR="$TEST_ROOT/hooks"$'\n'
+mkdir "$NEWLINE_HOOK_DIR"
+ln -s "$NEWLINE_HOOK_DIR" "$NORMAL_REPO/.git/hooks"
+HOOK_FILE="$NEWLINE_HOOK_DIR/pre-commit"
+assert_shared_pre_commit_status 0
+ln -s "$MANAGED_EXTERNAL_HOOK" "$HOOK_FILE"
+assert_shared_pre_commit_status 2
+cmp "$MANAGED_EXTERNAL_HOOK" "$TEST_ROOT/managed-external-original"
 
 # Keep the tested policies wired into the entry scripts without executing them.
 grep -Fq '{{ includeTemplate "git_config_migration.sh" . }}' \
