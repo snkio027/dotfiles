@@ -32,7 +32,7 @@ plugin.config = configure
 local neotest = require("neotest")
 local nio = require("nio")
 local adapter = require("config.zig_test").adapter()
-local root = assert(vim.uv.fs_mkdtemp(vim.fs.joinpath(vim.env.TMPDIR, "zig-workflow-XXXXXX")))
+local root = assert(vim.uv.fs_mkdtemp(vim.fs.joinpath(assert(vim.uv.os_tmpdir()), "zig-workflow-XXXXXX")))
 root = assert(vim.uv.fs_realpath(root))
 local cwd = vim.fn.getcwd()
 local function file(path, lines)

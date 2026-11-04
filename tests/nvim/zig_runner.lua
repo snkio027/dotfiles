@@ -2,7 +2,8 @@
 require("lazy").load({ plugins = { "neotest" } })
 local adapter = require("config.zig_test").adapter()
 local nio = require("nio")
-local root = assert(vim.uv.fs_mkdtemp(vim.fs.joinpath(vim.env.TMPDIR, "zig-runner-XXXXXX")))
+local root = assert(vim.uv.fs_mkdtemp(vim.fs.joinpath(assert(vim.uv.os_tmpdir()), "zig-runner-XXXXXX")))
+root = assert(vim.uv.fs_realpath(root))
 local path = root .. "/semantics.zig"
 vim.fn.writefile({
 	'const std = @import("std");',

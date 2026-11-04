@@ -1,7 +1,7 @@
 require("lazy").load({ plugins = { "nvim-dap" } })
 local dap = require("dap")
 local workflow = require("config.zig_debug")
-local root = assert(vim.uv.fs_mkdtemp(vim.fs.joinpath(vim.env.TMPDIR, "zig-workflow-XXXXXX")))
+local root = assert(vim.uv.fs_mkdtemp(vim.fs.joinpath(assert(vim.uv.os_tmpdir()), "zig-workflow-XXXXXX")))
 root = assert(vim.uv.fs_realpath(root))
 local cwd = vim.fn.getcwd()
 local function file(path, lines)

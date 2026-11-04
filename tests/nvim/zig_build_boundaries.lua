@@ -3,7 +3,7 @@
 require("lazy").load({ plugins = { "nvim-dap" } })
 local module = require("config.zig_debug")
 local dap = require("dap")
-local root = assert(vim.uv.fs_mkdtemp(vim.env.TMPDIR .. "/zig-boundaries-XXXXXX"))
+local root = assert(vim.uv.fs_mkdtemp(vim.fs.joinpath(assert(vim.uv.os_tmpdir()), "zig-boundaries-XXXXXX")))
 root = assert(vim.uv.fs_realpath(root))
 local project, alias, outside = root .. "/project", root .. "/alias", root .. "/outside"
 vim.fn.mkdir(project .. "/.nvim", "p")

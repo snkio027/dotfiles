@@ -1,6 +1,7 @@
 -- Exclusive helper creation must tolerate short writes and clean partial files.
 local module = require("config.zig_test")
-local root = assert(vim.uv.fs_mkdtemp(vim.env.TMPDIR .. "/zig-helper-XXXXXX"))
+local root = assert(vim.uv.fs_mkdtemp(vim.fs.joinpath(assert(vim.uv.os_tmpdir()), "zig-helper-XXXXXX")))
+root = assert(vim.uv.fs_realpath(root))
 local uv = vim.uv
 local write, open, clock = uv.fs_write, uv.fs_open, uv.hrtime
 local seen, fd_seen

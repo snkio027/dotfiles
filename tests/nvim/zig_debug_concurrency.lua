@@ -3,7 +3,8 @@
 require("lazy").load({ plugins = { "neotest", "nvim-dap" } })
 local nio = require("nio")
 local adapter = require("config.zig_test").adapter()
-local root = assert(vim.uv.fs_mkdtemp(vim.env.TMPDIR .. "/zig-dap-race-XXXXXX"))
+local root = assert(vim.uv.fs_mkdtemp(vim.fs.joinpath(assert(vim.uv.os_tmpdir()), "zig-dap-race-XXXXXX")))
+root = assert(vim.uv.fs_realpath(root))
 local path = root .. "/probe.zig"
 vim.fn.writefile({ 'test "probe" {}' }, path)
 local position = { id = path .. '::"probe"', type = "test", name = '"probe"', path = path }
