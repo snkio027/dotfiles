@@ -151,6 +151,7 @@ local ok, err = xpcall(function()
 	vim.cmd.edit(vim.fn.fnameescape(link))
 	buffers[#buffers + 1] = vim.api.nvim_get_current_buf()
 	assert(vim.bo.readonly and not vim.bo.modifiable, "Symlink alias bypassed protection")
+	dofile("tests/nvim/cpp_dependency_view.lua")()
 end, debug.traceback)
 
 vim.notify = notify

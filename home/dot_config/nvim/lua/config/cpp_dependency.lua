@@ -35,6 +35,7 @@ function M.protect(buf)
   vim.bo[buf].readonly = true
   vim.bo[buf].modifiable = false
   vim.diagnostic.show(nil, buf)
+  require("config.cpp_dependency_view").refresh()
 end
 
 -- Native per-buffer display options: diagnostic storage, signs, underline,
@@ -72,6 +73,7 @@ function M.edit(buf)
   end
   vim.bo[buf].readonly = false
   vim.bo[buf].modifiable = true
+  require("config.cpp_dependency_view").refresh()
   -- An explicit edit is not permission to reformat the dependency on save.
   vim.b[buf].autoformat = false
   vim.diagnostic.show(nil, buf)
