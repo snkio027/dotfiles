@@ -34,6 +34,40 @@ local function completed(count, status)
 		})
 	)
 end
+local identity_rejection = "CMake stopped: presets, targets or settings changed during build; build again"
+local function expect_identity_rejection(label, count, command, unchanged)
+	local notify = vim.notify
+	local observed, unexpected = {}, {}
+	-- A fast build may finish inside a picker's nested vim.wait, before the
+	-- public command returns. Default ERROR notifications then make nvim_exec2
+	-- throw. Observe only this intentional rejection without invoking its UI;
+	-- unknown errors and command failures must still fail the contract.
+	vim.notify = function(message, level, opts)
+		if message == identity_rejection and level == vim.log.levels.ERROR and opts and opts.title == "CMake" then
+			observed[#observed + 1] = { message = message, level = level, title = opts.title }
+			return
+		end
+		if level == vim.log.levels.ERROR then
+			unexpected[#unexpected + 1] = tostring(message)
+		end
+		return notify(message, level, opts)
+	end
+	local succeeded, failure = xpcall(function()
+		vim.cmd(command)
+		completed(count, "SUCCESS")
+		wait_for(function()
+			return #observed > 0 or #unexpected > 0 or not unchanged()
+		end, "Missing CMake identity rejection: " .. label)
+		assert(#unexpected == 0, "Unexpected CMake error: " .. vim.inspect(unexpected))
+		assert(#observed == 1, "Expected exactly one CMake identity rejection: " .. label)
+		assert(unchanged(), "Rejected CMake build executed a stale continuation: " .. label)
+		io.stdout:write(
+			"CMAKE_IDENTITY_REJECTION " .. vim.json.encode({ case = label, notification = observed[1] }) .. "\n"
+		)
+	end, debug.traceback)
+	vim.notify = notify
+	assert(succeeded, failure)
+end
 local ok, err = xpcall(function()
 	write("CMakeLists.txt", {
 		"cmake_minimum_required(VERSION 3.25)",
@@ -199,8 +233,9 @@ local ok, err = xpcall(function()
 		end)
 	end
 	local preset_count = #tasks
-	vim.cmd("CMakeBuildTest")
-	completed(preset_count + 1, "SUCCESS")
+	expect_identity_rejection("presets", preset_count + 1, "CMakeBuildTest", function()
+		return #tasks == preset_count + 1
+	end)
 	observe_task = nil
 	vim.wait(100)
 	assert(#tasks == preset_count + 1, "Changed presets ran tests for a different build")
@@ -228,8 +263,9 @@ local ok, err = xpcall(function()
 		end)
 	end
 	preset_count = #tasks
-	vim.cmd("CMakeBuildTest")
-	completed(preset_count + 1, "SUCCESS")
+	expect_identity_rejection("build target", preset_count + 1, "CMakeBuildTest", function()
+		return #tasks == preset_count + 1
+	end)
 	observe_task = nil
 	vim.wait(100)
 	assert(
@@ -387,8 +423,9 @@ local ok, err = xpcall(function()
 			end)
 		end
 		count = #tasks
-		vim.cmd("CMakeDebug")
-		completed(count + 1, "SUCCESS")
+		expect_identity_rejection("debug " .. change, count + 1, "CMakeDebug", function()
+			return #tasks == count + 1 and started == 1
+		end)
 		observe_task = nil
 		vim.wait(100)
 		assert(started == 1, "Changed debug " .. change .. " launched an old binary")
