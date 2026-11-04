@@ -4,6 +4,8 @@ local root = assert(vim.uv.fs_mkdtemp(vim.uv.os_tmpdir() .. "/editor-feedback-XX
 root = assert(vim.uv.fs_realpath(root))
 local original_cwd = vim.fn.getcwd()
 local shutdown = dofile("tests/nvim/lsp_shutdown.lua")
+local record = dofile("tests/nvim/ci_evidence.lua").open("editor-feedback")
+local active_case = { phase = "startup" }
 local environment = {
 	RUSTUP_AUTO_INSTALL = vim.env.RUSTUP_AUTO_INSTALL,
 	CARGO_NET_OFFLINE = vim.env.CARGO_NET_OFFLINE,
@@ -11,6 +13,10 @@ local environment = {
 }
 vim.env.RUSTUP_AUTO_INSTALL, vim.env.CARGO_NET_OFFLINE, vim.env.CARGO_TARGET_DIR = "0", "true", nil
 local observations, buffers, requests, processes = {}, {}, {}, {}
+local function observe(value)
+	observations[#observations + 1] = value
+	record("observation", value)
+end
 local system = vim.system
 vim.system = function(command, opts, callback)
 	processes[#processes + 1] = { command = vim.deepcopy(command), cwd = opts and opts.cwd }
@@ -97,7 +103,7 @@ local function save(buf, expected, label)
 	end)
 	local elapsed = (vim.uv.hrtime() - start) / 1e6
 	local actual = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-	observations[#observations + 1] = {
+	observe({
 		case = label,
 		file = vim.api.nvim_buf_get_name(buf),
 		cwd = vim.fn.getcwd(),
@@ -109,7 +115,7 @@ local function save(buf, expected, label)
 		end, LazyVim.format.resolve(buf)),
 		lsp_requests = vim.list_slice(requests, request_start + 1),
 		processes = vim.list_slice(processes, process_start + 1),
-	}
+	})
 	local activity = observations[#observations]
 	local ft = vim.bo[buf].filetype
 	if ft == "c" or ft == "cpp" then
@@ -164,8 +170,7 @@ local function tool_status(buf, language, project, names)
 			language .. ": ProjectTools wrong client root"
 		)
 	end
-	observations[#observations + 1] =
-		{ case = language .. " tool status", file = vim.api.nvim_buf_get_name(buf), status = status }
+	observe({ case = language .. " tool status", file = vim.api.nvim_buf_get_name(buf), status = status })
 end
 local function case(language, make, names)
 	local specs = {}
@@ -177,10 +182,22 @@ local function case(language, make, names)
 		specs[index] = { project = project, path = path, raw = raw, formatted = formatted }
 	end
 	vim.cmd.cd(vim.fn.fnameescape(specs[2].project))
-	for _, index in ipairs({ 1, 2, 1 }) do
+	for visit, index in ipairs({ 1, 2, 1 }) do
 		local spec = specs[index]
+		active_case = { language = language, index = index, visit = visit, file = spec.path, phase = "attach" }
 		local buf = spec.buf or edit(spec.path, names)
 		spec.buf = buf
+		active_case.buf = buf
+		-- Revisit A in the actual editor window. A temporary buf_call(write)
+		-- restores B afterwards, where native visible-only pull diagnostics
+		-- correctly skip hidden A. Keep cwd at B to test project isolation.
+		vim.api.nvim_set_current_buf(buf)
+		assert(vim.api.nvim_get_current_buf() == buf, "Fixture did not switch to the target buffer")
+		assert(vim.fn.getcwd() == specs[2].project, "Fixture lost the other project's cwd")
+		record(
+			"visit",
+			vim.tbl_extend("force", active_case, { current = vim.api.nvim_get_current_buf(), cwd = vim.fn.getcwd() })
+		)
 		wait(language .. " native formatter did not become available", function()
 			for _, formatter in ipairs(LazyVim.format.resolve(buf)) do
 				if formatter.active then
@@ -196,8 +213,12 @@ local function case(language, make, names)
 		end
 		tool_status(buf, language, spec.project, names)
 		vim.api.nvim_buf_set_lines(buf, 0, -1, false, spec.raw)
+		active_case.phase = "save"
 		save(buf, spec.formatted, language .. index .. " save")
+		assert(vim.api.nvim_get_current_buf() == buf, "Save left the target buffer hidden")
+		assert(vim.fn.getcwd() == specs[2].project, "Save changed the other project's cwd")
 		local diagnostic_started = vim.uv.hrtime()
+		active_case.phase = "diagnostic"
 		wait(language .. " missing native diagnostic", function()
 			local expected_col = assert(spec.formatted[2]:find("missing_value", 1, true)) - 1
 			for source, code in pairs(diagnostic_sources[language]) do
@@ -221,34 +242,38 @@ local function case(language, make, names)
 		end)
 		local diagnostic = assert(has_missing(buf))
 		assert(diagnostic.lnum == 1, language .. ": wrong diagnostic line: " .. vim.inspect(diagnostic))
-		observations[#observations + 1] = {
+		observe({
 			case = language .. " diagnostic",
 			file = spec.path,
 			diagnostics = diagnostics(buf),
 			wait_after_save_ms = (vim.uv.hrtime() - diagnostic_started) / 1e6,
-		}
+		})
+		active_case.phase = "idempotent save"
 		save(buf, spec.formatted, language .. index .. " idempotent")
 		local repaired = vim.tbl_map(function(line)
 			return (line:gsub("missing_value", "1"))
 		end, spec.formatted)
 		vim.api.nvim_buf_set_lines(buf, 0, -1, false, repaired)
+		active_case.phase = "repair save"
 		save(buf, repaired, language .. index .. " repair")
 		local repair_started = vim.uv.hrtime()
+		active_case.phase = "diagnostic cleared"
 		wait(language .. " stale native diagnostic", function()
 			return not has_missing(buf)
 		end)
-		observations[#observations + 1] = {
+		observe({
 			case = language .. " cleared",
 			file = spec.path,
 			diagnostics = diagnostics(buf),
 			wait_after_save_ms = (vim.uv.hrtime() - repair_started) / 1e6,
-		}
+		})
 		assert(
 			#vim.diagnostic.get(buf, { severity = vim.diagnostic.severity.ERROR }) == 0,
 			language .. ": remaining error"
 		)
 	end
 	print("EDITOR_FEEDBACK_SAVE_COMPLETE " .. language)
+	active_case.phase = "retirement"
 	local stopped = {}
 	for _, spec in ipairs(specs) do
 		for _, client in ipairs(vim.lsp.get_clients({ bufnr = spec.buf })) do
@@ -319,6 +344,46 @@ local ok, failure = xpcall(function()
 			{ "pub fn answer() i32 {", "    return missing_value;", "}" }
 	end, { "zls" })
 end, debug.traceback)
+if not ok then
+	local snapshot = {
+		case = active_case,
+		current = vim.api.nvim_get_current_buf(),
+		cwd = vim.fn.getcwd(),
+		windows = {},
+		buffers = {},
+	}
+	for _, win in ipairs(vim.api.nvim_list_wins()) do
+		snapshot.windows[#snapshot.windows + 1] = { win = win, buf = vim.api.nvim_win_get_buf(win) }
+	end
+	for _, buf in ipairs(buffers) do
+		if vim.api.nvim_buf_is_valid(buf) then
+			local item = {
+				buf = buf,
+				file = vim.api.nvim_buf_get_name(buf),
+				tick = vim.api.nvim_buf_get_changedtick(buf),
+				diagnostics = diagnostics(buf),
+				clients = {},
+			}
+			for _, client in ipairs(vim.lsp.get_clients({ bufnr = buf })) do
+				local pending = {}
+				for id, request in pairs(client.requests) do
+					pending[#pending + 1] =
+						{ id = id, method = request.method, type = request.type, buf = request.bufnr }
+				end
+				item.clients[#item.clients + 1] = {
+					id = client.id,
+					name = client.name,
+					root = client.root_dir,
+					initialized = client.initialized,
+					requests = pending,
+				}
+			end
+			snapshot.buffers[#snapshot.buffers + 1] = item
+		end
+	end
+	record("failure", snapshot)
+	print("EDITOR_FEEDBACK_FAILURE " .. vim.json.encode(snapshot))
+end
 vim.system = system
 for _, traced_client in pairs(traced) do
 	traced_client.client.request = traced_client.request
