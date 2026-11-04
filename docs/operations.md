@@ -213,9 +213,23 @@ Rust 默认使用项目的默认 features，不再全局启用 `allFeatures`，�
 同一声明传给 rust-analyzer 的 Cargo 与 Clippy 设置，测试和调试仍消费 rust-analyzer 的原生 runnable，
 不另行拼一套 Cargo 命令。不同 workspace 使用各自的语言服务；同一路径的别名仍复用同一项目。
 修改声明后重启该项目的 Rust 语言服务再运行测试。此文件不会安装工具链或 target。
+在当前 Rust 源文件执行 `:RustRunnableInfo`，可选择语言服务实际返回的 runnable，查看其所属项目、源码位置和原生命令参数。带源码位置的入口与通用 Cargo 入口会明确标注；命令未显式声明的 features/target 不推断为已经应用，Cargo 自己的配置和环境仍可能影响结果。此操作只查看，不构建、不执行测试、不改原生菜单或命令；调试构建还会由原生调试流程追加参数。
+
 Rust 不在打开文件时预先编译所有 DAP 配置；通过原生 `:RustLsp debuggables` / 调试操作按需构建，
 避免后台的另一套 features 构建覆盖即将调试的产物。选择带源码位置的二进制/测试目标；
 原生菜单中的通用 `cargo run/test -p` 项仍采用 Cargo 自身默认特性，不能把它当作同一源码 runnable。
+
+### 当前文件的工具与诊断状态
+
+`:ProjectTools` 按需打开只读快照，显示当前文件的语言服务及其实际客户端根目录、配置的启动命令、自动格式化开关、LazyVim 选择的格式化来源、Conform 的格式化计划，以及已发布诊断的来源和数量。它不会执行格式化、构建、测试或安装工具，也不导出环境变量。按 `q` 关闭，再从源文件重新调用可刷新信息。
+
+“已附着”不等于分析已完成；“无诊断”也不是正确性证明。尚未就绪或无法取得的信息会明确显示。不同检查器报告同一问题时保留各自来源，不自动去重或屏蔽。具体格式规则仍由原工具读取；需要格式化器原生详情时使用 `:LazyFormatInfo` / `:ConformInfo`。
+
+编辑反馈回归覆盖五语言的真实保存、格式化、诊断修正与跨项目切换。Zig 这一合同只在隔离测试中停用后台 build-on-save，验证真实 ZLS 格式化和 AST 诊断；日用设置不变。现有 Zig/ZLS 0.17.0 的后台构建进程在本机旧主线也复现过 5 秒自然退出门槛失败，不能用此隔离合同的成功声称该生命周期问题已解决。
+
+C/C++ 部分区分客户端显式数据库覆盖、受管项目默认数据库、CMakeTools 当前选择和数据库中的精确文件记录。记录中的参数只是 clangd 的输入，不能冒充叠加 `.clangd`、驱动查询和头文件推断后的最终参数；自定义 `.clangd` 不在这里解析。超大、不可读或不支持的数据库会明确跳过，头文件不猜测借用了哪个源文件。
+
+`:ClangdProjectRefresh` 是显式的单客户端刷新，不负责 configure，也不切换构建 preset 或重写项目文件。它重新评估由 dotfiles 自动添加的数据库路径，同时保留用户明确设置的命令行或初始化覆盖；多个 clangd、服务未就绪或当前 Neovim 不支持该原生边界时拒绝操作。
 
 ### Neovim 隔离更新候选
 
@@ -421,7 +435,7 @@ cmake --workflow --preset dev
 
 模板内置 C++23、CMake Presets、Ninja、clangd、clang-format、clang-tidy、CTest 与 Sanitizer 配置；创建过程不访问网络，生成项目也不依赖 `cxx` 命令。
 
-`cmake --workflow --preset dev` 不只是首次构建：它还会生成 clangd 所需的 `build/dev/compile_commands.json`。对于包含 `.cxx.toml` 的受管项目，若该固定位置的文件不存在，Neovim 会报告缺失事实并提示项目 flags 可能不完整；workflow 完成后执行 `:lsp restart clangd` 即可重新载入精确的 C++23、SDK、include 与 warning 配置。其他项目的 `.clangd` 语义不由 dotfiles 解析或改写。C/C++ Buffer 默认使用 4 空格实时缩进，与 cxx 模板的 `.clang-format` 保持一致；项目自己的 EditorConfig 仍可覆盖该默认值，保存时由 clang-format 作最终格式化。
+`cmake --workflow --preset dev` 不只是首次构建：它还会生成 clangd 所需的 `build/dev/compile_commands.json`。对于包含 `.cxx.toml` 的受管项目，若该固定位置的文件不存在，Neovim 会报告缺失事实并提示项目 flags 可能不完整；workflow 完成后若当前文件仍使用旧编译上下文，可在该源文件执行 `:ClangdProjectRefresh`，只刷新附着于它的唯一 clangd，并保留该客户端的其他缓冲区；其他项目的 clangd 不会一起重启。其他项目的 `.clangd` 语义不由 dotfiles 解析或改写。C/C++ Buffer 默认使用 4 空格实时缩进，与 cxx 模板的 `.clang-format` 保持一致；项目自己的 EditorConfig 仍可覆盖该默认值，保存时由 clang-format 作最终格式化。
 
 #### C++ 代码骨架与语义补全
 
@@ -431,7 +445,7 @@ C++ 可调用值使用 `DxCallable`，不改变类型名的颜色。clangd 适�
 
 clangd 提供符号、成员、函数／模板参数及上下文代码模式，Blink 展示候选，LuaSnip 执行占位符展开。保留完整 LSP `snippetSupport`，不屏蔽 clangd 候选。针对 clangd 多行控制结构缺失相对缩进的问题，只在这些代码模式的独立正文占位符前补一层缩进；已有缩进、namespace、调用参数、头文件编辑与其他服务器候选保持原样，不在接受补全后格式化整个文件。
 
-如果旧项目为绕过缩进问题设置了 `Completion.CodePatterns: None`，需手动删除该项或改为下面的设置，再执行 `:lsp restart clangd`。不要覆盖项目原有的 `CompileFlags` 等配置；dotfiles 不会自动改写项目的 `.clangd`。
+如果旧项目为绕过缩进问题设置了 `Completion.CodePatterns: None`，需手动删除该项或改为下面的设置，再从该项目源文件执行 `:ClangdProjectRefresh`。不要覆盖项目原有的 `CompileFlags` 等配置；dotfiles 不会自动改写项目的 `.clangd`。
 
 ```yaml
 Completion:

@@ -153,7 +153,7 @@ ctest --preset dev
 
 检查 `build/dev/compile_commands.json` 是否存在，以及 `main.cpp` 的命令是否有正确的
 标准、SDK、依赖路径和宏。clangd 应连接这个项目，并使用 `build/dev` 的数据库；
-首次创建后必要时执行 `:lsp restart clangd`。
+首次创建后必要时执行 `:ClangdProjectRefresh`。
 
 ## 在 Neovim 中减少重复操作
 

@@ -78,6 +78,9 @@ function M.before_init(params, config)
   if database then
     config.init_options = config.init_options or {}
     config.init_options.compilationDatabasePath = database
+    -- A targeted restart may re-evaluate this inferred startup option. Explicit
+    -- user options are never tagged or rewritten.
+    config._dotfiles_clangd_database = { root = config.root_dir, path = database }
     params.initializationOptions = config.init_options
   end
 end

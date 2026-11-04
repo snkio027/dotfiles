@@ -38,7 +38,7 @@ function M.warn_if_compile_database_missing(bufnr)
   vim.notify(
     (
       "Managed cxx project is missing %s; clangd may have incomplete project flags. Run "
-      .. "`cmake --preset dev`, then `:lsp restart clangd`."
+      .. "`cmake --preset dev`, then `:ClangdProjectRefresh`."
     ):format(vim.fn.fnamemodify(database, ":~")),
     vim.log.levels.WARN,
     { title = "C/C++ compile database" }

@@ -63,7 +63,8 @@ assert(#compile_database_warnings == 1, "Managed C++ project warning must be emi
 assert(compile_database_warnings[1].message:find("build/dev/compile_commands.json", 1, true))
 assert(compile_database_warnings[1].message:find("cmake --preset dev", 1, true))
 assert(not compile_database_warnings[1].message:find("--workflow", 1, true), "CDB recovery must not run the app")
-assert(compile_database_warnings[1].message:find(":lsp restart clangd", 1, true))
+assert(compile_database_warnings[1].message:find(":ClangdProjectRefresh", 1, true))
+assert(not compile_database_warnings[1].message:find(":lsp restart clangd", 1, true))
 assert(compile_database_warnings[1].level == vim.log.levels.WARN)
 vim.api.nvim_buf_delete(warning_buffer, { force = true })
 

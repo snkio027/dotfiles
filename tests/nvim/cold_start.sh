@@ -135,11 +135,14 @@ grep -Fq "ZIG_DEBUG_COMPLETE" "$LOG_DIR/zig-debug.log"
 run_nvim workflow-ui "-n" "+lua vim.g.dotfiles_contract_file = 'tests/nvim/workflow_ui.lua'" \
     "+luafile tests/nvim/run_contract.lua"
 grep -Fq "WORKFLOW_UI_COMPLETE" "$LOG_DIR/workflow-ui.log"
-for contract in cmake_native_workflow task_output rust_workflow zig_workflow zig_build_workflow zig_build_boundaries zig_debug_concurrency zig_runner; do
+for contract in cmake_native_workflow task_output rust_workflow zig_workflow zig_build_workflow zig_build_boundaries zig_debug_concurrency zig_runner project_tools clangd_status editor_feedback rust_runnable_info rust_runnable_info_contract; do
     run_nvim "$contract" "-n" "+lua vim.g.dotfiles_contract_file = 'tests/nvim/$contract.lua'" "+luafile tests/nvim/run_contract.lua"
     marker="$(printf '%s' "$contract" | tr '[:lower:]' '[:upper:]')_COMPLETE"
     grep -Fq "$marker" "$LOG_DIR/$contract.log"
 done
+run_nvim clangd-status-unit "-u" "NONE" "-n" "-i" "NONE" "+set rtp^=$PWD/home/dot_config/nvim" \
+    "+lua vim.g.dotfiles_contract_file = 'tests/nvim/clangd_status_contract.lua'" "+luafile tests/nvim/run_contract.lua"
+grep -Fq "CLANGD_STATUS_CONTRACT_COMPLETE" "$LOG_DIR/clangd-status-unit.log"
 run_nvim rust-scope "-n" "+lua vim.g.dotfiles_contract_file = 'tests/nvim/rust_scope_contract.lua'" \
     "+luafile tests/nvim/run_contract.lua"
 grep -Fq "RUST_SCOPE_COMPLETE" "$LOG_DIR/rust-scope.log"
@@ -187,7 +190,9 @@ if grep -ERni 'Package is already installing|Neovim is exiting while packages ar
     "$LOG_DIR/binding-evidence.log" "$LOG_DIR/python-provider-production.log" \
     "$LOG_DIR/cmake_native_workflow.log" "$LOG_DIR/task_output.log" "$LOG_DIR/rust_workflow.log" "$LOG_DIR/rust-scope.log" \
     "$LOG_DIR/zig_workflow.log" "$LOG_DIR/zig_build_workflow.log" "$LOG_DIR/python-workflow.log" \
-    "$LOG_DIR/zig_build_boundaries.log" "$LOG_DIR/zig_debug_concurrency.log" "$LOG_DIR/zig_runner.log"; then
+    "$LOG_DIR/zig_build_boundaries.log" "$LOG_DIR/zig_debug_concurrency.log" "$LOG_DIR/zig_runner.log" \
+    "$LOG_DIR/project_tools.log" "$LOG_DIR/clangd_status.log" "$LOG_DIR/editor_feedback.log" \
+    "$LOG_DIR/rust_runnable_info.log" "$LOG_DIR/rust_runnable_info_contract.log" "$LOG_DIR/clangd-status-unit.log"; then
     echo "Unexpected Mason background installation or update detected" >&2
     exit 1
 fi
