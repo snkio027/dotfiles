@@ -70,6 +70,34 @@ function M.setup()
     end
   end
 
+  function M.save_project()
+    if saving then
+      return false, "a project save is already in progress"
+    end
+    saving = true
+    local confirm = vim.o.confirm
+    vim.o.confirm = false -- Automatic saves must fail, not ask to overwrite.
+    local filename
+    local ok, err = pcall(function()
+      for _, buf in ipairs(modified_buffers(cmake)) do
+        filename = vim.api.nvim_buf_get_name(buf)
+        vim.api.nvim_buf_call(buf, function()
+          vim.cmd("silent keepalt write")
+        end)
+        if vim.bo[buf].modified then
+          error("buffer is still modified: " .. vim.api.nvim_buf_get_name(buf))
+        end
+      end
+    end)
+    vim.o.confirm = confirm
+    saving = false
+    if not ok then
+      local reason = tostring(err):match("^[^\n]+")
+      return false, "save failed: " .. (filename or cmake.get_config().cwd) .. "\n" .. reason
+    end
+    return true
+  end
+
   -- Save before CMakeTools reads presets, not after it has assembled argv.
   -- Keep normal write/format hooks and verify modified clears; never use !.
   for _, method in ipairs({ "generate", "build" }) do
@@ -84,29 +112,15 @@ function M.setup()
         return
       end
       local config = cmake.get_config()
+      if require("config.cmake_native_workflow").is_active(config.cwd) then
+        return fail(callback, "wait for the native workflow to finish")
+      end
       if utils.has_active_job(config.runner, config.executor) then
         return original(opts, callback)
       end
-      saving = true
-      local confirm = vim.o.confirm
-      vim.o.confirm = false -- Automatic saves must fail, not ask to overwrite.
-      local filename
-      local ok, err = pcall(function()
-        for _, buf in ipairs(modified_buffers(cmake)) do
-          filename = vim.api.nvim_buf_get_name(buf)
-          vim.api.nvim_buf_call(buf, function()
-            vim.cmd("silent keepalt write")
-          end)
-          if vim.bo[buf].modified then
-            error("buffer is still modified: " .. vim.api.nvim_buf_get_name(buf))
-          end
-        end
-      end)
-      vim.o.confirm = confirm
-      saving = false
-      if not ok then
-        local reason = tostring(err):match("^[^\n]+")
-        return fail(callback, "save failed: " .. (filename or config.cwd) .. "\n" .. reason)
+      local saved, save_error = M.save_project()
+      if not saved then
+        return fail(callback, save_error)
       end
       if method == "build" and opts and opts.dotfiles_preset_targets then
         local previous = preset_targets

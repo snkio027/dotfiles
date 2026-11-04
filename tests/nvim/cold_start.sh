@@ -135,6 +135,20 @@ grep -Fq "ZIG_DEBUG_COMPLETE" "$LOG_DIR/zig-debug.log"
 run_nvim workflow-ui "-n" "+lua vim.g.dotfiles_contract_file = 'tests/nvim/workflow_ui.lua'" \
     "+luafile tests/nvim/run_contract.lua"
 grep -Fq "WORKFLOW_UI_COMPLETE" "$LOG_DIR/workflow-ui.log"
+for contract in cmake_native_workflow task_output rust_workflow zig_workflow zig_build_workflow zig_build_boundaries zig_debug_concurrency zig_runner; do
+    run_nvim "$contract" "-n" "+lua vim.g.dotfiles_contract_file = 'tests/nvim/$contract.lua'" "+luafile tests/nvim/run_contract.lua"
+    marker="$(printf '%s' "$contract" | tr '[:lower:]' '[:upper:]')_COMPLETE"
+    grep -Fq "$marker" "$LOG_DIR/$contract.log"
+done
+run_nvim rust-scope "-n" "+lua vim.g.dotfiles_contract_file = 'tests/nvim/rust_scope_contract.lua'" \
+    "+luafile tests/nvim/run_contract.lua"
+grep -Fq "RUST_SCOPE_COMPLETE" "$LOG_DIR/rust-scope.log"
+run_nvim rust-context-unit "-u" "NONE" "-n" "-i" "NONE" "+set rtp^=$PWD/home/dot_config/nvim" "+lua vim.g.dotfiles_contract_file = 'tests/nvim/rust_context_contract.lua'" "+luafile tests/nvim/run_contract.lua"
+grep -Fq "RUST_CONTEXT_COMPLETE" "$LOG_DIR/rust-context-unit.log"
+run_nvim rust-clients-unit "-u" "NONE" "-n" "-i" "NONE" "+set rtp^=$PWD/home/dot_config/nvim" "+lua vim.g.dotfiles_contract_file = 'tests/nvim/rust_clients_contract.lua'" "+luafile tests/nvim/run_contract.lua"
+grep -Fq "RUST_CLIENTS_COMPLETE" "$LOG_DIR/rust-clients-unit.log"
+run_nvim rust-neotest-unit "-u" "NONE" "-n" "-i" "NONE" "+set rtp^=$PWD/home/dot_config/nvim" "+lua vim.g.dotfiles_contract_file = 'tests/nvim/rust_neotest_contract.lua'" "+luafile tests/nvim/run_contract.lua"
+grep -Fq "RUST_NEOTEST_COMPLETE" "$LOG_DIR/rust-neotest-unit.log"
 # Test-only dependencies live inside this disposable cold-start root. Never
 # install pytest into the user's Python, plugin environment, or project venv.
 uv pip install --no-config --no-python-downloads --python "$(command -v python3)" \
@@ -144,7 +158,9 @@ DOTFILES_PYTHON_PACKAGES="$TEST_ROOT/python-workflow-deps" \
     cat "$LOG_DIR/python-workflow.log" >&2
     exit 1
 }
-grep -Fq "PYTHON_WORKFLOW_COMPLETE" "$LOG_DIR/python-workflow.log"
+for marker in PYTHON_WORKFLOW_COMPLETE PYTHON_SELECTION_ORDER_COMPLETE PYTHON_SELECTION_SCOPE_COMPLETE PYTHON_TERMINAL_COMPLETE; do
+    grep -Fq "$marker" "$LOG_DIR/python-workflow.log"
+done
 run_nvim_expected_failure smoke-config-negative "-n" \
     "+lua vim.g.dotfiles_smoke_config_negative = true" \
     "+lua vim.g.dotfiles_contract_file = 'tests/nvim/smoke.lua'" "+luafile tests/nvim/run_contract.lua"
@@ -168,7 +184,10 @@ if grep -ERni 'Package is already installing|Neovim is exiting while packages ar
     "$LOG_DIR/completion-contract-negative.log" "$LOG_DIR/clangd-completion.log" "$LOG_DIR/smoke.log" \
     "$LOG_DIR/color-unit.log" "$LOG_DIR/production-visual.log" \
     "$LOG_DIR/python-provider-unit.log" "$LOG_DIR/color-contract.log" "$LOG_DIR/rust-ownership.log" \
-    "$LOG_DIR/binding-evidence.log" "$LOG_DIR/python-provider-production.log"; then
+    "$LOG_DIR/binding-evidence.log" "$LOG_DIR/python-provider-production.log" \
+    "$LOG_DIR/cmake_native_workflow.log" "$LOG_DIR/task_output.log" "$LOG_DIR/rust_workflow.log" "$LOG_DIR/rust-scope.log" \
+    "$LOG_DIR/zig_workflow.log" "$LOG_DIR/zig_build_workflow.log" "$LOG_DIR/python-workflow.log" \
+    "$LOG_DIR/zig_build_boundaries.log" "$LOG_DIR/zig_debug_concurrency.log" "$LOG_DIR/zig_runner.log"; then
     echo "Unexpected Mason background installation or update detected" >&2
     exit 1
 fi

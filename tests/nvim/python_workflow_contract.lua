@@ -54,4 +54,23 @@ vim.env.VIRTUAL_ENV, vim.env.CONDA_PREFIX = previous_venv, previous_conda
 vim.cmd.cd(previous_cwd)
 vim.env.UV_PROJECT_ENVIRONMENT = original_uv
 vim.fn.delete(root, "rf")
+-- PATH ownership must preserve inherited duplicate entries and later user edits.
+local ambient = require("config.python_environment").new()
+local saved_path, saved_venv = vim.env.PATH, vim.env.VIRTUAL_ENV
+vim.env.PATH, vim.env.VIRTUAL_ENV = "/external/bin:/usr/bin:/bin", "/external"
+ambient.prepend("/project/bin")
+ambient.set("VIRTUAL_ENV", "/project")
+vim.env.PATH = "/user/bin:" .. vim.env.PATH
+ambient.clear_path()
+ambient.restore_variables()
+assert(vim.env.PATH == "/user/bin:/external/bin:/usr/bin:/bin", "PATH ownership erased later edits")
+assert(vim.env.VIRTUAL_ENV == "/external", "external activation was not restored")
+ambient.prepend("/project/bin")
+assert(vim.env.PATH:match("^/project/bin:"), "same-directory reactivation was skipped")
+ambient.clear_path()
+vim.env.PATH = "/project/bin:/usr/bin:/project/bin"
+ambient.prepend("/project/bin")
+ambient.clear_path()
+assert(vim.env.PATH == "/project/bin:/usr/bin:/project/bin", "inherited occurrences were removed")
+vim.env.PATH, vim.env.VIRTUAL_ENV = saved_path, saved_venv
 print("Python workflow configuration contract passed")

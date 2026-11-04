@@ -198,6 +198,25 @@ components = ["rustfmt", "clippy", "rust-src"]
 
 本次迁移不引入 nextest 或改变测试/调试 UI；PR 合并和 CI 通过也不等于本机已激活。激活须单独授权，在新 Shell/Neovim 中核对工具来源后，再决定是否卸载旧 Brew Rust。
 
+Rust 默认使用项目的默认 features，不再全局启用 `allFeatures`，避免互斥特性同时编译。
+需要指定 features 或 target 时，在 Cargo workspace 根目录放置 `.nvim/rust.json`：
+
+```json
+{
+  "features": ["fast"],
+  "noDefaultFeatures": true,
+  "target": "aarch64-apple-darwin"
+}
+```
+
+三个字段均可省略；显式需要全部特性时用 `"features": "all"`。target 必须是项目实际使用、已安装的目标。
+同一声明传给 rust-analyzer 的 Cargo 与 Clippy 设置，测试和调试仍消费 rust-analyzer 的原生 runnable，
+不另行拼一套 Cargo 命令。不同 workspace 使用各自的语言服务；同一路径的别名仍复用同一项目。
+修改声明后重启该项目的 Rust 语言服务再运行测试。此文件不会安装工具链或 target。
+Rust 不在打开文件时预先编译所有 DAP 配置；通过原生 `:RustLsp debuggables` / 调试操作按需构建，
+避免后台的另一套 features 构建覆盖即将调试的产物。选择带源码位置的二进制/测试目标；
+原生菜单中的通用 `cargo run/test -p` 项仍采用 Cargo 自身默认特性，不能把它当作同一源码 runnable。
+
 ### Neovim 隔离更新候选
 
 `devup` 需要完整 source checkout。它把 Neovim/neocmake/markdownlint 配置复制到新的临时目录，独立设置 config/data/state/cache、日志与 `NVIM_APPNAME`；先更新候选插件，再在新进程安装缺失 Mason 工具/五语言 parser，最后复用 toolchain smoke。任一步失败或缺少完成标记都返回非零，目录和日志保留；不会升级 Homebrew/cxx-init、改写源 `lazy-lock.json` 或复制候选工具到日用目录。这是 Neovim 状态隔离，不是文件系统沙箱：仍使用本机 Homebrew 工具，第三方安装器可能使用自身的共享下载缓存。
@@ -338,12 +357,20 @@ Quiet Ops Prompt 将第一行留给位置与 Git 状态，第二行留给命令�
 | `<leader>di` / `<leader>dO` / `<leader>do` | 步入 / 步过 / 步出 |
 | `<leader>du` / `<leader>de` / `<leader>dt` | DAP UI / 计算表达式 / 终止调试 |
 | `<leader>oo` / `<leader>ow` | 运行任务 / 任务列表 |
+| `<leader>oA` / `<leader>oE` | 通用任务动作 / 显式导出已完成任务的保留输出 |
+| `<leader>oW` | 执行项目原生 CMake workflow preset |
+| `<leader>oZ` | 按 `.nvim/zig.json` 显式构建成功后调试 Zig |
 | `<leader>ot` / `<leader>oD` / `<leader>oT` | CMake 构建并测试 / 构建并调试 / 选择 CTest preset |
 | `<leader>gs` / `<leader>gd` | Git 状态 / 仓库 Diff hunks |
 | `<leader>gl` / `<leader>gS` | 仓库提交历史 / Stash |
 | `<leader>gL` / `<leader>gf` | 当前目录提交历史 / 当前文件提交历史 |
 | `<leader>g/` | GitHub 综合检索（Octo）；与 Stash 独立 |
 | `lg` | 在终端中启动 LazyGit |
+
+任务输出导出先选择已完成任务，再输入一个新的绝对 JSON 路径。记录包含该任务的命令、
+工作目录、状态、退出码、时间和仍保留在任务 buffer 中的输出；不会复制进程环境变量，
+也不会把 quickfix 或当前窗口当成输出。已有文件和链接不覆盖。历史输出可能已被截断，
+导出不承诺完整原始字节流；命令参数和程序输出本身可能包含敏感内容，分享前请检查。
 
 ### 多语言开发环境
 
@@ -356,6 +383,25 @@ Quiet Ops Prompt 将第一行留给位置与 Git 状态，第二行留给命令�
 | Rust | rust-analyzer、rustaceanvim、rustfmt、Clippy | Cargo、Neotest、codelldb |
 
 Mason 只安装编辑器侧的 LSP、格式化器与调试适配器；Rust 编译工具链由 rustup 提供，其余声明的全局编译器和构建系统由 Homebrew 提供。C/C++ 的 clangd 与 clang-format 是例外：两者显式使用 Homebrew LLVM 的同一滚动版本，避免 Mason 与终端工具链发生版本漂移。CMake 使用 neocmake 与 gersemi，两者统一为 100 列；neocmake 保留内置语义和样式诊断，不再额外启动固定 80 列且维护停滞的 cmakelint。CMake 和通用任务输出进入 Overseer；C/C++ 测试使用 CTest/presets，`<leader>ot` 构建并测试、`<leader>oD` 构建并调试、`<leader>oT` 选择 test preset；Python、Go、Rust、Zig 测试使用 Neotest。原生语言使用 codelldb。调试配置优先读取项目的 `.vscode/launch.json`，也可以使用内置的 launch/attach 配置。Zig 内置 launch 的程序选择与工作目录采用同一当前项目，启动前仍须手动构建，不会自动执行 `zig build`。
+
+Zig 的显式构建调试入口为 `:ZigBuildDebug` / `<leader>oZ`。在项目根目录创建 `.nvim/zig.json`：
+
+```json
+{
+  "build": { "argv": ["zig", "build", "-Doptimize=Debug"] },
+  "debug": { "program": "zig-out/bin/demo", "cwd": ".", "args": [], "env": {} }
+}
+```
+
+`argv` 原样传递参数，只接受 `zig build` 或 `zig build-exe`，不经过 shell；程序与工作目录必须留在项目内。
+构建失败、取消、切换项目或检测到源文件/已加载 Buffer/声明变化时停止调试。
+检查范围包含项目内普通 `.zig`、`.zon` 文件和该声明；外部、生成或其他类型的构建输入仍由项目构建系统负责。
+用 `:ZigBuildDebugOutput` 查看输出，`:ZigBuildDebugStop` 取消待完成的构建。原有手动 launch 继续可用。
+
+Zig 0.17 测试沿用 Neotest 的文件、最近测试、摘要与 DAP 入口。构建项目从原生 `build.zig` 图中选测试，
+保留模块导入、运行环境及工作目录；自定义 wrapper、跨目标等无法确认可直接调试的布局明确报错，
+可继续使用项目原生命令。临时构建辅助文件使用独占名称并只清理本次创建且身份未变的文件，
+不会写入或覆盖固定的 `neotest_build.zig`。
 
 #### 编辑器工具与项目格式化
 
@@ -429,7 +475,13 @@ Markdown 在普通、命令和终端模式渲染标题、任务、表格、代�
 | `[[` / `]]` | 跳转到上一节 / 下一节 |
 | `gO` | 打开 Markdown 文档大纲 |
 | `<leader>cv` | 在 Python Buffer 中手动选择虚拟环境 |
+| `<leader>fP` | 为当前 Python 项目打开使用目标环境的新终端 |
 | `<leader>cT` | 使用 ty 对整个 Python 项目做补充类型检查 |
+
+`:PythonProjectTerminal` / `<leader>fP` 明确使用目标项目的解释器、PATH 和工作目录。
+改选环境后会创建对应环境的新终端，已有终端进程不被改写。撤销选择或进入无环境的
+其他项目时，新开的通用终端不再残留编辑器之前添加的 venv 路径；启动 Neovim 时已经
+继承的外部环境，以及之后由用户添加的 PATH 项会保留。
 
 新 uv 项目先执行 `uv sync`，再打开 Neovim。打开 Python 文件时，默认使用 `uv.lock` 根下的 `.venv/bin/python`；`UV_PROJECT_ENVIRONMENT` 支持相对于该根的路径和绝对路径。手动选择的环境按项目记忆，不被下一次进入 Buffer 的自动选择覆盖；显式停用后不自动重新激活。已知项目环境缺失时提示修复，不偷偷使用另一个项目的环境或自动安装。
 

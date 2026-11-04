@@ -176,6 +176,8 @@ ctest --preset dev
 | `Space o D` | `CMakeDebug` | 构建所选运行目标，成功后调试；复用该目标的参数和运行目录 |
 | `Space o t` | `CMakeBuildTest` | 构建所选 build preset，成功后用原生 CTest 选择器测试 |
 | `Space o T` | `CMakeSelectTestPreset` | 选择与 configure/build 配对的 test preset |
+| `Space o W` | `CMakeWorkflow` | 输入项目原生 workflow preset，执行其完整步骤 |
+| `Space o A` / `Space o E` | 任务动作 / 导出任务输出 | 管理任务或保存选中已完成任务的输出 |
 | `Space o c` | `CMakeGenerate` | 新依赖、manifest 或构建配置变化后 |
 | `Space o s` | `CMakeSelectLaunchTarget` | 在多个程序之间切换 |
 | `Space o a` | `CMakeLaunchArgs` | 设置当前程序的参数 |
@@ -195,8 +197,14 @@ Configure / Build 会先保存 **CMakeTools 当前项目目录内**已命名、�
 build preset 必须包含测试所需的目标；它不会把当前 launch target 当成全部测试目标。
 目前自动衔接要求 build/test preset **直接声明同一个 configurePreset**，且 configuration 相同；
 不支持 build/test 的 `inherits`，因为锁定插件无法可靠解析这两类 preset 的继承关系。
-不符合条件时会明确停止；请运行项目原生 `cmake --workflow --preset <name>`，
+不符合条件时会明确停止；可用 `Space o W` / `:CMakeWorkflow <name>` 执行项目原生 `cmake --workflow --preset <name>`，
 或自行构建后用 `:CMakeRunTest`。后者保留原生行为，**不会自动构建**，也不代表完成整个 workflow。
+`CMakeWorkflow` 由 CMake 自己解析 include、继承、用户 preset、条件和多配置构建，
+不会尝试在 Lua 中重建这些规则。它按 CMakeTools 当前选中的项目保存文件并启动一个
+Overseer 任务；取消输入不运行。运行期间保存项目文件会取消整条任务，需重新执行。
+任务重启仍检查项目和保存状态；构建失败由 CMake 停止后续测试步骤。它执行项目声明的
+完整 workflow，可能包含 package 步骤，使用前应核对该项目 preset。
+
 测试选择器打开后再编辑或保存源码，也需重新执行 `CMakeBuildTest`。
 从父目录通过 `:CMakeSelectCwd` 选项目时，测试发现和运行都使用所选项目目录，不修改编辑器 cwd。
 
