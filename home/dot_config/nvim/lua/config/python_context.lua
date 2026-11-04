@@ -1,5 +1,6 @@
 -- Resolve tools from their target project, never the last globally activated venv.
 local M = {}
+local terminal_environment = require("config.python_environment").new()
 local selections = {}
 local explicit_choices = {}
 local automatic = {}
@@ -127,20 +128,37 @@ function M.require_context(source)
   return context
 end
 
+local function release_terminal_environment()
+  terminal_environment.clear_path()
+  terminal_environment.restore_variables()
+  -- Keep other buffers' selected environments and LSP clients; only global active
+  -- state is no longer applicable to newly opened generic terminals.
+  require("venv-selector.venv").clear_active_state()
+end
+
 function M.activate(buf)
-  if not vim.api.nvim_buf_is_valid(buf) or vim.bo[buf].filetype ~= "python" or vim.bo[buf].buftype ~= "" then
-    return
-  end
-  -- Respect explicit deactivation; do not turn a user's disabled buffer back on.
-  if vim.b[buf].venv_selector_disabled or buf ~= vim.api.nvim_get_current_buf() then
+  if not vim.api.nvim_buf_is_valid(buf) or vim.bo[buf].buftype ~= "" or buf ~= vim.api.nvim_get_current_buf() then
     return
   end
   local root = M.root(buf)
+  if vim.bo[buf].filetype ~= "python" then
+    if require("venv-selector.venv").active_project_root() ~= root then
+      release_terminal_environment()
+    end
+    return
+  end
+  -- Respect explicit deactivation; do not turn a user's disabled buffer back on.
+  if vim.b[buf].venv_selector_disabled then
+    release_terminal_environment()
+    return
+  end
   if selections[root] == false then
+    release_terminal_environment()
     return
   end
   local choice = selections[root] or discovered(root)
   if not choice or vim.fn.executable(choice.python) ~= 1 then
+    release_terminal_environment()
     return
   end
   if not selections[root] then
@@ -158,6 +176,31 @@ end
 function M.setup_selector(opts)
   local selector = require("venv-selector")
   selector.setup(opts)
+  local path = require("venv-selector.path")
+  local venv = require("venv-selector.venv")
+  local function option(name)
+    return require("venv-selector.config").user_settings.options[name] == true
+  end
+  -- The upstream deactivate clears current_python_path before PATH cleanup, and
+  -- its private last-directory memo also survives removal. Track our own entry
+  -- so deactivate and same-environment reselect both work without plugin edits.
+  path.add = function(directory)
+    if option("activate_venv_in_terminal") then
+      terminal_environment.prepend(directory)
+    end
+  end
+  path.remove_current = terminal_environment.clear_path
+  venv.set_env = function(value, name)
+    if option("set_environment_variables") then
+      terminal_environment.set(name, value)
+    end
+  end
+  venv.unset_env = function(name)
+    if option("set_environment_variables") then
+      terminal_environment.set(name, nil)
+    end
+  end
+  venv.unset_env_variables = terminal_environment.restore_variables
   local project_root = require("venv-selector.project_root")
   local key_for_buf = project_root.key_for_buf
   project_root.key_for_buf = function(buf, markers)
@@ -184,7 +227,6 @@ function M.setup_selector(opts)
   end
   -- Observe the buffer-aware API after activation. Its same-interpreter fast path
   -- skips hooks, so hooks alone lose an explicit selection in another project.
-  local venv = require("venv-selector.venv")
   local activate = venv.activate_for_buffer
   venv.activate_for_buffer = function(python, kind, buf, activation_opts)
     kind = kind or "venv"
@@ -200,6 +242,9 @@ function M.setup_selector(opts)
     local same = selector.python() == python
     local result = activate(python, kind, buf, activation_opts)
     if result then
+      if same and explicit then
+        venv.update_paths(python, kind)
+      end
       M.remember(python, kind, buf, explicit)
       if same and explicit and buf and vim.api.nvim_buf_is_valid(buf) then
         vim.b[buf].venv_selector_last_python = python
@@ -215,12 +260,30 @@ function M.setup_selector(opts)
       M.activate(args.buf)
     end)
   end
-  vim.api.nvim_create_autocmd("BufEnter", { group = group, pattern = "*.py", callback = schedule })
+  vim.api.nvim_create_autocmd("BufEnter", { group = group, callback = schedule })
   vim.api.nvim_create_autocmd("FileType", { group = group, pattern = "python", callback = schedule })
   local buf = vim.api.nvim_get_current_buf()
   vim.schedule(function()
     M.activate(buf)
   end)
+end
+
+function M.terminal(source, opts)
+  local context, err = M.resolve(source)
+  if not context then
+    vim.notify(err, vim.log.levels.ERROR, { title = "Python" })
+    return
+  end
+  opts = vim.deepcopy(opts or {})
+  local command = opts.command
+  opts.command = nil
+  opts.cwd = context.root
+  opts.env = vim.tbl_extend("force", opts.env or {}, context.env, {
+    PATH = terminal_environment.project_path(context.python, initial_env),
+  })
+  -- Snacks includes cwd and env in the terminal identity. Reopening an old
+  -- terminal never changes its process; a changed selection gets a new one.
+  return Snacks.terminal(command, opts)
 end
 
 function M.neotest_adapter(opts)

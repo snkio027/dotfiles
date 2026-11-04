@@ -200,6 +200,7 @@ jobs:
           zsh -f tests/zsh/aliases_test.zsh
           zsh -f tests/zsh/history_test.zsh
           zsh -f tests/zsh/history_compatibility_test.zsh
+          python3 tests/zsh/prompt_output_test.py
           bash tests/zsh/linux_homebrew_test.sh
           bash tests/chezmoi/apply_contract_test.sh
           bash tests/chezmoi/fresh_apply_contract_test.sh

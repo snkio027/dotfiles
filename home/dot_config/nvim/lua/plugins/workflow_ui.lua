@@ -1,5 +1,23 @@
 return {
   {
+    "stevearc/overseer.nvim",
+    optional = true,
+    keys = {
+      { "<leader>oA", "<cmd>OverseerTaskAction<cr>", desc = "Task Action (Overseer)" },
+      {
+        "<leader>oE",
+        function()
+          require("config.task_output").export()
+        end,
+        desc = "Export Task Output",
+      },
+    },
+  },
+  {
+    "folke/which-key.nvim",
+    opts = { spec = { { "<leader>o", group = "build / tasks" } } },
+  },
+  {
     "pwntester/octo.nvim",
     keys = {
       { "<leader>gS", false },

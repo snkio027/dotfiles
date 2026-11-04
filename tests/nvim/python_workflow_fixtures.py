@@ -16,11 +16,15 @@ parser.add_argument("--packages", action="append", type=pathlib.Path, required=T
 args = parser.parse_args()
 base = args.directory.resolve()
 base.mkdir(parents=True, exist_ok=True)
-for name, sub in [("project-a", ".venv"), ("project-b", "custom-env"), ("project-c", ".venv"), ("manual", "env")]:
+for name, sub in [
+    ("project-a", ".venv"), ("project-b", "custom-env"),
+    ("project-c", ".venv"), ("manual", "env"),
+    ("terminal-a", ".venv"), ("terminal-b", ".venv"),
+]:
     root = base / name
     root.mkdir(exist_ok=True)
     subprocess.run([sys.executable, "-m", "venv", "--without-pip", str(root / sub)], check=True)
-    if name == "manual":
+    if name == "manual" or name.startswith("terminal-"):
         continue
     (root / ".env").write_text(f"DOTFILES_TARGET={name}\n")
     (root / "uv.lock").write_text("version = 1\n")

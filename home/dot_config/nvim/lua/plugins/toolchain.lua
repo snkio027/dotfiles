@@ -244,19 +244,52 @@ return {
   {
     "mrcjkb/rustaceanvim",
     optional = true,
-    opts = {
-      server = {
+    init = function()
+      -- LazyVim later replaces opts.dap when configuring Mason's adapter.
+      -- Its native keep-merge preserves this early global setting.
+      vim.g.rustaceanvim = vim.tbl_deep_extend("force", vim.g.rustaceanvim or {}, {
+        dap = { autoload_configurations = false },
+      })
+    end,
+    opts = function(_, opts)
+      opts.dap = opts.dap or {}
+      -- Eagerly compiling every generic runnable can overwrite the artifact
+      -- built with a symbol's project features. Compile on explicit debug only.
+      opts.dap.autoload_configurations = false
+      opts.server = opts.server or {}
+      local auto_attach = opts.server.auto_attach
+      opts.server = vim.tbl_deep_extend("force", opts.server, {
         cmd = { rust_prefix .. "/bin/rust-analyzer" },
+        settings = require("config.rust_context").settings,
         default_settings = {
           ["rust-analyzer"] = {
+            cargo = { allFeatures = false },
             check = {
               command = "clippy",
               allTargets = true,
             },
           },
         },
-      },
-    },
+      })
+      opts.server.auto_attach = function(buf)
+        require("config.rust_clients").setup()
+        if type(auto_attach) == "function" then
+          return auto_attach(buf)
+        end
+        return auto_attach ~= false
+      end
+    end,
+  },
+
+  {
+    "nvim-neotest/neotest",
+    optional = true,
+    opts = function(_, opts)
+      if opts.adapters["rustaceanvim.neotest"] then
+        opts.adapters["rustaceanvim.neotest"] = false
+        table.insert(opts.adapters, require("config.rust_neotest").adapter())
+      end
+    end,
   },
 
   -- Route configure/build/run output through the same task panel used by
@@ -268,6 +301,7 @@ return {
     config = function(_, opts)
       require("cmake-tools").setup(opts)
       require("config.cmake_workflow").setup()
+      require("config.cmake_native_workflow").setup()
     end,
     keys = {
       { "<leader>ob", "<cmd>CMakeBuild<cr>", desc = "Build (CMake)" },
@@ -275,6 +309,7 @@ return {
       { "<leader>ot", "<cmd>CMakeBuildTest<cr>", desc = "Build and Test (CMake)" },
       { "<leader>oD", "<cmd>CMakeDebug<cr>", desc = "Build and Debug Target (CMake)" },
       { "<leader>oT", "<cmd>CMakeSelectTestPreset<cr>", desc = "Select Test Preset (CMake)" },
+      { "<leader>oW", "<cmd>CMakeWorkflow<cr>", desc = "Native Workflow Preset (CMake)" },
       { "<leader>oc", "<cmd>CMakeGenerate<cr>", desc = "Configure (CMake)" },
       { "<leader>os", "<cmd>CMakeSelectLaunchTarget<cr>", desc = "Select Run Target (CMake)" },
       { "<leader>oa", "<cmd>CMakeLaunchArgs<cr>", desc = "Run Arguments (CMake)" },

@@ -91,10 +91,15 @@ assert_container_state() {
             "+luafile tests/nvim/run_contract.lua" || exit "$?"
         nvim -n --headless "+lua vim.g.dotfiles_contract_file = 'tests/nvim/smoke.lua'" \
             "+luafile tests/nvim/run_contract.lua" || exit "$?"
-        for contract in cmake_test_debug zig_debug workflow_ui; do
+        for contract in cmake_test_debug zig_debug workflow_ui cmake_native_workflow task_output rust_workflow zig_workflow zig_build_workflow zig_build_boundaries zig_debug_concurrency zig_runner; do
             nvim -n --headless "+lua vim.g.dotfiles_contract_file = 'tests/nvim/$contract.lua'" \
                 "+luafile tests/nvim/run_contract.lua" || exit "$?"
         done
+        nvim -n --headless "+lua vim.g.dotfiles_contract_file = 'tests/nvim/rust_scope_contract.lua'" \
+            "+luafile tests/nvim/run_contract.lua" || exit "$?"
+        nvim -u NONE -n -i NONE --headless "+set rtp^=$PWD/home/dot_config/nvim" "+lua vim.g.dotfiles_contract_file = 'tests/nvim/rust_context_contract.lua'" "+luafile tests/nvim/run_contract.lua" || exit "$?"
+        nvim -u NONE -n -i NONE --headless "+set rtp^=$PWD/home/dot_config/nvim" "+lua vim.g.dotfiles_contract_file = 'tests/nvim/rust_clients_contract.lua'" "+luafile tests/nvim/run_contract.lua" || exit "$?"
+        nvim -u NONE -n -i NONE --headless "+set rtp^=$PWD/home/dot_config/nvim" "+lua vim.g.dotfiles_contract_file = 'tests/nvim/rust_neotest_contract.lua'" "+luafile tests/nvim/run_contract.lua" || exit "$?"
         workflow_deps="$(mktemp -d)" || exit "$?"
         uv pip install --no-config --no-python-downloads --python "$(command -v python3)" \
             --target "$workflow_deps" 'pytest==9.0.3' || exit "$?"
@@ -123,7 +128,7 @@ assert_container_state() {
         cat "$nvim_log" >&2
         fail "Neovim warm smoke did not complete"
     }
-    for marker in CMAKE_TEST_DEBUG_COMPLETE ZIG_DEBUG_COMPLETE WORKFLOW_UI_COMPLETE PYTHON_WORKFLOW_COMPLETE; do
+    for marker in CMAKE_TEST_DEBUG_COMPLETE ZIG_DEBUG_COMPLETE WORKFLOW_UI_COMPLETE PYTHON_WORKFLOW_COMPLETE PYTHON_TERMINAL_COMPLETE CMAKE_NATIVE_WORKFLOW_COMPLETE TASK_OUTPUT_COMPLETE RUST_WORKFLOW_COMPLETE RUST_SCOPE_COMPLETE RUST_CONTEXT_COMPLETE RUST_CLIENTS_COMPLETE ZIG_WORKFLOW_COMPLETE ZIG_BUILD_WORKFLOW_COMPLETE ZIG_BUILD_BOUNDARIES_COMPLETE ZIG_DEBUG_CONCURRENCY_COMPLETE ZIG_RUNNER_COMPLETE RUST_NEOTEST_COMPLETE; do
         grep -Fq "$marker" "$nvim_log" || fail "Development workflow contract incomplete: $marker"
     done
     grep -Fq "Mason recovery contract passed:" "$nvim_log" || fail "Mason recovery contract did not complete"

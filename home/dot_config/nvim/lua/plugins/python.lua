@@ -42,9 +42,27 @@ return {
   },
   {
     "linux-cultist/venv-selector.nvim",
+    init = function()
+      vim.api.nvim_create_user_command("PythonProjectTerminal", function()
+        context.terminal()
+      end, { desc = "Open terminal with the current Python project's environment" })
+    end,
     config = function(_, opts)
       context.setup_selector(opts)
     end,
+  },
+  {
+    "folke/snacks.nvim",
+    keys = {
+      {
+        "<leader>fP",
+        function()
+          context.terminal()
+        end,
+        desc = "Terminal (Python Project Environment)",
+        ft = "python",
+      },
+    },
   },
   {
     "nvim-neotest/neotest",
