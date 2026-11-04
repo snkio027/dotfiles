@@ -1,6 +1,7 @@
 -- Resolve tools from their target project, never the last globally activated venv.
 local M = {}
 local selections = {}
+local explicit_choices = {}
 local automatic = {}
 local activating = false
 local markers = { "pyproject.toml", "setup.cfg", "mypy.ini", "pytest.ini", "setup.py", "uv.lock", ".git" }
@@ -78,6 +79,9 @@ function M.remember(python, kind, buf, explicit)
     return 0
   end
   selections[root] = { python = python, kind = kind, source = "selected" }
+  if explicit then
+    explicit_choices[root] = { python = python, kind = kind }
+  end
   return 0
 end
 
@@ -154,10 +158,27 @@ end
 function M.setup_selector(opts)
   local selector = require("venv-selector")
   selector.setup(opts)
+  local project_root = require("venv-selector.project_root")
+  local key_for_buf = project_root.key_for_buf
+  project_root.key_for_buf = function(buf, markers)
+    buf = buf or vim.api.nvim_get_current_buf()
+    if
+      vim.api.nvim_buf_is_valid(buf)
+      and vim.bo[buf].buftype == ""
+      and vim.bo[buf].filetype == "python"
+      and vim.api.nvim_buf_get_name(buf) ~= ""
+    then
+      -- Generic clients such as Copilot can share an unrelated cwd across projects.
+      -- Cache saves and restores must use the same target root as Python tools.
+      return M.root(buf)
+    end
+    return key_for_buf(buf, markers)
+  end
   local deactivate = selector.deactivate
   selector.deactivate = function()
     local root = M.root(0)
     selections[root] = false
+    explicit_choices[root] = false
     automatic[root] = nil
     return deactivate()
   end
@@ -166,10 +187,19 @@ function M.setup_selector(opts)
   local venv = require("venv-selector.venv")
   local activate = venv.activate_for_buffer
   venv.activate_for_buffer = function(python, kind, buf, activation_opts)
+    kind = kind or "venv"
+    local explicit = not activation_opts or activation_opts.save_cache ~= false
+    if not explicit and buf and vim.api.nvim_buf_is_valid(buf) then
+      local choice = explicit_choices[M.root(buf)]
+      -- A queued cache restore must not undo a newer user choice or deactivation.
+      -- Reject it before the plugin changes PATH, buffer state or LSP/DAP hooks.
+      if choice == false or (choice and (choice.python ~= python or choice.kind ~= kind)) then
+        return false
+      end
+    end
     local same = selector.python() == python
     local result = activate(python, kind, buf, activation_opts)
     if result then
-      local explicit = not activation_opts or activation_opts.save_cache ~= false
       M.remember(python, kind, buf, explicit)
       if same and explicit and buf and vim.api.nvim_buf_is_valid(buf) then
         vim.b[buf].venv_selector_last_python = python

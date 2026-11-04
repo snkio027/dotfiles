@@ -1,5 +1,6 @@
 -- Run with the isolated full-config runner and pre-created, offline fixtures.
 -- See python_workflow_fixtures.py; no package installation occurs in this test.
+local test_dir = vim.fs.dirname(vim.fn.fnamemodify(debug.getinfo(1, "S").source:sub(2), ":p"))
 local fixture_path = assert(vim.env.DOTFILES_PYTHON_FIXTURES, "DOTFILES_PYTHON_FIXTURES is required")
 local fixture = assert(vim.uv.fs_realpath(fixture_path))
 local a, b, c = fixture .. "/project-a", fixture .. "/project-b", fixture .. "/project-c"
@@ -372,6 +373,8 @@ vim.fn.mkdir(missing, "p")
 vim.fn.writefile({ "version = 1" }, missing .. "/uv.lock")
 local resolved, err = context.resolve(missing)
 assert(resolved == nil and err:find("unavailable", 1, true), "missing environment silently fell back")
+dofile(test_dir .. "/python_selection_order.lua")
+dofile(test_dir .. "/python_selection_scope.lua")
 print("PYTHON_WORKFLOW_EVIDENCE " .. vim.json.encode(evidence))
 io.stdout:write("PYTHON_WORKFLOW_COMPLETE\n")
 io.stdout:flush()
