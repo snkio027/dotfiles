@@ -44,3 +44,16 @@ for _, buf in ipairs(vim.api.nvim_list_bufs()) do
     require("config.cpp_dependency").protect(buf)
   end
 end
+
+vim.api.nvim_create_user_command("ProjectTools", function()
+  require("config.project_tools").open(vim.api.nvim_get_current_buf())
+end, { desc = "Inspect this file's language services, formatting and project context" })
+
+vim.api.nvim_create_user_command("RustRunnableInfo", function()
+  require("config.rust_runnable_info").inspect(vim.api.nvim_get_current_buf())
+end, { desc = "Inspect native Rust runnable parameters without executing them" })
+
+vim.api.nvim_create_user_command("ClangdProjectRefresh", function()
+  local ok, message = require("config.clangd_status").refresh(vim.api.nvim_get_current_buf())
+  vim.notify(message, ok and vim.log.levels.INFO or vim.log.levels.WARN, { title = "C/C++ project" })
+end, { desc = "Refresh only the clangd attached to this project's source file" })
