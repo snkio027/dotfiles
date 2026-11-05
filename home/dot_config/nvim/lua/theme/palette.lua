@@ -11,28 +11,28 @@ function M.resolve(c)
   local code = {
     -- High-frequency semantic axes
     variable = "#C4CAE0",
-    keyword = "#DB8FEE",
-    keyword_function = "#DB8FEE",
-    callable = "#FFB266",
-    type = "#3DD1BB",
-    builtin = "#8FBCE6",
-    member = "#F29BC1",
+    keyword = "#C792EA",
+    keyword_function = "#C792EA",
+    callable = "#F2B77E",
+    type = "#4DD6B0",
+    builtin = "#84DC8B",
+    member = "#ECA1BD",
 
     -- Secondary semantic structure
-    lifetime = "#67D4C7",
-    parameter = "#CBB79A",
+    lifetime = "#91E0DA",
+    parameter = "#E0B9AF",
     meta = "#FF8F7D",
-    namespace = "#79AAFF",
-    string = "#B8D07A",
+    namespace = "#7198E8",
+    string = "#ABD08B",
     number = "#F2D675",
     constant = "#F2D675",
 
     -- Micro-syntax and prose
     label = "#8E98B8",
-    operator = "#A7B5CC",
+    operator = "#BAC4D6",
     punctuation = "#8991A8",
     comment = "#8490AE",
-    doc = "#AAA67A",
+    doc = "#A6A0BD",
   }
 
   local ui = {

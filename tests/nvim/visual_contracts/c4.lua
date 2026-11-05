@@ -111,24 +111,24 @@ end
 -- Independent design oracle: never read expected HEX values from production.
 local expected_code = {
 	variable = "#C4CAE0",
-	keyword = "#DB8FEE",
-	keyword_function = "#DB8FEE",
-	callable = "#FFB266",
-	type = "#3DD1BB",
-	builtin = "#8FBCE6",
-	member = "#F29BC1",
-	lifetime = "#67D4C7",
-	parameter = "#CBB79A",
+	keyword = "#C792EA",
+	keyword_function = "#C792EA",
+	callable = "#F2B77E",
+	type = "#4DD6B0",
+	builtin = "#84DC8B",
+	member = "#ECA1BD",
+	lifetime = "#91E0DA",
+	parameter = "#E0B9AF",
 	meta = "#FF8F7D",
-	namespace = "#79AAFF",
-	string = "#B8D07A",
+	namespace = "#7198E8",
+	string = "#ABD08B",
 	number = "#F2D675",
 	constant = "#F2D675",
 	label = "#8E98B8",
-	operator = "#A7B5CC",
+	operator = "#BAC4D6",
 	punctuation = "#8991A8",
 	comment = "#8490AE",
-	doc = "#AAA67A",
+	doc = "#A6A0BD",
 }
 
 local function verify_fixed_palette(code)
@@ -146,24 +146,26 @@ local function verify_fixed_palette(code)
 end
 
 local must_separate = {
-	{ "keyword_function", "namespace", 0.12 },
+	{ "keyword_function", "namespace", 0.11 },
 	{ "namespace", "type", 0.11 },
-	{ "type", "builtin", 0.10 },
-	{ "builtin", "parameter", 0.11 }, -- Warm sand separates parameters from pale-blue builtins (0.1227).
-	{ "variable", "member", 0.12 },
-	{ "variable", "string", 0.14 },
+	{ "type", "builtin", 0.06 },
+	{ "builtin", "parameter", 0.11 }, -- Rose-beige parameters remain separate from green builtins (0.1642).
+	{ "variable", "member", 0.10 },
+	{ "variable", "string", 0.12 },
 	{ "callable", "constant", 0.04 },
 	{ "callable", "number", 0.065 },
 }
 
 local should_separate = {
-	{ "builtin", "string", 0.15 }, -- Approved pale blue must stay distinct from yellow-green strings.
+	{ "builtin", "string", 0.04 },
 	{ "meta", "keyword", 0.10 },
 }
 
--- E fixes Type/Lifetime at distance 0.0342: the old 0.07 SHOULD-SEPARATE
--- requirement is not met. Preserve both fixed colors; Rust human review remains
--- pending. This is an accepted palette proximity, not proof of distinguishability.
+-- The approved green family intentionally brings type/builtin (0.0658) and
+-- builtin/string (0.0507) closer than the previous blue-builtin palette.
+-- The softer member/string colors also sit closer to the neutral body. These
+-- regression bounds preserve that choice; they do not prove distinguishability.
+-- Type/lifetime now separate by 0.0877; the earlier 0.0342 proximity no longer applies.
 
 local intentional_near = {
 	{ "variable", "parameter", 0.02, 0.10 },
@@ -269,13 +271,12 @@ local function verify_policy(context)
 		if state_values[hex:lower()] then
 			fail(("E_SOURCE_STATE: code.%s reuses %s"):format(name, hex))
 		end
-		-- E's teal Type also meets this coarse RGB heuristic (G - B = 22).
-		if name ~= "string" and name ~= "type" and is_green_dominant(hex) then
-			fail(("E admits green dominance only for type/string, found code.%s (%s)"):format(name, hex))
+		if name ~= "string" and name ~= "type" and name ~= "builtin" and is_green_dominant(hex) then
+			fail(("E admits green dominance only for type/builtin/string, found code.%s (%s)"):format(name, hex))
 		end
 	end
-	if is_green_dominant(code.builtin) or not is_green_dominant(code.string) then
-		fail("E builtin must be pale blue while strings remain yellow-green")
+	if not is_green_dominant(code.builtin) or not is_green_dominant(code.string) then
+		fail("E_GREEN_FAMILY: builtin and string must retain their approved green hues")
 	end
 
 	assert_eq(palette.state.success:lower(), host_colors.sky:lower(), "state.success must remain Catppuccin Sky")
@@ -305,15 +306,15 @@ local function verify_policy(context)
 		fail("DxMember and DxParameter must remain subordinate to DxVariable")
 	end
 
-	assert_ratio_range("DxKeyword", ratios.keyword, 7.2, 7.7)
-	assert_ratio_range("DxFunctionKeyword", ratios.keyword_function, 7.2, 7.7)
+	assert_ratio_range("DxKeyword", ratios.keyword, 6.8, 7.4)
+	assert_ratio_range("DxFunctionKeyword", ratios.keyword_function, 6.8, 7.4)
 	assert_ratio_range("DxCallable", ratios.callable, 9.3, 9.9)
-	assert_ratio_range("DxType", ratios.type, 8.7, 9.2)
-	assert_ratio_range("DxBuiltin", ratios.builtin, 8.4, 9.0)
-	assert_ratio_range("DxLifetime", ratios.lifetime, 9.3, 9.9)
+	assert_ratio_range("DxType", ratios.type, 9.1, 9.7)
+	assert_ratio_range("DxBuiltin", ratios.builtin, 9.9, 10.5)
+	assert_ratio_range("DxLifetime", ratios.lifetime, 11.0, 11.6)
 	assert_ratio_range("DxMember", ratios.member, 8.0, 8.6)
-	assert_ratio_range("DxParameter", ratios.parameter, 8.5, 9.2)
-	assert_ratio_range("DxNamespace", ratios.namespace, 7.1, 7.6)
+	assert_ratio_range("DxParameter", ratios.parameter, 9.2, 9.8)
+	assert_ratio_range("DxNamespace", ratios.namespace, 5.7, 6.3)
 	assert_ratio_range("DxMeta", ratios.meta, 7.4, 8.0)
 	assert_ratio_range("DxString", ratios.string, 9.7, 10.3)
 	assert_ratio_range("DxNumber", ratios.number, 11.6, 12.1)
@@ -322,9 +323,15 @@ local function verify_policy(context)
 	assert_ratio_range("DxPunctuation", ratios.punctuation, 5.3, 5.8)
 	assert_ratio_range("DxComment", ratios.comment, 5.1, 5.6)
 	assert_ratio_range("DxDocComment", ratios.doc, 6.6, 7.1)
-	assert_ratio_range("DxOperator", ratios.operator, 8.0, 8.4)
-	if ratios.operator >= math.min(ratios.callable, ratios.type) then
-		fail("DxOperator must remain subordinate to callable/type foregrounds")
+	assert_ratio_range("DxOperator", ratios.operator, 9.4, 10.0)
+	-- Cold silver is brighter than the previous operator gray and can exceed
+	-- callable/type contrast; retain a neutral hue and keep it below body text.
+	if not (ratios.punctuation < ratios.operator and ratios.operator < ratios.variable) then
+		fail("Operator hierarchy must satisfy DxPunctuation < DxOperator < DxVariable")
+	end
+	local operator_r, operator_g, operator_b = hex_to_rgb(code.operator)
+	if not (operator_r < operator_g and operator_g < operator_b) or operator_b - operator_r > 48 then
+		fail("E_OPERATOR_HUE: cold silver must remain a slightly blue neutral")
 	end
 	if not (ratios.comment < ratios.doc and ratios.doc < ratios.variable) then
 		fail("Prose hierarchy must satisfy DxComment < DxDocComment < DxVariable")
@@ -349,14 +356,14 @@ local function verify_policy(context)
 	local type_r, type_g, type_b = hex_to_rgb(code.type)
 	local callable_r, _, callable_b = hex_to_rgb(code.callable)
 	if
-		keyword_r - keyword_g < 60
-		or keyword_b - keyword_r < 10
-		or function_r - function_g < 60
-		or function_b - function_r < 10
+		keyword_r - keyword_g < 40
+		or keyword_b - keyword_r < 25
+		or function_r - function_g < 40
+		or function_b - function_r < 25
 		or namespace_b - namespace_r < 100
 		or namespace_b - namespace_g < 60
 		or type_g <= type_b
-		or type_b - type_r < 100
+		or type_b - type_r < 90
 		or callable_r - callable_b < 100
 	then
 		fail("E_COLOR_AXES: shared purple grammar / blue namespace / teal type / orange callable required")
@@ -377,17 +384,20 @@ end
 function M.verify_negative_controls(context)
 	local cases = {
 		{
-			name = "old_lavender_parameter",
+			name = "merged_builtin_parameter",
 			expected = "MUST-SEPARATE pairing builtin/parameter",
+			verify = function(candidate)
+				verify_pairings(candidate.palette.code)
+			end,
 			mutate = function(palette)
-				palette.code.parameter = "#C8B2E3"
+				palette.code.parameter = palette.code.builtin
 			end,
 		},
 		{
-			name = "old_green_builtin",
-			expected = "E admits green dominance only",
+			name = "old_blue_builtin",
+			expected = "E_GREEN_FAMILY:",
 			mutate = function(palette)
-				palette.code.builtin = "#9ECE6A"
+				palette.code.builtin = "#8FBCE6"
 			end,
 		},
 		{
@@ -482,8 +492,8 @@ function M.verify_negative_controls(context)
 			verify = M.verify,
 			mutate = function(palette)
 				-- Preserve sharing and relational bounds; only the exact E oracle rejects this.
-				palette.code.keyword = "#DC90EF"
-				palette.code.keyword_function = "#DC90EF"
+				palette.code.keyword = "#C893EB"
+				palette.code.keyword_function = "#C893EB"
 			end,
 		},
 		{
@@ -493,12 +503,12 @@ function M.verify_negative_controls(context)
 				verify_fixed_palette(candidate.palette.code)
 			end,
 			mutate = function(palette)
-				palette.code.keyword_function = "#DC90EF"
+				palette.code.keyword_function = "#C893EB"
 			end,
 		},
 		{
 			name = "bad_grammar_namespace_swap",
-			expected = "E_COLOR_AXES:",
+			expected = "E_CONTRAST: DxKeyword",
 			mutate = function(palette)
 				palette.code.keyword, palette.code.namespace = palette.code.namespace, palette.code.keyword
 				palette.code.keyword_function = palette.code.keyword
