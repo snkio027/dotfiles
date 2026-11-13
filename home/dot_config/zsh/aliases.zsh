@@ -9,15 +9,15 @@ alias ..="cd .."
 alias ...="cd ../.."
 alias ....="cd ../../../.."
 
-# --- 1.5 个人标准 7 大工作区快速导航 (Workspace Shortcuts) ---
+# --- 1.5 工作区导航：保留已有快捷键，分类目录统一小写 ---
 alias ws="cd ~/Workspace"
-alias w1="cd ~/Workspace/01_Vault"
-alias w2="cd ~/Workspace/02_Platform"
-alias w3="cd ~/Workspace/03_Projects"
-alias w4="cd ~/Workspace/04_Lab"
-alias w5="cd ~/Workspace/05_Architecture"
-alias w6="cd ~/Workspace/06_Data"
-alias w7="cd ~/Workspace/07_Archive"
+alias w1="cd ~/Workspace/vault"
+alias w2="cd ~/Workspace/projects/local-infrastructure"
+alias w3="cd ~/Workspace/projects"
+alias w4="cd ~/Workspace/lab"
+alias w5="cd ~/Workspace/projects/knowledge-base/architecture"
+alias w6="cd ~/Workspace/data"
+alias w7="cd ~/Workspace/archive"
 
 # --- 2. 现代 Rust CLI 工具链映射 ---
 if command -v eza &>/dev/null; then
@@ -267,7 +267,7 @@ function cze() {
     [[ -n "$target" ]] && chezmoi edit "$target"
 }
 function dataclean() {
-    local scratch="$HOME/Workspace/06_Data/scratch"
+    local scratch="$HOME/Workspace/data/scratch"
     [[ -d "$scratch" ]] || { print -u2 "目录不存在: $scratch"; return 1; }
     read -q "REPLY?确认清空 $scratch？[y/N] " || { print; return 1; }
     print
