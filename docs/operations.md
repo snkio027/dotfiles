@@ -328,6 +328,10 @@ Quiet Ops Prompt 将第一行留给位置与 Git 状态，第二行留给命令�
 | `dotenv [file]` | 导出 `.env` 的字面量赋值；支持空值、整行注释和成对引号，拒绝命令替换、续行与非法键名 |
 | `reload` | 重新加载 Zsh 配置 |
 
+工作区保留 `~/Workspace`，主要分类使用小写：`projects` 放持续维护的项目，`lab` 放具体学习和实验，`vault` 放敏感资料，`data` 放独立的大文件与运行数据，`archive` 放明确结束的内容。项目自己的设计文档、部署配置和小型测试样本随项目保存；不预建空的实验分类，也不统一重命名现有仓库及其内部文件。
+
+`ws` 进入工作区；已有 `w1`、`w3`、`w4`、`w6`、`w7` 分别进入 `vault`、`projects`、`lab`、`data`、`archive`。`w2` 进入基础设施工作目录 `projects/local-infrastructure`，`w5` 进入知识库设计资料 `projects/knowledge-base/architecture`；SQL 面试练习放在 `lab/sql-interview`。顶层不再保留 `platform`、`architecture`、`interview` 分类；已有材料保留内部结构，不自动去重或归档。`dataclean` 仍需交互确认，只清理 `~/Workspace/data/scratch`；目录迁移不通过 `chezmoi apply` 自动执行。
+
 ### Neovim 导航与检索
 
 | 快捷键 | 功能 |
