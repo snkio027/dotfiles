@@ -22,6 +22,8 @@ MonoLisa 为用户自行安装的授权字体，字号 `17.5` 是本机显示设
 
 ## 开始使用
 
+第一次配置个人 Apple Silicon Mac，请跟随[新 Mac 从零部署指南](docs/new-mac-setup.md)，从开机设置一直做到 GitHub 认证和提交验签。
+
 这是个人工作站配置，不是无副作用的主题安装包。部署前请阅读[初始化与平台边界](docs/operations.md#初始化)及 [SSH 与提交签名](docs/operations.md#ssh-与提交签名)。
 
 初始化和 apply 会安装缺失依赖、配置 Git / SSH 与 hooks；macOS 还会应用系统偏好。请先检查现有配置、身份信息、字体和功能开关，尤其是 `home/.chezmoiscripts/` 中的脚本。
