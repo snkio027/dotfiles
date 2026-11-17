@@ -7,7 +7,7 @@ automation = "ci"
 [profiles.workstation]
 description = "完整个人工作站；包含 core、交互式 CLI、质量工具及 macOS GUI/字体"
 automation = "manual-boundary"
-boundary = "CLI 可自动安装；1Password、OrbStack、GUI、字体及授权 MonoLisa 需要真实 macOS 主机或人工验证"
+boundary = "CLI 可自动安装；Proton Pass、OrbStack、GUI、字体及授权 MonoLisa 需要真实 macOS 主机或人工验证"
 
 [profiles.devcontainer]
 description = "完整非 root Dev Container；保持 Linux 工作站 CLI 与语言工具集合"
@@ -458,14 +458,6 @@ description = "CI Dev Container lifecycle 客户端"
 
 [[tools]]
 kind = "cask"
-name = "1password-cli"
-owner = "workstation"
-profiles = ["workstation"]
-conditions = { workstation = "mac" }
-description = "1Password CLI"
-
-[[tools]]
-kind = "cask"
 name = "ghostty"
 owner = "workstation"
 profiles = ["workstation", "quality"]
@@ -474,11 +466,11 @@ description = "macOS 终端与配置验证"
 
 [[tools]]
 kind = "cask"
-name = "1password"
+name = "proton-pass"
 owner = "workstation"
 profiles = ["workstation"]
 conditions = { workstation = "mac" }
-description = "密码管理器与 SSH Agent"
+description = "Proton Pass 桌面密码管理器"
 
 [[tools]]
 kind = "cask"

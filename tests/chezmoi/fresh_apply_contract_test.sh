@@ -17,9 +17,9 @@ BUNDLE_TEMPLATE="$REPO_ROOT/home/.chezmoiscripts/run_onchange_after_20_brew_bund
 UV_TEMPLATE="$REPO_ROOT/home/.chezmoiscripts/run_onchange_after_30_uv_tools.sh.tmpl"
 IDENTITY_TEMPLATE="$REPO_ROOT/home/.chezmoiscripts/run_once_after_20_git_identity.sh.tmpl"
 HOOK_TEMPLATE="$REPO_ROOT/home/.chezmoiscripts/run_onchange_after_50_install_git_hooks.sh.tmpl"
-LINUX_DATA='{"is_mac":false,"is_linux":true,"is_arm64":false,"machine_profile":"workstation","email":"fresh-apply@example.com","features":{"use_1password":false}}'
-MACOS_ARM_DATA='{"is_mac":true,"is_linux":false,"is_arm64":true,"machine_profile":"workstation","email":"fresh-apply@example.com","features":{"use_1password":false}}'
-MACOS_INTEL_DATA='{"is_mac":true,"is_linux":false,"is_arm64":false,"machine_profile":"workstation","email":"fresh-apply@example.com","features":{"use_1password":false}}'
+LINUX_DATA='{"is_mac":false,"is_linux":true,"is_arm64":false,"machine_profile":"workstation","email":"fresh-apply@example.com"}'
+MACOS_ARM_DATA='{"is_mac":true,"is_linux":false,"is_arm64":true,"machine_profile":"workstation","email":"fresh-apply@example.com"}'
+MACOS_INTEL_DATA='{"is_mac":true,"is_linux":false,"is_arm64":false,"machine_profile":"workstation","email":"fresh-apply@example.com"}'
 
 INSTALL_SCRIPT="$TEST_ROOT/install-brew.sh"
 BUNDLE_SCRIPT="$TEST_ROOT/brew-bundle.sh"
@@ -69,7 +69,9 @@ assert_platform_paths() {
     grep -Fq "BREW_PREFIX=\"$prefix\"" "$install"
     grep -Fq "BREW_BIN=\"$prefix/bin/brew\"" "$bundle"
     grep -Fq "UV_BIN=\"$prefix/bin/uv\"" "$uv"
-    grep -Fq "GH_BIN=\"$prefix/bin/gh\"" "$identity"
+    if [ "$name" = linux ]; then
+        grep -Fq "GH_BIN=\"$prefix/bin/gh\"" "$identity"
+    fi
     grep -Fq "GITLEAKS_BIN=\"$prefix/bin/gitleaks\"" "$hook"
 }
 

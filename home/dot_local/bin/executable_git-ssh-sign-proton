@@ -1,0 +1,8 @@
+#!/bin/sh
+# GUI Git clients may start outside Zsh. Select the same agent as OpenSSH.
+export SSH_AUTH_SOCK="$HOME/.ssh/proton-pass-ssh-agent.sock"
+if [ "${1:-}" = "-Y" ] && [ "${2:-}" = "sign" ]; then
+    # Only use the agent even if a private key exists beside the public file.
+    set -- -U "$@"
+fi
+exec /usr/bin/ssh-keygen "$@"

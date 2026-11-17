@@ -82,7 +82,7 @@ fi
 
 # A failed status observation must never be reported as a clean chezmoi state.
 chezmoi execute-template --source="$REPO_ROOT" \
-    --override-data '{"machine_profile":"devcontainer","features":{"use_1password":false}}' \
+    --override-data '{"machine_profile":"devcontainer"}' \
     <"$DOCTOR_TEMPLATE" >"$DOCTOR_SCRIPT"
 
 mkdir -p "$TEST_ROOT/doctor-bin"

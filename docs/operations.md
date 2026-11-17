@@ -10,7 +10,7 @@
 chezmoi init --apply https://github.com/snkio027/dotfiles
 ```
 
-初始化会询问 Git 姓名和邮箱，安装 Homebrew/Linuxbrew，并按机器类型安装 `workstation` 或 `devcontainer` profile 的缺失依赖，配置 SSH 签名与 gitleaks hook；macOS workstation 还会安装 Ghostty 并应用键盘、Finder、Dock 和截图偏好。日常 `chezmoi apply` 不更新 Homebrew 元数据、不主动批量升级已安装工具，也不会因 Ghostty 配置变化而重新应用 macOS defaults；安装新依赖所必需的依赖链升级仍由 Homebrew 决定，Homebrew 全量更新由 `brewup` 显式触发。Linux 使用现有终端模拟器，只部署跨平台的 Shell、TUI 与 Neovim 配置。本地新建的长期 SSH key 必须由用户设置口令；启用 1Password Agent 时不会生成磁盘私钥。
+初始化会询问 Git 姓名和邮箱，安装 Homebrew/Linuxbrew，并按机器类型安装 `workstation` 或 `devcontainer` profile 的缺失依赖，配置 SSH 签名与 gitleaks hook；macOS workstation 还会安装 Ghostty 并应用键盘、Finder、Dock 和截图偏好。日常 `chezmoi apply` 不更新 Homebrew 元数据、不主动批量升级已安装工具，也不会因 Ghostty 配置变化而重新应用 macOS defaults；安装新依赖所必需的依赖链升级仍由 Homebrew 决定，Homebrew 全量更新由 `brewup` 显式触发。Linux 使用现有终端模拟器，只部署跨平台的 Shell、TUI 与 Neovim 配置。macOS 工作站使用 Proton Pass 桌面应用中的个人 SSH key，首次部署按[SSH 与提交签名](#ssh-与提交签名)准备公钥。Linux 工作站在终端创建本地长期 SSH key 时需设置口令。
 
 Linux 工作站由 Brewfile 显式安装 `/home/linuxbrew/.linuxbrew/bin/zsh`，新建的非登录交互 Shell 也会直接获得 Linuxbrew PATH、FPATH、插件与补全，不依赖 `.zprofile`。安装 Zsh 与选择登录 Shell 是两个独立行为：本仓库不会执行 `chsh` 或修改 `/etc/shells`。需要切换时，应先确认该路径存在，再由用户按发行版要求将它加入 `/etc/shells` 并显式运行 `chsh -s /home/linuxbrew/.linuxbrew/bin/zsh`。
 
@@ -247,13 +247,13 @@ diff -u "$candidate/baseline-lock.json" "$candidate/config/nvim/lazy-lock.json"
 
 ### 工具归属与验证边界
 
-工具 owner 与安装目标是两个维度：每个工具在 `ownership.toml` 中只有一个 owner，但可以进入多个 profile。`core`、`quality` 和 `devcontainer` 均由 Ubuntu CI 真实安装并执行命令探针；macOS CI 还真实安装并验证 Ghostty 与公开字体。完整 `workstation` 中的 1Password、OrbStack、GUI、字体和手工安装的授权 MonoLisa 保留真实主机验证边界，不在无交互 runner 上伪装成已验证。
+工具 owner 与安装目标是两个维度：每个工具在 `ownership.toml` 中只有一个 owner，但可以进入多个 profile。`core`、`quality` 和 `devcontainer` 均由 Ubuntu CI 真实安装并执行命令探针；macOS CI 还真实安装并验证 Ghostty 与公开字体。完整 `workstation` 中的 Proton Pass、OrbStack、GUI、字体和手工安装的授权 MonoLisa 保留真实主机验证边界，不在无交互 runner 上伪装成已验证。
 
 Homebrew 的非官方来源审计目前只有 `hashicorp/tap/terraform`；Brewfile 只信任这个公式，不信任整个 tap、其他 formula、cask 或 command。`brew bundle cleanup` 会把全局 trust store 重置为当前 Brewfile 声明，因此普通 apply 与 CI 均不执行它；维护命令中的显式 cleanup 仍属于用户主动升级边界。PR/push 只用故障注入验证 `brew vulns` 的状态判定、有限重试与 fail-closed 逻辑；schedule/manual 维护任务才真实查询 `quality` 与 `devcontainer` profile，后者包含 `core` 并与 workstation 的 formula 集合一致。维护查询会从受审 Brewfile 读取对象级 trust 声明，在一次性 `XDG_CONFIG_HOME` 中授权后随任务清除，不读取或改写 runner/宿主机的默认 trust store。检查使用 Homebrew 的 OSV formula 数据，cask 与被上游标记为 skipped 的 formula 不在覆盖范围；结果严格区分 `PASS`、`VULNERABLE`、`UNAVAILABLE`，高危发现、无效响应或三次查询仍不可用都会让维护任务告警，但不会因一次外部网络故障阻塞普通 PR。
 
 Icon Contract 固定采用“精确文件名 > 扩展名 > 消费者默认值”的解析顺序。生成器拒绝重复键、非法码点、缺失颜色角色和非单字符宽度 glyph；CI 验证 `72/72` 审计范围、`87/87` 显式消费者映射、`47/72` 真实项目观察与 `45/45` 唯一 glyph 字体覆盖，并解析 Neovim 最终 highlight RGB。eza 的未知无扩展名文件、空目录、`.github` 与 `build` 专用图标，以及 `mini.icons` 的对应默认值，明确属于消费者上游观察，不进入 87 项共享映射；两者无法表达的空目录差异不会被假装成已统一。其余 25 类合成 fixture 不表述为真实项目样本；升级 eza 或 `mini.icons` 时只报告上游差异，不自动改写本仓库拥有的契约。
 
-GitHub Actions 会在每次提交验证 Brew ownership/profile 生成结果，真实安装并使用安全可自动化的 `core`、`quality` 与 `devcontainer` profile，同时验证模板、Shell、安全策略、macOS 配置、cxx-init、Dev Container 镜像与完整 lifecycle。常规 bootstrap 只验证仓库固定的 SHA-256，不下载公钥或签名验证器；schedule/manual 维护任务才使用提交 SHA 固定的临时 Cosign Action 复验上游 chezmoi checksum bundle，Cosign 不进入运行时镜像。基础镜像仍会连续解析两次并确认得到同一个多平台对象。macOS GUI/字体只声明真实可覆盖的边界；1Password、OrbStack 与授权 MonoLisa 不做虚假 CI 安装声明。每周一还会从空缓存同步上游最新 Neovim 插件与 Mason 工具，运行语义冒烟测试，并在插件锁落后时提示执行 `devup`。Dependabot 每周更新 GitHub Actions 与 `.devcontainer/Dockerfile` 中的 Docker 镜像；当前没有 Dev Container Features，因此不配置 Feature 专用 updater。
+GitHub Actions 会在每次提交验证 Brew ownership/profile 生成结果，真实安装并使用安全可自动化的 `core`、`quality` 与 `devcontainer` profile，同时验证模板、Shell、安全策略、macOS 配置、cxx-init、Dev Container 镜像与完整 lifecycle。常规 bootstrap 只验证仓库固定的 SHA-256，不下载公钥或签名验证器；schedule/manual 维护任务才使用提交 SHA 固定的临时 Cosign Action 复验上游 chezmoi checksum bundle，Cosign 不进入运行时镜像。基础镜像仍会连续解析两次并确认得到同一个多平台对象。macOS GUI/字体只声明真实可覆盖的边界；Proton Pass 解锁与实际签名、OrbStack 和授权 MonoLisa 的验收需要真实主机。每周一还会从空缓存同步上游最新 Neovim 插件与 Mason 工具，运行语义冒烟测试，并在插件锁落后时提示执行 `devup`。Dependabot 每周更新 GitHub Actions 与 `.devcontainer/Dockerfile` 中的 Docker 镜像；当前没有 Dev Container Features，因此不配置 Feature 专用 updater。
 
 ### 历史视觉研究恢复
 
@@ -551,11 +551,72 @@ git rebase origin/main
 
 ## SSH 与提交签名
 
-- Workstation 默认启用 SSH 提交签名，但不再把所有 GitHub HTTPS URL 全局改写为 SSH；`ghc` 仍显式使用 SSH 克隆。
-- Dev Container 不强制签名、不固定本地 IdentityFile，也不改写 URL，允许使用转发凭据或项目级 Git 配置。
-- 本地模式使用 `~/.ssh/keys/` 下相互独立且有口令的 Ed25519 认证/签名 key；已有无口令 key 不会被脚本自动轮换。
-- 缺少本地 key 时，非交互 `chezmoi apply` 会立即失败并提示操作方式，不会等待 `ssh-keygen` 输入。
-- Fresh apply 在 Brew bundle 后通过确定的 Homebrew/Linuxbrew 入口运行 `gitleaks`，本地磁盘 key 模式也以同样方式运行 `gh`，两者均不依赖父进程 `PATH`。GitHub 目标固定为 `github.com`；`gh` 只在已认证时同步公钥，API 查询或上传失败会保留非零状态以允许 run-once 重试。未认证时会明确说明本次未同步且 run-once 不会自动重试，并输出完整的手动同步命令。`gitleaks` 缺失、不可执行或扫描失败均会非零退出；已有非 chezmoi 管理的 pre-commit hook，以及符号链接或非普通文件均会原样保留并显式告警。
-- 启用 `features.use_1password` 后，SSH 统一使用 1Password Agent 且初始化脚本不生成私钥；导出的 `~/.ssh/keys/git_signing.pub` 会内联为 Git `key::` 配置，并在 apply 时验证 Agent 确实提供同一 key。
-- `git.rewrite_github_https_to_ssh` 是显式 opt-in，默认关闭；可在初始化前通过 `OP_SSH_AUTH_SOCK` 覆盖 1Password Agent socket。
-- 全局 Git ignore 只处理 OS 与编辑器垃圾；依赖缓存、环境文件和 SOPS/age 文件由仓库级 `.gitignore` 与 gitleaks 管理。
+| 环境 | SSH 与 Git 行为 |
+| --- | --- |
+| macOS 工作站 | Proton Pass 桌面应用保存私钥。GitHub SSH 认证和提交签名选择 `~/.ssh/keys/git_signing.pub` 对应的同一把个人钥匙。 |
+| Linux 工作站 | 默认在 `~/.ssh/keys/` 分别保存 `github_auth`、`git_signing`。首次创建 Ed25519 私钥需交互输入非空口令。 |
+| Dev Container | 容器不设置宿主 agent 或固定身份。按需使用转发的凭据或项目自己的签名配置。 |
+
+### 在 macOS 准备 Proton Pass
+
+1. 安装并打开 **Proton Pass** 桌面应用，登录并解锁支持 SSH agent 的账户。已有 Homebrew 时可先运行 `brew install --cask proton-pass`。如果先运行完整 `chezmoi apply`，Brew bundle 会安装应用；身份初始化遇到缺少公钥或 socket 时会停止。完成以下步骤后重新运行 `chezmoi apply`。
+2. 在桌面应用中选定用于此 GitHub 账户的个人 SSH key，然后在 **Settings → General → SSH Agent** 启用 **Use Proton Pass as SSH agent**。支持该功能的订阅和设置界面见 [Proton 官方指南](https://proton.me/support/ssh-agent)。
+3. 从该条目复制 **Public key** 字段。运行 `mkdir -p ~/.ssh/keys`，将这**一行 OpenSSH 公钥**保存为 `~/.ssh/keys/git_signing.pub`。如果文件已存在，先比较指纹；只在确认更换身份时替换。签名私钥始终由 Proton Pass 持有。
+4. 比较下面两条命令中的 `SHA256:` 指纹。第一条应显示一个指纹，且该指纹必须出现在第二条的列表中。桌面应用的 macOS socket 固定为 `~/.ssh/proton-pass-ssh-agent.sock`。[Proton 桌面端实现](https://github.com/ProtonMail/WebClients/blob/4fb2338484ee474aa5690fb17255ac3214ac2822/applications/pass-desktop/native/napi/src/ssh_agent/mod.rs#L435-L440)
+
+```sh
+ssh-keygen -lf ~/.ssh/keys/git_signing.pub
+SSH_AUTH_SOCK="$HOME/.ssh/proton-pass-ssh-agent.sock" ssh-add -l
+```
+
+在 GitHub 的 **Settings → SSH and GPG keys → New SSH key** 检查账户注册状态。缺哪种用途，就把这行**公钥**以对应类型添加一次：**Authentication Key** 用于 SSH 连接，**Signing Key** 用于提交签名。要让 GitHub 显示 Verified，提交者邮箱也应属于该账户的已验证邮箱。[GitHub 公钥注册指南](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account)
+
+### 从 1Password 迁移及验收
+
+当 `chezmoi apply` 提示 Git 签名配置被覆盖时，先检查工作站默认值及来源。`-C /` 排除当前仓库的局部设置。
+
+```sh
+git -C / config --show-origin --get-all gpg.ssh.program
+git -C / config --show-origin --get-all user.signingkey
+git -C / config --show-origin --get-regexp '^(gpg\.format|(commit|tag)\.gpgsign|user\.email)$'
+```
+
+macOS 签名程序应指向 `~/.local/bin/git-ssh-sign-proton`，签名公钥应指向 `~/.ssh/keys/git_signing.pub`。该程序直接连接 Proton Pass 的 socket，并让 OpenSSH 在 agent 内签名，GUI 启动的 Git 也使用同一身份。
+
+旧 `~/.gitconfig` 优先于受管的 XDG Git 配置。如果第一条命令显示该文件仍指定 `op-ssh-sign`，只删除对应旧值。例如，来源和值与下例完全一致时，可运行：
+
+```sh
+git config --file "$HOME/.gitconfig" --fixed-value --unset-all gpg.ssh.program '/Applications/1Password.app/Contents/MacOS/op-ssh-sign'
+```
+
+如果 `~/.gitconfig` 还设置了 `user.signingkey = key::…`，用 `git config --file "$HOME/.gitconfig" --get-all user.signingkey` 列出该文件里的值。如果只有一条，且以 `key::` 开头，读取完整值并核对旧公钥指纹：
+
+```sh
+old_signing_key=$(git config --file "$HOME/.gitconfig" --get user.signingkey)
+printf '%s\n' "${old_signing_key#key::}" | ssh-keygen -lf -
+```
+
+确认后仅移除该文件中与所选值完全相同的条目：
+
+```sh
+git config --file "$HOME/.gitconfig" --fixed-value --unset-all user.signingkey "$old_signing_key"
+```
+
+如果有多个值或出现其他来源，通过 `--show-origin` 找到配置文件，在编辑器中只移除旧个人身份的 `signingkey` 条目。保留工作或项目专用的条件配置。重新运行 `chezmoi apply`，再进入目标仓库执行 `git config --show-origin --get user.signingkey`，确认在那里实际生效的身份。普通个人仓库应使用 Proton 公钥路径、`gpg.format=ssh`，并启用 `commit.gpgsign` 和 `tag.gpgsign`。
+
+用临时仓库创建并验证一条真实的签名提交：
+
+```sh
+sign_test_dir=$(mktemp -d)
+git -C "$sign_test_dir" init -q
+git -C "$sign_test_dir" commit --allow-empty -S -m 'Verify Proton Pass signing'
+git -C "$sign_test_dir" verify-commit HEAD
+```
+
+验收时保持应用解锁。`git verify-commit` 应报告与本机 `allowed_signers` 条目相符的身份、所选公钥的指纹，并以状态 0 退出。要另外验收 GitHub SSH 认证，可运行 `ssh -T git@github.com`，核对欢迎信息中的账户。GitHub 成功认证后会提示不提供 shell，并返回状态 1。[GitHub SSH 连接测试](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/testing-your-ssh-connection)
+
+### Linux 本地密钥与其他默认值
+
+缺少本地认证或签名私钥时，请从交互终端运行 `chezmoi apply` 设置口令。Linux 初始化脚本通过 Brew 管理的 `gh` 检查 `github.com` 登录状态；已认证时同步公钥，查询或上传失败可在下次 apply 重试。尚未认证时脚本输出手动注册命令。
+
+工作站默认启用提交签名，保留 GitHub HTTPS URL；`git.rewrite_github_https_to_ssh` 可显式启用全局改写，`ghc` 自身使用 SSH。全局 Git ignore 处理系统和编辑器文件，项目缓存与环境文件由仓库级 `.gitignore` 管理。工作站的 `gitleaks` hook 使用 Brew 提供的程序，扫描失败会返回非零；已有非受管 hook 会保留并提示。

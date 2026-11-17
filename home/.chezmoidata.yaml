@@ -13,7 +13,5 @@ git:
 
 # 全局功能开关
 features:
-  # 启用后只使用 1Password SSH Agent，不在磁盘生成长期私钥。
-  use_1password: false
   use_starship: true
   use_atuin: true

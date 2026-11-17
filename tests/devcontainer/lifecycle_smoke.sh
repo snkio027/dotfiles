@@ -46,7 +46,7 @@ assert_container_state() {
     if [[ -d "$HOME/.ssh" ]] && find "$HOME/.ssh" -type s -print -quit | grep -q .; then
         fail "An SSH agent socket was mounted under the container home"
     fi
-    if [[ -d "$HOME/.ssh" ]] && find "$HOME/.ssh" -type f \( -name 'id_*' -o -name '*.pem' \) -print -quit | grep -q .; then
+    if [[ -d "$HOME/.ssh" ]] && find "$HOME/.ssh" -type f \( -name 'id_*' -o -name '*.pem' -o -name github_auth -o -name git_signing \) -print -quit | grep -q .; then
         fail "A host-style private key exists in the Dev Container"
     fi
 
@@ -251,7 +251,7 @@ trap 'exit 143' TERM
 command -v docker >/dev/null || fail "docker is unavailable"
 command -v jq >/dev/null || fail "jq is unavailable"
 
-if jq -e '[.. | strings | select(test("SSH_AUTH_SOCK|OP_SSH_AUTH_SOCK|1[Pp]assword|(^|/)\\.ssh(/|$)"))] | length > 0' \
+if jq -e '[.. | strings | select(test("SSH_AUTH_SOCK|1[Pp]assword|proton-pass-ssh-agent|(^|/)\\.ssh(/|$)"))] | length > 0' \
     "$REPO_ROOT/.devcontainer/devcontainer.json" >/dev/null; then
     fail "devcontainer.json must not wire host credentials into the container"
 fi
@@ -306,7 +306,7 @@ INSPECT="$(docker inspect "$FIRST_CONTAINER_ID")"
 if printf '%s' "$INSPECT" | jq -e '.[0].Config.Env | any(test("^(SSH_AUTH_SOCK|OP_SSH_AUTH_SOCK|GH_TOKEN|GITHUB_TOKEN)="))' >/dev/null; then
     fail "A host credential environment variable was persisted in the container"
 fi
-if printf '%s' "$INSPECT" | jq -e '.[0].Mounts | any((.Source + " " + .Destination) | test("(1[Pp]assword|/\\.ssh(/|$)|ssh-auth)"))' >/dev/null; then
+if printf '%s' "$INSPECT" | jq -e '.[0].Mounts | any((.Source + " " + .Destination) | test("(1[Pp]assword|proton-pass-ssh-agent|/\\.ssh(/|$)|ssh-auth)"))' >/dev/null; then
     fail "A host credential path was mounted in the container"
 fi
 

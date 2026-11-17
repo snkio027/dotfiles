@@ -2,7 +2,11 @@
 Host github.com
     HostName github.com
     User git
-{{- if and (ne .machine_profile "devcontainer") (not .features.use_1password) }}
+{{- if ne .machine_profile "devcontainer" }}
+{{- if .is_mac }}
+    IdentityFile ~/.ssh/keys/git_signing.pub
+{{- else }}
     IdentityFile ~/.ssh/keys/github_auth
+{{- end }}
     IdentitiesOnly yes
 {{- end }}

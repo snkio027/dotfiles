@@ -3,19 +3,6 @@
 # 2026 云原生与现代开发标准 | Git >= 2.45, OpenSSH >= 9.x
 # Managed by chezmoi
 # ==============================================================================
-{{- $signing_key := "~/.ssh/keys/git_signing.pub" -}}
-{{- if and (ne .machine_profile "devcontainer") .git.sign_commits .features.use_1password -}}
-{{-   $signing_key_path := joinPath .chezmoi.homeDir ".ssh/keys/git_signing.pub" -}}
-{{-   if not (stat $signing_key_path) -}}
-{{-     fail "1Password signing requires ~/.ssh/keys/git_signing.pub; export the selected 1Password public key, then rerun chezmoi apply" -}}
-{{-   end -}}
-{{-   $signing_key_material := include $signing_key_path | trim -}}
-{{-   if contains "\n" $signing_key_material -}}
-{{-     fail "1Password signing public key must contain exactly one key" -}}
-{{-   end -}}
-{{-   $signing_key = printf "key::%s" $signing_key_material -}}
-{{- end }}
-
 # ==============================================================================
 # 1. 开发者身份与提交签名 (供应链安全溯源)
 # ==============================================================================
@@ -23,7 +10,7 @@
     name = {{ .name | quote }}
     email = {{ .email | quote }}
 {{- if and (ne .machine_profile "devcontainer") .git.sign_commits }}
-    signingkey = {{ $signing_key | quote }}
+    signingkey = ~/.ssh/keys/git_signing.pub
 
 [commit]
     gpgsign = true
@@ -36,6 +23,9 @@
     format = {{ .git.gpg_format }}
 
 [gpg "ssh"]
+{{- if and .is_mac (eq .machine_profile "workstation") }}
+    program = {{ joinPath .chezmoi.homeDir ".local/bin/git-ssh-sign-proton" | quote }}
+{{- end }}
     allowedSignersFile = ~/.ssh/allowed_signers
     revocationFile = ~/.ssh/revoked_signers
 {{- end }}

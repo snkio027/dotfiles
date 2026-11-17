@@ -74,14 +74,13 @@ WORKSTATION_BREWS = {
     "zsh-syntax-highlighting",
 }
 WORKSTATION_CASKS = {
-    "1password",
-    "1password-cli",
     "font-inter",
     "font-jetbrains-mono-nerd-font",
     "font-maple-mono-nf-cn",
     "font-symbols-only-nerd-font",
     "ghostty",
     "orbstack",
+    "proton-pass",
 }
 QUALITY_BREWS = {
     "actionlint",
@@ -170,7 +169,7 @@ if names(contract, "devcontainer", "brew") != WORKSTATION_BREWS:
 if names(contract, "quality", "brew") != QUALITY_BREWS:
     fail("quality formula set drifted from the former CI Brewfile")
 if names(contract, "workstation", "cask") != WORKSTATION_CASKS:
-    fail("workstation cask set drifted from the pre-profile baseline")
+    fail("workstation cask set drifted from the expected baseline")
 if names(contract, "devcontainer", "cask"):
     fail("Dev Container profile must not contain GUI casks")
 if names(contract, "quality", "cask") != QUALITY_CASKS:

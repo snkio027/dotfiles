@@ -139,19 +139,12 @@ echo ""
 # ------------------------------------------------------------------------------
 echo -e "${BOLD}${BLUE}[2/5] Security & Credentials Plane${RESET}"
 
-{{- if .features.use_1password }}
-if [ -n "${OP_SSH_AUTH_SOCK:-}" ]; then
-    OP_SOCK="$OP_SSH_AUTH_SOCK"
-elif [ "$OS_TYPE" = "Darwin" ]; then
-    OP_SOCK="$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
+{{- if and .is_mac (eq .machine_profile "workstation") }}
+proton_socket="$HOME/.ssh/proton-pass-ssh-agent.sock"
+if [ -S "$proton_socket" ]; then
+    check_status "Proton Pass SSH Agent" "pass" "Socket present ($proton_socket)"
 else
-    OP_SOCK="$HOME/.1password/agent.sock"
-fi
-
-if [ -S "$OP_SOCK" ]; then
-    check_status "1Password SSH Agent" "pass" "Socket active ($OP_SOCK)"
-else
-    check_status "1Password SSH Agent" "warn" "Socket not detected ($OP_SOCK)"
+    check_status "Proton Pass SSH Agent" "warn" "Open Proton Pass and enable SSH Agent"
 fi
 {{- end }}
 

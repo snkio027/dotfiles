@@ -26,11 +26,13 @@ MonoLisa 为用户自行安装的授权字体，字号 `17.5` 是本机显示设
 
 初始化和 apply 会安装缺失依赖、配置 Git / SSH 与 hooks；macOS 还会应用系统偏好。请先检查现有配置、身份信息、字体和功能开关，尤其是 `home/.chezmoiscripts/` 中的脚本。
 
+macOS 工作站默认用 Proton Pass 桌面应用连接 GitHub 并为 Git 提交签名。首次部署前，登录应用、启用 SSH Agent，将选定**个人身份**的签名公钥保存为 `~/.ssh/keys/git_signing.pub`。如有多把钥匙，请按指纹确认。完整步骤包含从 1Password 迁移和签名验收，见 [SSH 与提交签名](docs/operations.md#ssh-与提交签名)。
+
 已有 chezmoi 时，分步检查并部署：
 
 ```bash
 chezmoi init https://github.com/snkio027/dotfiles
-chezmoi diff
+chezmoi diff --no-pager
 chezmoi apply
 ```
 

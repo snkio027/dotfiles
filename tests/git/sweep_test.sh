@@ -11,7 +11,7 @@ REMOTE="$TEST_ROOT/remote.git"
 WORK="$TEST_ROOT/work"
 
 chezmoi execute-template --source="$REPO_ROOT" \
-    --override-data '{"machine_profile":"devcontainer","features":{"use_1password":false}}' \
+    --override-data '{"machine_profile":"devcontainer"}' \
     <"$REPO_ROOT/home/dot_config/git/config.tmpl" >"$GIT_CONFIG"
 
 export GIT_CONFIG_GLOBAL="$GIT_CONFIG"

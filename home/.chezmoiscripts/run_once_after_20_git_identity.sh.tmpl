@@ -9,53 +9,35 @@ set -euo pipefail
 
 {{- if eq (index . "machine_profile") "devcontainer" }}
 echo "ℹ️  DevContainer 继承宿主凭据，跳过密钥生成与远端注册。"
-exit 0
-{{- end }}
-
-{{- if .features.use_1password }}
+{{- else if .is_mac }}
 SIGN_PUB="$HOME/.ssh/keys/git_signing.pub"
-OP_SSH_SOCKET={{ .op_ssh_socket | quote }}
+export SSH_AUTH_SOCK="$HOME/.ssh/proton-pass-ssh-agent.sock"
+if [ ! -S "$SSH_AUTH_SOCK" ]; then
+    echo "请登录并解锁 Proton Pass，在 Settings → General 启用 SSH Agent，然后重新运行 chezmoi apply。" >&2
+    exit 1
+fi
 if [ ! -r "$SIGN_PUB" ]; then
-    echo "✘ 1Password 签名公钥不可读: $SIGN_PUB" >&2
-    echo "  请导出所选 1Password SSH key 的公钥后重新运行 chezmoi apply。" >&2
+    echo "请将选定的 Proton Pass 公钥保存到 $SIGN_PUB，然后重新运行 chezmoi apply。" >&2
     exit 1
 fi
-EXPECTED_SIGNING_KEY="$(awk 'NF >= 2 { print $1 " " $2; exit }' "$SIGN_PUB")"
-
-if [ ! -S "$OP_SSH_SOCKET" ]; then
-    echo "✘ 1Password SSH Agent socket 不可用: $OP_SSH_SOCKET" >&2
-    echo "  请在 1Password 中启用 SSH Agent，或关闭 features.use_1password。" >&2
+expected_key="$(awk 'NF >= 2 { print $1 " " $2 }' "$SIGN_PUB")"
+if ! ssh-add -L | awk -v key="$expected_key" '($1 " " $2) == key { found = 1 } END { exit !found }'; then
+    echo "Proton Pass SSH Agent 未提供选定的公钥。请检查保险库和 $SIGN_PUB，再运行 chezmoi apply。" >&2
     exit 1
 fi
-if [ -z "$EXPECTED_SIGNING_KEY" ]; then
-    echo "✘ 无法读取 1Password 签名公钥: $SIGN_PUB" >&2
-    echo "  请重新导出所选 1Password SSH key 的公钥后运行 chezmoi apply。" >&2
+{{- if .git.sign_commits }}
+if [ "$(git -C / config --path --get user.signingkey)" != "$SIGN_PUB" ] ||
+    [ "$(git -C / config --get gpg.ssh.program)" != "$HOME/.local/bin/git-ssh-sign-proton" ] ||
+    [ "$(git -C / config --get gpg.format)" != ssh ] ||
+    [ "$(git -C / config --bool --get commit.gpgsign)" != true ] ||
+    [ "$(git -C / config --bool --get tag.gpgsign)" != true ]; then
+    echo "Git 签名配置被覆盖。运行 git config --show-origin --get-regexp '^(user\.signingkey|gpg\.|(commit|tag)\.gpgsign)' 检查来源，更新后重试。" >&2
     exit 1
 fi
-if ! SSH_AUTH_SOCK="$OP_SSH_SOCKET" ssh-add -L 2>/dev/null | awk -v expected="$EXPECTED_SIGNING_KEY" '
-    ($1 " " $2) == expected { found = 1 }
-    END { exit !found }
-'; then
-    echo "✘ 导出的签名公钥未由当前 1Password SSH Agent 提供。" >&2
-    echo "  请在 Agent 中启用同一 key，或重新导出 ~/.ssh/keys/git_signing.pub。" >&2
-    exit 1
-fi
-
-echo "ℹ️  1Password SSH Agent 与 Git 签名公钥匹配，不生成磁盘私钥。"
-exit 0
 {{- end }}
-
-{{- if .is_mac }}
-{{-   if .is_arm64 }}
-GH_BIN="/opt/homebrew/bin/gh"
-{{-   else }}
-GH_BIN="/usr/local/bin/gh"
-{{-   end }}
+echo "Proton Pass SSH Agent 已提供所选公钥。"
 {{- else if .is_linux }}
 GH_BIN="/home/linuxbrew/.linuxbrew/bin/gh"
-{{- else }}
-{{-   fail (printf "unsupported GitHub CLI platform: %s/%s" .chezmoi.os .chezmoi.arch) }}
-{{- end }}
 
 KEY_DIR="$HOME/.ssh/keys"
 AUTH_KEY="$KEY_DIR/github_auth"
@@ -65,7 +47,7 @@ SIGN_PUB="${SIGN_KEY}.pub"
 
 if { [ ! -f "$AUTH_KEY" ] || [ ! -f "$SIGN_KEY" ]; } && [ ! -t 0 ]; then
     echo "✘ 缺少本地 SSH key，非交互环境不会启动 ssh-keygen。" >&2
-    echo "  请在终端运行 chezmoi apply 并设置非空口令，或启用 1Password Profile。" >&2
+    echo "  请在终端运行 chezmoi apply 并设置非空口令。" >&2
     exit 1
 fi
 
@@ -199,3 +181,6 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "  ✔ 开发者信任链身份配置完成。"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
+{{- else }}
+{{- fail (printf "unsupported Git identity platform: %s/%s" .chezmoi.os .chezmoi.arch) }}
+{{- end }}

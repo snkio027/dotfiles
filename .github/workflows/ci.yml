@@ -208,6 +208,7 @@ jobs:
           bash tests/cpp/vcpkg_environment_test.sh
           bash tests/git/sweep_test.sh
           bash tests/git/config_and_hooks_policy_test.sh
+          python3 tests/git/proton_pass_agent_test.py
           bash tests/supply-chain/chezmoi_bootstrap_test.sh
           bash tests/supply-chain/brew_vulnerabilities_test.sh
 
@@ -354,6 +355,7 @@ jobs:
           /Applications/Ghostty.app/Contents/MacOS/ghostty +validate-config \
             --config-file="$PWD/home/dot_config/ghostty/config"
           python3 tests/icons/test_icon_contract.py --font-check
+          python3 tests/git/proton_pass_agent_test.py
           chezmoi apply --dry-run --source=.
 
   devcontainer-build:

@@ -7,9 +7,8 @@
 Include ~/.ssh/config.d/*.conf
 
 Host *
-{{- if and .features.use_1password .op_ssh_socket }}
-    # 1Password SSH Agent 全局集成 (双引号转义包含空格的 macOS 路径)
-    IdentityAgent "{{ .op_ssh_socket }}"
+{{- if and .is_mac (eq .machine_profile "workstation") }}
+    IdentityAgent {{ joinPath .chezmoi.homeDir ".ssh/proton-pass-ssh-agent.sock" | quote }}
 {{- else }}
     AddKeysToAgent yes
 {{- if .is_mac }}

@@ -1,7 +1,7 @@
 # ------------------------------------------------------------------------------
 # direnv project-level environment template
 # Copy to any project root as .envrc and customize
-# NOTE: Never store raw secret values here. Use AWS profiles or `op run`.
+# NOTE: Never store raw secret values here. For AWS, select a named profile.
 # ------------------------------------------------------------------------------
 
 # --- Runtime Environment Selection ---
@@ -12,7 +12,3 @@
 # --- Project-scoped build caches ---
 export ZIG_GLOBAL_CACHE_DIR="$PWD/.zig-cache"
 export CARGO_TARGET_DIR="$PWD/.target"
-
-# --- Inject secrets into one child process via 1Password (zero-disk exposure) ---
-# op_run() { op run --env-file=.op.env -- "$@"; }
-# op_run your-command --flag

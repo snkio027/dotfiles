@@ -2,9 +2,15 @@
 # ~/.ssh/allowed_signers — Git SSH 提交签名验证信任链文件
 # 由 chezmoi 动态渲染
 # ==============================================================================
-{{- if stat (joinPath .chezmoi.homeDir ".ssh/keys/git_signing.pub") }}
-{{ .email }} {{ include (joinPath .chezmoi.homeDir ".ssh/keys/git_signing.pub") | trim }}
+{{- $pub := joinPath .chezmoi.homeDir ".ssh/keys/git_signing.pub" }}
+{{- if stat $pub }}
+{{-   $line := include $pub | trim }}
+{{-   if and .is_mac (eq .machine_profile "workstation") }}
+{{-     if not (regexMatch `^(ssh-|ecdsa-|sk-)[^[:space:]]+[ \t]+[A-Za-z0-9+/]+={0,2}([ \t]+[^\r\n]*)?$` $line) }}
+{{-       fail "~/.ssh/keys/git_signing.pub must contain exactly one OpenSSH public key exported from Proton Pass" }}
+{{-     end }}
+{{-   end }}
+{{ .email }} {{ $line }}
 {{- else }}
-# 未在 ~/.ssh/keys/git_signing.pub 找到本地 Ed25519 签名秘钥
-# 运行身份初始化脚本生成秘钥后，重新执行 `chezmoi apply` 即可更新本文件。
+# 注册公钥后再次运行 chezmoi apply 即可生成验签记录。
 {{- end }}
