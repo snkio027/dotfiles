@@ -144,13 +144,13 @@ return function(effective, language, buf, client)
 					evidence.assert_role(group, role, hl.fg)
 					-- Independent approved palette values, not copied from live role groups.
 					local expected = {
-						DxDocComment = 0xAAA67A,
+						DxDocComment = 0xA6A0BD,
 						DxComment = 0x8490AE,
-						DxString = 0xB8D07A,
-						DxBuiltin = 0x8FBCE6,
-						DxOperator = 0xA7B5CC,
-						DxType = 0x3DD1BB,
-						DxParameter = 0xCBB79A,
+						DxString = 0xABD08B,
+						DxBuiltin = 0x84DC8B,
+						DxOperator = 0xBAC4D6,
+						DxType = 0x4DD6B0,
+						DxParameter = 0xE0B9AF,
 						DxVariable = 0xC4CAE0,
 					}
 					assert(hl.fg == expected[role], context .. ": wrong final foreground")

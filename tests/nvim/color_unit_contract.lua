@@ -714,14 +714,43 @@ local function normalized_graph_digest(graph)
 	return #names, vim.fn.sha256(table.concat(normalized, "\n"))
 end
 
--- Freeze the current graph, then reverse the documentation foreground and
--- C/C++ import/Zig bindings before replaying the earlier visual evidence.
+-- Freeze the current graph, then reverse approved foreground changes before
+-- replaying the earlier visual and binding evidence.
 assert(vim.deep_equal(full_hl.DiagnosticUnnecessary, { italic = true }), "Unused state gained foreground authority")
 local production_count, production_digest = normalized_graph_digest(full_hl)
-local PRODUCTION_GRAPH_SHA256 = "d4c6bf64a4dda5b13167a9e26077e2595b946931b9ca0f7b66e21894f45ab34f"
+local PRODUCTION_GRAPH_SHA256 = "5b3d0695c606c8ca9eb4eca925db3fd9d5da88a94a4f560a52a603fbb57c6ea4"
 assert_eq(production_count, E_GRAPH_COUNT + 6, "Production highlight group count changed")
 assert_eq(production_digest, PRODUCTION_GRAPH_SHA256, "Unrelated production resolved graph changed")
 local original_graph = vim.deepcopy(full_hl)
+-- The softer palette changes twelve role foregrounds and four existing member
+-- color consumers. Restoring them must recover every previous link and style.
+for group, previous in pairs({
+	DxKeyword = "#DB8FEE",
+	DxFunctionKeyword = "#DB8FEE",
+	DxCallable = "#FFB266",
+	DxType = "#3DD1BB",
+	DxBuiltin = "#8FBCE6",
+	DxMember = "#F29BC1",
+	DxLifetime = "#67D4C7",
+	DxParameter = "#CBB79A",
+	DxNamespace = "#79AAFF",
+	DxString = "#B8D07A",
+	DxOperator = "#A7B5CC",
+	DxDocComment = "#AAA67A",
+	CursorLineNr = "#F29BC1",
+	SnacksIndentScope = "#F29BC1",
+	NeotestFocused = "#F29BC1",
+	RenderMarkdownH2 = "#F29BC1",
+}) do
+	assert(original_graph[group].fg ~= previous, "Approved palette change missing: " .. group)
+	original_graph[group].fg = previous
+end
+local _, pre_soft_palette_digest = normalized_graph_digest(original_graph)
+assert_eq(
+	pre_soft_palette_digest,
+	"d4c6bf64a4dda5b13167a9e26077e2595b946931b9ca0f7b66e21894f45ab34f",
+	"Softer palette changed unrelated highlights or styles"
+)
 -- The warm-sand revision changes only the parameter foreground relative to
 -- the already verified three-color candidate. Keep its full graph as evidence.
 assert_eq(original_graph.DxParameter.fg, "#CBB79A", "Warm-sand parameter foreground missing")
